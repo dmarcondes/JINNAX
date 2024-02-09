@@ -1,0 +1,17 @@
+Metadata-Version: 2.1
+Name: JINNAX
+Version: 0.0.1
+Summary: JINNAX
+Home-page: UNKNOWN
+Author: Diego Marcondes
+Author-email: <dmarcondes@ime.usp.br>
+License: UNKNOWN
+Keywords: python,JAX,PINN
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Researchers
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: Linux :: Ubuntu
+
+Interface to train Informed neural Networks in JAX
+

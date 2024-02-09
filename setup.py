@@ -7,7 +7,7 @@ LONG_DESCRIPTION = 'Interface to train Informed neural Networks in JAX'
 # Setting up
 setup(
        # the name must match the folder name 'verysimplemodule'
-        name="functions",
+        name="JINNAX",
         version=VERSION,
         author="Diego Marcondes",
         author_email="<dmarcondes@ime.usp.br>",

@@ -1,0 +1,11 @@
+README.md
+setup.py
+JINNAX/__init__.py
+JINNAX/architectures.py
+JINNAX/main.py
+JINNAX/process_results.py
+JINNAX/training.py
+JINNAX.egg-info/PKG-INFO
+JINNAX.egg-info/SOURCES.txt
+JINNAX.egg-info/dependency_links.txt
+JINNAX.egg-info/top_level.txt
