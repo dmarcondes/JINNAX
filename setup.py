@@ -14,7 +14,7 @@ setup(
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         packages=find_packages(),
-        install_requires=['pandas','openpyxl', 'jax', 'random', 'sys', 'PIL'], # add any additional packages that
+        install_requires=['pandas','openpyxl', 'jax', 'random', 'sys', 'pillow'], # add any additional packages that
         # needs to be installed along with your package. Eg: 'caer'
 
         keywords=['python', 'JAX', 'PINN'],
