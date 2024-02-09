@@ -1,5 +1,6 @@
 #Install from GitHub
 pip install git+https://github.com/dmarcondes/JINNAX
+from jinnax
 
 def u(x,t):
     return x[0] + x[1] + x[3] + t**2

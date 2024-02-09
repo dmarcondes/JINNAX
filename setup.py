@@ -1,13 +1,13 @@
 from setuptools import setup, find_packages
 
 VERSION = '0.0.1'
-DESCRIPTION = 'JINNAX'
+DESCRIPTION = 'Interface to train Informed neural Networks in JAX'
 LONG_DESCRIPTION = 'Interface to train Informed neural Networks in JAX'
 
 # Setting up
 setup(
        # the name must match the folder name 'verysimplemodule'
-        name="JINNAX",
+        name="jinnax",
         version=VERSION,
         author="Diego Marcondes",
         author_email="<dmarcondes@ime.usp.br>",
