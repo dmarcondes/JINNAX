@@ -1,3 +1,6 @@
+#Install from GitHub
+pip install git+https://github.com/dmarcondes/JINNAX
+
 def u(x,t):
     return x[0] + x[1] + x[3] + t**2
 
@@ -20,3 +23,6 @@ for name,value in dat.items():
     print(value.shape)
 with jnp.printoptions(threshold=jnp.inf):
     print(x_boundary)
+
+files_path = ['/home/dmarcondes/Dropbox/Diego/Profissional/Code/Experiments/DMNN_experiments/data/material_science/Phi_comp_' + str(i+1) + '.jpg' for i in range(10)]
+f = '/home/dmarcondes/Pictures/d&l.jpeg'

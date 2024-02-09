@@ -87,4 +87,19 @@ def generate_dDimdataPINN(u,xlo,xhi,tlo,thi,Nx,Nt,Nc,d = 1,posx = 'grid',post = 
 
     return dat
 
-#Read images
+#Read images into an array
+def png_to_jnp(files_path):
+    dat = None
+    for f in files_path:
+        a = 1
+        img = Image.open(f)
+        img = jnp.array(img)
+        if len(img.shape) == 3:
+            img = img.reshape((1,img.shape[0],img.shape[1],img.shape[2]))
+        else:
+            img = img.reshape((1,img.shape[0],img.shape[1]))
+        if dat is None:
+            dat = img
+        else:
+            dat = jnp.append(dat,img,0)
+    return dat
