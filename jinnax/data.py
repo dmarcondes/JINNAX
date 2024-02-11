@@ -93,7 +93,7 @@ def png_to_jnp(files_path):
     for f in files_path:
         a = 1
         img = Image.open(f)
-        img = jnp.array(img)
+        img = jnp.array(img,dtype = jnp.float32)
         if len(img.shape) == 3:
             img = img.reshape((1,img.shape[0],img.shape[1],img.shape[2]))
         else:
@@ -103,3 +103,7 @@ def png_to_jnp(files_path):
         else:
             dat = jnp.append(dat,img,0)
     return dat
+
+#Create an index array for an array
+def index_array(shape):
+    return jnp.array([[x,y] for x in range(shape[0]) for y in range(shape[1])])
