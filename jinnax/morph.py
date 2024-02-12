@@ -51,7 +51,12 @@ def opening(f,index_f,k):
 
 #Coling of f by k
 def closing(f,index_f,k):
-    return erosion(dilation(f,index_f,k),index_f,k)
+    l = math.floor(k.shape[0]/2)
+    jit_local_dilation = local_dilation(f,k,l)
+    fd = jax.numpy.apply_along_axis(jit_local_dilation,1,index_f).reshape(f.shape)
+    jit_local_erosion = local_erosion(fd,k,l)
+    fde = jax.numpy.apply_along_axis(jit_local_erosion,1,index_f).reshape(f.shape)
+    return fde
 
 #Alternate-sequential filter of f by k
 def asf(f,index_f,k):
