@@ -16,7 +16,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0):
         params.append({'W':W,'B':B})
 
     #Define function for forward pass
-    @jit
+    @jax.jit
     def forward(params,x):
       *hidden,output = params
       for layer in hidden:
@@ -41,7 +41,7 @@ def fconNN_str(width,activation = jax.nn.tanh,key = 0):
         params.append({'W':W,'B':B})
 
     #Define function for forward pass
-    @jit
+    @jax.jit
     def forward(params,x):
       *hidden,output = params
       for layer in hidden:
@@ -52,7 +52,7 @@ def fconNN_str(width,activation = jax.nn.tanh,key = 0):
     return {'params': params,'forward': forward}
 
 #Apply a morphological layer
-@jit
+@jax.jit
 def apply_morph_layer(x,type,width,params,p,w,index_x,d):
     #Define which operator will be applied
     if type == 'erosion':
@@ -111,7 +111,7 @@ def apply_morph_layer(x,type,width,params,p,w,index_x,d):
     return {'x': fx,'p': p}
 
 #Canonical Morphological NN
-@jit
+@jax.jit
 def cmnn(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0):
     #Index window
     index_x = mp.index_array(shape_x)
