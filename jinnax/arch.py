@@ -146,4 +146,4 @@ def cmnn(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0):
         return x[0,:,:,:]
 
     #Return initial parameters and forward function
-    return {'params': params,'forward': jax.jit(forward)}
+    return {'params': params,'forward': forward}
