@@ -37,7 +37,6 @@ def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.1,b1 = 0.9
       return opt_state,params
 
     #Train
-    init = time.time()
     with alive_bar(epochs) as bar:
         for e in range(epochs):
             opt_state,params = update(opt_state,params,x,y)
