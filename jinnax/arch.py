@@ -52,7 +52,6 @@ def fconNN_str(width,activation = jax.nn.tanh,key = 0):
     return {'params': params,'forward': forward}
 
 #Apply a morphological layer
-@jax.jit
 def apply_morph_layer(x,type,width,params,p,w,index_x,d):
     #Define which operator will be applied
     if type == 'erosion':
@@ -111,7 +110,6 @@ def apply_morph_layer(x,type,width,params,p,w,index_x,d):
     return {'x': fx,'p': p}
 
 #Canonical Morphological NN
-@jax.jit
 def cmnn(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0):
     #Index window
     index_x = mp.index_array(shape_x)
