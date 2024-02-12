@@ -10,6 +10,10 @@ def struct_function(k,d):
     k = jnp.array(k(w))
     return jnp.transpose(k.reshape((d,d)))
 
+def struct_function_w(k,w):
+    k = jnp.array(k(w))
+    return jnp.transpose(k.reshape((d,d)))
+
 #Create an index array for an array
 def index_array(shape):
     return jnp.array([[x,y] for x in range(shape[0]) for y in range(shape[1])])
@@ -61,8 +65,26 @@ def complement(f):
 
 #Sup-generating with interval [k1,k2]
 def supgen(f,index_f,k1,k2):
-    return jnp.minimum(erosion(f,index_f,k1),complement(dilation(f,index_f,complement(k2.transpose()))))
+    K1 = jnp.minimum(k1,k2)
+    K2 = jnp.maximum(k1,k2)
+    return jnp.minimum(erosion(f,index_f,K1),complement(dilation(f,index_f,complement(K2.transpose()))))
 
 #Inf-generating with interval [k1,k2]
 def infgen(f,index_f,k1,k2):
-    return jnp.maximum(dilation(f,index_f,k1),complement(erosion(f,index_f,complement(k2.transpose()))))
+    K1 = jnp.minimum(k1,k2)
+    K2 = jnp.maximum(k1,k2)
+    return jnp.maximum(dilation(f,index_f,K1),complement(erosion(f,index_f,complement(K2.transpose()))))
+
+#Sup of list images
+def sup(f_list):
+    f = f_list[0]
+    for i in range(len(f_list) - 1):
+        f = jnp.maximum(f,f_list[i+1])
+    return f
+
+#Inf of list images
+def inf(f_list):
+    f = f_list[0]
+    for i in range(len(f_list) - 1):
+        f = jnp.minimum(f,f_list[i+1])
+    return f
