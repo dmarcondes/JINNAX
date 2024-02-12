@@ -11,14 +11,6 @@ def MSE(true,pred):
 
 #Training function
 def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.1,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0):
-    #Isolate parameters and redefine forward function
-    allp = params
-    params = [allp[i]['params'] for i in range(len(params))]
-    @jax.jit
-    def new_forward(x,params):
-        p = [{'params': params[i],'forward': allp[i]['forward']} for i in range(len(params))]
-        return forward(x,p)
-
     #Optmizer NN
     optimizer = optax.adam(lr,b1,b2,eps,eps_root)
     opt_state = optimizer.init(params)
@@ -26,7 +18,7 @@ def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.1,b1 = 0.9
     #Loss function
     @jax.jit
     def lf(params,x,y):
-        return loss(new_forward(x,params),y)
+        return loss(forward(x,params),y)
 
     #Training function
     grad_loss = jax.jit(jax.grad(lf,0))
@@ -44,4 +36,4 @@ def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.1,b1 = 0.9
             bar.title("Loss: " + str(jnp.round(lf(params,x,y),10)))
             bar()
 
-    return [{'params': params[i],'forward': allp[i]['forward']} for i in range(len(params))]
+    return params

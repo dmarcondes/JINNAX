@@ -52,7 +52,7 @@ def fconNN_str(width,activation = jax.nn.tanh,key = 0):
     return {'params': params,'forward': forward}
 
 #Apply a morphological layer
-def apply_morph_layer(x,type,width,params,p,w,index_x,d):
+def apply_morph_layer(x,type,width,params,forward,p,w,index_x,d):
     #Define which operator will be applied
     if type == 'erosion':
         oper = jax.jit(lambda f,index_f,k1,k2: mp.erosion(f,index_f,k1))
@@ -94,10 +94,10 @@ def apply_morph_layer(x,type,width,params,p,w,index_x,d):
             k2 = None
             #Calculate kernel
             if type != 'complement':
-                k1 = mp.struct_function_w(lambda w: params[p]['forward'](w,params[p]['params']),w,d)
+                k1 = mp.struct_function_w(lambda w: forward[p](w,params[p]),w,d)
                 p = p + 1
                 if type == 'supgen' or type == 'infgen':
-                    k2 = mp.struct_function_w(lambda w: params[p]['forward'](w,params[p]['params']),w,d)
+                    k2 = mp.struct_function_w(lambda w: forward[p](w,params[p]),w,d)
                     p = p + 1
             tmp = oper(x[0,:,:],index_x,k1,k2).reshape((1,x.shape[1],x.shape[2]))
             for j in range(x.shape[0] - 1):
@@ -118,16 +118,23 @@ def cmnn(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0):
     initializer = jax.nn.initializers.glorot_normal()
     k = jax.random.split(jax.random.PRNGKey(key),(len(type),max(width))) #Seed for initialization
     params = list()
+    inside_forward = list()
     for i in range(len(type)):
         if type[i] != 'sup' and type[i] != 'inf':
             for j in range(width[i]):
-                params.append(fconNN_str(width_str,activation,k[i,j,0]))
+                nn = fconNN_str(width_str,activation,k[i,j,0])
+                params.append(nn['param'])
+                inside_forward.append(nn['forward'])
                 if type[i] == 'supgen' or type[i] == 'infgen':
-                    params.append(fconNN_str(width_str,activation,k[i,j,1]))
+                    nn = fconNN_str(width_str,activation,k[i,j,1])
+                    params.append(nn['param'])
+                    inside_forward.append(nn['forward'])
         elif type[i] == 'sup':
-            params.append({'params': jnp.array([0.0],dtype = jnp.float32),'forward': None})
+            params.append(jnp.array([0.0],dtype = jnp.float32))
+            inside_forward.append(None)
         elif type[i] == 'inf':
-            params.append({'params': jnp.array([0.0],dtype = jnp.float32),'forward': None})
+            params.append(jnp.array([0.0],dtype = jnp.float32))
+            inside_forward.append(None)
 
     #Create w to apply str NN
     unique_size = set(size)
@@ -141,7 +148,7 @@ def cmnn(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0):
         x = x.reshape((1,x.shape[0],x.shape[1],x.shape[2]))
         for i in range(len(type)):
             #Apply layer
-            x = apply_morph_layer(x,type[i],width[i],params,p,w[str(size[i])],index_x,size[i])
+            x = apply_morph_layer(x,type[i],width[i],params,inside_forward,p,w[str(size[i])],index_x,size[i])
             #Update counter
             p = x['p']
             x = x['x']
