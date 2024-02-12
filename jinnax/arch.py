@@ -123,11 +123,11 @@ def cmnn(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0):
         if type[i] != 'sup' and type[i] != 'inf':
             for j in range(width[i]):
                 nn = fconNN_str(width_str,activation,k[i,j,0])
-                params.append(nn['param'])
+                params.append(nn['params'])
                 inside_forward.append(nn['forward'])
                 if type[i] == 'supgen' or type[i] == 'infgen':
                     nn = fconNN_str(width_str,activation,k[i,j,1])
-                    params.append(nn['param'])
+                    params.append(nn['params'])
                     inside_forward.append(nn['forward'])
         elif type[i] == 'sup':
             params.append(jnp.array([0.0],dtype = jnp.float32))
