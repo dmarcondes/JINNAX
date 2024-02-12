@@ -19,7 +19,6 @@ def index_array(shape):
     return jnp.array([[x,y] for x in range(shape[0]) for y in range(shape[1])])
 
 #Local erosion of f by k for pixel (i,j)
-@jax.jit
 def local_erosion(f,k,l):
     def jit_local_erosion(index):
         fw = jax.lax.dynamic_slice(f, (index[0] - l, index[1] - l), (2*l + 1, 2*l + 1))
@@ -34,7 +33,6 @@ def erosion(f,index_f,k):
     return jax.numpy.apply_along_axis(jit_local_erosion,1,index_f).reshape(f.shape)
 
 #Local dilation of f by k for pixel (i,j)
-@jax.jit
 def local_dilation(f,k,l):
     def jit_local_dilation(index):
         fw = jax.lax.dynamic_slice(f, (index[0] - l, index[1] - l), (2*l + 1, 2*l + 1))
