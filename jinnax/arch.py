@@ -17,7 +17,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0):
 
     #Define function for forward pass
     @jax.jit
-    def forward(params,x):
+    def forward(x,params):
       *hidden,output = params
       for layer in hidden:
         x = activation(x @ layer['W'] + layer['B'])
@@ -42,7 +42,7 @@ def fconNN_str(width,activation = jax.nn.tanh,key = 0):
 
     #Define function for forward pass
     @jax.jit
-    def forward(params,x):
+    def forward(x,params):
       *hidden,output = params
       for layer in hidden:
         x = activation(x @ layer['W'] + layer['B'])
