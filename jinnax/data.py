@@ -89,7 +89,7 @@ def generate_dDimdataPINN(u,xlo,xhi,tlo,thi,Nx,Nt,Nc,d = 1,posx = 'grid',post = 
     return dat
 
 #Read images into an array
-def png_to_jnp(files_path):
+def image_to_jnp(files_path):
     dat = None
     for f in files_path:
         img = Image.open(f)
