@@ -110,7 +110,7 @@ def apply_morph_layer(x,type,width,params,p,w,index_x,d):
 #Canonical Morphological NN
 def cmnn(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0):
     #Index window
-    index_x = index_array(shape_x)
+    index_x = mp.index_array(shape_x)
 
     #Initialize parameters with Glorot initialization
     initializer = jax.nn.initializers.glorot_normal()
