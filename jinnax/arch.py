@@ -139,11 +139,11 @@ def cmnn(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0):
         x = x.reshape((1,x.shape[0],x.shape[1],x.shape[2]))
         for i in range(len(type)):
             #Apply layer
-        x = apply_morph_layer(x,type[i],width[i],params,p,w[str(size[i])],index_x,size[i])
+            x = apply_morph_layer(x,type[i],width[i],params,p,w[str(size[i])],index_x,size[i])
             #Update counter
-        p = x['p']
-        x = x['x']
-    return x[0,:,:,:]
+            p = x['p']
+            x = x['x']
+        return x[0,:,:,:]
 
     #Return initial parameters and forward function
     return {'params': params,'forward': forward}
