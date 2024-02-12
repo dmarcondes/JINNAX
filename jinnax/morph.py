@@ -42,15 +42,18 @@ def dilation(f,index_f,k):
 
 #Opening of f by k
 def opening(f,index_f,k):
-    return dilation(erosion(f,index_f,k),index_f,k)
+    fe = erosion(f,index_f,k)
+    return dilation(fe,index_f,k)
 
 #Coling of f by k
 def closing(f,index_f,k):
-    return erosion(dilation(f,index_f,k),index_f,k)
+    fd = dilation(f,index_f,k)
+    return erosion(fd,index_f,k)
 
 #Alternate-sequential filter of f by k
 def asf(f,index_f,k):
-    return closing(opening(f,index_f,k),index_f,k)
+    fo = opening(f,index_f,k)
+    return closing(fo,index_f,k)
 
 #Complement
 def complement(f):
