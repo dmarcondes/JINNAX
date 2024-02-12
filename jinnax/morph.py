@@ -1,4 +1,7 @@
 #Morphology module
+import jax
+import jax.numpy as jnp
+
 
 #Structuring element from function
 def struct_function(k,d):

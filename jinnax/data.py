@@ -108,7 +108,6 @@ def image_to_jnp(files_path):
 def save_images(images,files_path):
     if len(files_path) > 1:
         for i in range(len(files_path)):
-            print(i)
             if len(images.shape) == 4:
                 tmp = Image.fromarray(np.uint8(jnp.round(255*images[i,:,:,:]))).convert('RGB')
             else:
