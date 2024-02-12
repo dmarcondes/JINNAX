@@ -134,7 +134,7 @@ def cmnn(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0):
         w[str(d)] = jnp.array([[x1.tolist(),x2.tolist()] for x1 in jnp.linspace(-jnp.floor(d/2),jnp.floor(d/2),d) for x2 in jnp.linspace(jnp.floor(d/2),-jnp.floor(d/2),d)])
 
     #Forward pass
-    def forward(params,x):
+    def forward(x,params):
         p = 0
         x = x.reshape((1,x.shape[0],x.shape[1],x.shape[2]))
         for i in range(len(type)):
@@ -146,4 +146,4 @@ def cmnn(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0):
         return x[0,:,:,:]
 
     #Return initial parameters and forward function
-    return {'params': params,'forward': forward}
+    return {'params': params,'forward': jax.jit(forward)}
