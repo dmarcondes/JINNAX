@@ -19,7 +19,7 @@ def local_erosion(f,k,l):
     def jit_local_erosion(index):
         fw = jax.lax.dynamic_slice(f, (index[0] - l, index[1] - l), (2*l + 1, 2*l + 1))
         return jnp.minimum(jnp.maximum(jnp.min(fw - k),0.0),1.0)
-    return jax.jit(jit_local_erosion)
+    return jit_local_erosion
 
 #Erosion of f by k
 def erosion(f,index_f,k):
@@ -32,7 +32,7 @@ def local_dilation(f,k,l):
     def jit_local_dilation(index):
         fw = jax.lax.dynamic_slice(f, (index[0] - l, index[1] - l), (2*l + 1, 2*l + 1))
         return jnp.minimum(jnp.maximum(jnp.max(fw + k),0.0),1.0)
-    return jax.jit(jit_local_dilation)
+    return jit_local_dilation
 
 #Dilation of f by k
 def dilation(f,index_f,k):
@@ -42,7 +42,12 @@ def dilation(f,index_f,k):
 
 #Opening of f by k
 def opening(f,index_f,k):
-    return dilation(erosion(f,index_f,k),index_f,k)
+    l = math.floor(k.shape[0]/2)
+    jit_local_erosion = local_erosion(f,k,l)
+    fe = jax.numpy.apply_along_axis(jit_local_erosion,1,index_f).reshape(f.shape)
+    jit_local_dilation = local_dilation(fe,k,l)
+    fed = jax.numpy.apply_along_axis(jit_local_dilation,1,index_f).reshape(f.shape)
+    return fed
 
 #Coling of f by k
 def closing(f,index_f,k):
