@@ -3,6 +3,7 @@ import pandas
 import jax
 import jax.numpy as jnp
 from jax import random
+import numpy as np
 import random
 import sys
 from PIL import Image
@@ -91,9 +92,8 @@ def generate_dDimdataPINN(u,xlo,xhi,tlo,thi,Nx,Nt,Nc,d = 1,posx = 'grid',post = 
 def png_to_jnp(files_path):
     dat = None
     for f in files_path:
-        a = 1
         img = Image.open(f)
-        img = jnp.array(img,dtype = jnp.float32)
+        img = jnp.array(img,dtype = jnp.float32)/255
         if len(img.shape) == 3:
             img = img.reshape((1,img.shape[0],img.shape[1],img.shape[2]))
         else:
@@ -103,6 +103,23 @@ def png_to_jnp(files_path):
         else:
             dat = jnp.append(dat,img,0)
     return dat
+
+#Save images
+def save_images(images,files_path):
+    if len(files_path) > 1:
+        for i in range(len(files_path)):
+            print(i)
+            if len(images.shape) == 4:
+                tmp = Image.fromarray(np.uint8(jnp.round(255*images[i,:,:,:]))).convert('RGB')
+            else:
+                tmp = Image.fromarray(np.uint8(jnp.round(255*images[i,:,:]))).convert('RGB')
+            tmp.save(files_path[i])
+    else:
+        if len(images.shape) == 4:
+            tmp = Image.fromarray(np.uint8(jnp.round(255*images[0,:,:,:]))).convert('RGB')
+        else:
+            tmp = Image.fromarray(np.uint8(jnp.round(255*images[0,:,:]))).convert('RGB')
+        tmp.save(files_path[0])
 
 #Create an index array for an array
 def index_array(shape):
