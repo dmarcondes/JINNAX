@@ -6,7 +6,7 @@ import jax.numpy as jnp
 #Structuring element from function
 def struct_function(k,d):
     w = jnp.array([[x1.tolist(),x2.tolist()] for x1 in jnp.linspace(-jnp.floor(d/2),jnp.floor(d/2),d) for x2 in jnp.linspace(jnp.floor(d/2),-jnp.floor(d/2),d)])
-    k = k(w)
+    k = jnp.array(k(w))
     return jnp.transpose(k.reshape((d,d)))
 
 #Local erosion of f by k for pixel (i,j)
