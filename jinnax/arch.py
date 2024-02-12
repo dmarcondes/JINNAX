@@ -94,10 +94,10 @@ def apply_morph_layer(x,type,width,params,p,w,index_x,d):
             k2 = None
             #Calculate kernel
             if type != 'complement':
-                k1 = mp.struct_function_w(lambda w: params[p]['forward'](params[p]['params'],w),w,d)
+                k1 = mp.struct_function_w(lambda w: params[p]['forward'](w,params[p]['params']),w,d)
                 p = p + 1
                 if type == 'supgen' or type == 'infgen':
-                    k2 = mp.struct_function_w(lambda w: params[p]['forward'](params[p]['params'],w),w,d)
+                    k2 = mp.struct_function_w(lambda w: params[p]['forward'](w,params[p]['params']),w,d)
                     p = p + 1
             tmp = oper(x[0,:,:],index_x,k1,k2).reshape((1,x.shape[1],x.shape[2]))
             for j in range(x.shape[0] - 1):
