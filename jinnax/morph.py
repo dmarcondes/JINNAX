@@ -61,5 +61,5 @@ def supgen(f,index_f,k1,k2):
     return jnp.minimum(erosion(f,index_f,k1),complement(dilation(f,index_f,complement(k2.transpose()))))
 
 #Inf-generating with interval [k1,k2]
-def infgen(f,index_f,k1,k2,m):
+def infgen(f,index_f,k1,k2):
     return jnp.maximum(dilation(f,index_f,k1),complement(erosion(f,index_f,complement(k2.transpose()))))
