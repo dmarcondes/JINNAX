@@ -1,4 +1,5 @@
 #Functions to train NN
+import jax
 import optax
 from alive_progress import alive_bar
 
