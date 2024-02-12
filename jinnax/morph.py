@@ -5,19 +5,16 @@ import math
 
 
 #Structuring element from function
-@jax.jit
 def struct_function(k,d):
     w = jnp.array([[x1.tolist(),x2.tolist()] for x1 in jnp.linspace(-jnp.floor(d/2),jnp.floor(d/2),d) for x2 in jnp.linspace(jnp.floor(d/2),-jnp.floor(d/2),d)])
     k = jnp.array(k(w))
     return jnp.transpose(k.reshape((d,d)))
 
-@jax.jit
 def struct_function_w(k,w,d):
     k = jnp.array(k(w))
     return jnp.transpose(k.reshape((d,d)))
 
 #Create an index array for an array
-@jax.jit
 def index_array(shape):
     return jnp.array([[x,y] for x in range(shape[0]) for y in range(shape[1])])
 
