@@ -1,5 +1,6 @@
 #Functions to train NN
 import jax
+import jax.numpy as jnp
 import optax
 from alive_progress import alive_bar
 
