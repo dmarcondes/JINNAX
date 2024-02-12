@@ -75,16 +75,16 @@ def infgen(f,index_f,k1,k2):
     K2 = jnp.maximum(k1,k2)
     return jnp.maximum(dilation(f,index_f,K1),complement(erosion(f,index_f,complement(K2.transpose()))))
 
-#Sup of list images
-def sup(f_list):
-    f = f_list[0]
-    for i in range(len(f_list) - 1):
-        f = jnp.maximum(f,f_list[i+1])
+#Sup of array of images
+def sup(farr):
+    f = farr[0,:,:]
+    for i in range(farr.shape[0] - 1):
+        f = jnp.maximum(f,farr[i+1,:,:])
     return f
 
-#Inf of list images
-def inf(f_list):
-    f = f_list[0]
-    for i in range(len(f_list) - 1):
-        f = jnp.minimum(f,f_list[i+1])
+#Inf of array of images
+def inf(farr):
+    f = farr[0,:,:]
+    for i in range(farr.shape[0] - 1):
+        f = jnp.minimum(f,farr[i+1,:,:])
     return f
