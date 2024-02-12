@@ -9,11 +9,15 @@ def struct_function(k,d):
     k = jnp.array(k(w))
     return jnp.transpose(k.reshape((d,d)))
 
+#Create an index array for an array
+def index_array(shape):
+    return jnp.array([[x,y] for x in range(shape[0]) for y in range(shape[1])])
+
 #Local erosion of f by k for pixel (i,j)
 def local_erosion(f,k,l):
     def jit_local_erosion(index):
         fw = jax.lax.dynamic_slice(f, (index[0] - l, index[1] - l), (2*l + 1, 2*l + 1))
-        return jnp.min(fw - k)
+        return jnp.minimum(jnp.maximum(jnp.min(fw - k),0.0),1.0)
     return jit_local_erosion
 
 #Erosion of f by k
@@ -26,7 +30,7 @@ def erosion(f,index_f,k):
 def local_dilation(f,k,l):
     def jit_local_dilation(index):
         fw = jax.lax.dynamic_slice(f, (index[0] - l, index[1] - l), (2*l + 1, 2*l + 1))
-        return jnp.max(fw + k)
+        return jnp.minimum(jnp.maximum(jnp.max(fw + k),0.0),1.0)
     return jit_local_dilation
 
 #Dilation of f by k

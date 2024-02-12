@@ -119,7 +119,3 @@ def save_images(images,files_path):
         else:
             tmp = Image.fromarray(np.uint8(jnp.round(255*images[0,:,:]))).convert('RGB')
         tmp.save(files_path[0])
-
-#Create an index array for an array
-def index_array(shape):
-    return jnp.array([[x,y] for x in range(shape[0]) for y in range(shape[1])])
