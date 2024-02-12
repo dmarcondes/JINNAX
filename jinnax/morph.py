@@ -1,6 +1,7 @@
 #Morphology module
 import jax
 import jax.numpy as jnp
+import math
 
 
 #Structuring element from function
