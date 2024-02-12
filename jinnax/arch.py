@@ -51,72 +51,99 @@ def fconNN_str(width,activation = jax.nn.tanh,key = 0):
 
 #Apply a morphological layer
 def apply_morph_layer(x,type,width,params,p,w,index_x,d):
-#Define which operator will be applied
-if type == 'erosion':
-    oper = jax.jit(mp.erosion)
-elif type == 'dilation':
-    oper = jax.jit(mp.dilation)
-elif type == 'opening':
-    oper = jax.jit(mp.opening)
-elif type == 'closing':
-    oper = jax.jit(mp.closing)
-elif type == 'asf':
-    oper = jax.jit(mp.asf)
-elif type == 'complement':
-    oper = jax.jit(mp.complement)
-elif type == 'supgen':
-    oper = jax.jit(mp.supgen)
-elif type == 'infgen':
-    oper = jax.jit(mp.infgen)
-elif type == 'sup':
-    oper = jax.jit(mp.sup)
-elif type == 'inf':
-    oper = jax.jit(mp.inf)
-else:
-    print('Type of layer ' + type + 'is wrong!')
-    return 1
+    #Define which operator will be applied
+    if type == 'erosion':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.erosion(f,index_f,k1))
+    elif type == 'dilation':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.dilation(f,index_f,k1))
+    elif type == 'opening':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.opening(f,index_f,k1))
+    elif type == 'closing':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.closing(f,index_f,k1))
+    elif type == 'asf':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.asf(f,index_f,k1))
+    elif type == 'complement':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.complement(f))
+    elif type == 'supgen':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.supgen(f,index_f,k1,k2))
+    elif type == 'infgen':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.infgen(f,index_f,k1,k2))
+    elif type == 'sup':
+        oper = jax.jit(mp.sup)
+    elif type == 'inf':
+        oper = jax.jit(mp.inf)
+    else:
+        print('Type of layer ' + type + 'is wrong!')
+        return 1
 
-#Apply sup or inf
-if type == 'inf' or type == 'sup':
-    x = jax.numpy.apply_along_axis(oper,0,x).reshape((1,x.shape[1],x.shape[2],x.shape[3]))
-#Apply each operator
-for i in range(width):
-    #Calculate kernel
-    k = mp.struct_function_w(lambda w: params[p]['forward'](params[p]['params'],w),w,d)
+    #Apply sup or inf
+    if type == 'inf' or type == 'sup':
+        fx = oper(x[:,0,:,:]).reshape((1,x.shape[2],x.shape[3]))
+        for j in range(x.shape[1] - 1):
+            fx = jnp.append(fx,oper(x[:,j + 1,:,:]).reshape((1,x.shape[2],x.shape[3])),axis = 0)
+        fx = fx.reshape((1,fx.shape[0],fx.shape[1],fx.shape[2]))
+        p = p + 1
+    else:
+        x = x[0,:,:,:]
+        #Apply each operator
+        fx = None
+        for i in range(width):
+            k1 = None
+            k2 = None
+            #Calculate kernel
+            if type != 'complement':
+                k1 = mp.struct_function_w(lambda w: params[p]['forward'](params[p]['params'],w),w,d)
+                p = p + 1
+                if type == 'supgen' or type == 'infgen':
+                    k2 = mp.struct_function_w(lambda w: params[p]['forward'](params[p]['params'],w),w,d)
+                    p = p + 1
+            tmp = oper(x[0,:,:],index_x,k1,k2).reshape((1,x.shape[1],x.shape[2]))
+            for j in range(x.shape[0] - 1):
+                tmp = jnp.append(tmp,oper(x[j + 1,:,:],index_x,k1,k2).reshape((1,x.shape[1],x.shape[2])),axis = 0)
+            tmp = tmp.reshape((1,tmp.shape[0],tmp.shape[1],tmp.shape[2]))
+            if fx is None:
+                fx = tmp
+            else:
+                fx = jnp.append(fx,tmp,axis = 0)
+    return {'x': fx,'p': p}
 
 #Canonical Morphological NN
-def cmnn(type,width,width_str,size,activation = jax.nn.tanh,key = 0):
-#Initialize parameters with Glorot initialization
-initializer = jax.nn.initializers.glorot_normal()
-k = jax.random.split(jax.random.PRNGKey(key),(len(type),max(width))) #Seed for initialization
-params = list()
-for i in range(len(type)):
-    if type[i] != 'sup' and type[i] != 'inf':
-        for j in range(width[i]):
-            params.append(fconNN_str(width_str,activation,k[i,j,0]))
-            if type[i] == 'supgen' or type[i] == 'infgen':
-                params.append(fconNN_str(width_str,activation,k[i,j,1]))
-    elif type[i] == 'sup':
-        params.append({'params': jnp.array([0.0],dtype = jnp.float32),'forward': None})
-    elif type[i] == 'inf':
-        params.append({'params': jnp.array([0.0],dtype = jnp.float32),'forward': None})
+def cmnn(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0):
+    #Index window
+    index_x = index_array(shape_x)
 
-#Create w to apply str NN
-unique_size = set(size)
-w = {}
-for d in unique_size:
-    w[str(d)] = jnp.array([[x1.tolist(),x2.tolist()] for x1 in jnp.linspace(-jnp.floor(d/2),jnp.floor(d/2),d) for x2 in jnp.linspace(jnp.floor(d/2),-jnp.floor(d/2),d)])
+    #Initialize parameters with Glorot initialization
+    initializer = jax.nn.initializers.glorot_normal()
+    k = jax.random.split(jax.random.PRNGKey(key),(len(type),max(width))) #Seed for initialization
+    params = list()
+    for i in range(len(type)):
+        if type[i] != 'sup' and type[i] != 'inf':
+            for j in range(width[i]):
+                params.append(fconNN_str(width_str,activation,k[i,j,0]))
+                if type[i] == 'supgen' or type[i] == 'infgen':
+                    params.append(fconNN_str(width_str,activation,k[i,j,1]))
+        elif type[i] == 'sup':
+            params.append({'params': jnp.array([0.0],dtype = jnp.float32),'forward': None})
+        elif type[i] == 'inf':
+            params.append({'params': jnp.array([0.0],dtype = jnp.float32),'forward': None})
 
-#Forward pass
-def forward(params,x,index_x):
-p = 0
-x = x.reshape((1,x.shape[0],x.shape[1],x.shape[2]))
-for i in range(len(type)):
-    #Apply layer
-    x = apply_morph_layer(x,type[i],width[i],params,p,w[str(size[i])],index_x,size[i])
-    #Update counter
-    if type[i] == 'supgen' or type[i] == 'infgen':
-        p = p + 2
-    else:
-        p = p + 1
-return x
+    #Create w to apply str NN
+    unique_size = set(size)
+    w = {}
+    for d in unique_size:
+        w[str(d)] = jnp.array([[x1.tolist(),x2.tolist()] for x1 in jnp.linspace(-jnp.floor(d/2),jnp.floor(d/2),d) for x2 in jnp.linspace(jnp.floor(d/2),-jnp.floor(d/2),d)])
+
+    #Forward pass
+    def forward(params,x):
+        p = 0
+        x = x.reshape((1,x.shape[0],x.shape[1],x.shape[2]))
+        for i in range(len(type)):
+            #Apply layer
+        x = apply_morph_layer(x,type[i],width[i],params,p,w[str(size[i])],index_x,size[i])
+            #Update counter
+        p = x['p']
+        x = x['x']
+    return x[0,:,:,:]
+
+    #Return initial parameters and forward function
+    return {'params': params,'forward': forward}
