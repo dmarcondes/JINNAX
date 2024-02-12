@@ -10,7 +10,7 @@ def struct_function(k,d):
     k = jnp.array(k(w))
     return jnp.transpose(k.reshape((d,d)))
 
-def struct_function_w(k,w):
+def struct_function_w(k,w,d):
     k = jnp.array(k(w))
     return jnp.transpose(k.reshape((d,d)))
 

@@ -50,7 +50,7 @@ def fconNN_str(width,activation = jax.nn.tanh,key = 0):
     return {'params': params,'forward': forward}
 
 #Apply a morphological layer
-def apply_morph_layer(x,type,width,params,p,w):
+def apply_morph_layer(x,type,width,params,p,w,index_x,d):
 #Define which operator will be applied
 if type == 'erosion':
     oper = jax.jit(mp.erosion)
@@ -78,10 +78,11 @@ else:
 
 #Apply sup or inf
 if type == 'inf' or type == 'sup':
-    x = jax.numpy.apply_along_axis(oper,0,x).reshape((1,x.shape[1],x.shape[2],x.shape[3])
+    x = jax.numpy.apply_along_axis(oper,0,x).reshape((1,x.shape[1],x.shape[2],x.shape[3]))
 #Apply each operator
-
 for i in range(width):
+    #Calculate kernel
+    k = mp.struct_function_w(lambda w: params[p]['forward'](params[p]['params'],w),w,d)
 
 #Canonical Morphological NN
 def cmnn(type,width,width_str,size,activation = jax.nn.tanh,key = 0):
@@ -104,16 +105,15 @@ for i in range(len(type)):
 unique_size = set(size)
 w = {}
 for d in unique_size:
-    if d != 1:
-        w[str(d)] = jnp.array([[x1.tolist(),x2.tolist()] for x1 in jnp.linspace(-jnp.floor(d/2),jnp.floor(d/2),d) for x2 in jnp.linspace(jnp.floor(d/2),-jnp.floor(d/2),d)])
+    w[str(d)] = jnp.array([[x1.tolist(),x2.tolist()] for x1 in jnp.linspace(-jnp.floor(d/2),jnp.floor(d/2),d) for x2 in jnp.linspace(jnp.floor(d/2),-jnp.floor(d/2),d)])
 
 #Forward pass
-def forward(params,x):
+def forward(params,x,index_x):
 p = 0
 x = x.reshape((1,x.shape[0],x.shape[1],x.shape[2]))
 for i in range(len(type)):
     #Apply layer
-    x = apply_morph_layer(x,type[i],width[i],params,p,w)
+    x = apply_morph_layer(x,type[i],width[i],params,p,w[str(size[i])],index_x,size[i])
     #Update counter
     if type[i] == 'supgen' or type[i] == 'infgen':
         p = p + 2
