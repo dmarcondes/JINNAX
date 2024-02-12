@@ -42,34 +42,24 @@ def dilation(f,index_f,k):
 
 #Opening of f by k
 def opening(f,index_f,k):
-    l = math.floor(k.shape[0]/2)
-    jit_local_erosion = local_erosion(f,k,l)
-    fe = jax.numpy.apply_along_axis(jit_local_erosion,1,index_f).reshape(f.shape)
-    jit_local_dilation = local_dilation(fe,k,l)
-    fed = jax.numpy.apply_along_axis(jit_local_dilation,1,index_f).reshape(f.shape)
-    return fed
+    return dilation(erosion(f,index_f,k),index_f,k)
 
 #Coling of f by k
 def closing(f,index_f,k):
-    l = math.floor(k.shape[0]/2)
-    jit_local_dilation = local_dilation(f,k,l)
-    fd = jax.numpy.apply_along_axis(jit_local_dilation,1,index_f).reshape(f.shape)
-    jit_local_erosion = local_erosion(fd,k,l)
-    fde = jax.numpy.apply_along_axis(jit_local_erosion,1,index_f).reshape(f.shape)
-    return fde
+    return erosion(dilation(f,index_f,k),index_f,k)
 
 #Alternate-sequential filter of f by k
 def asf(f,index_f,k):
     return closing(opening(f,index_f,k),index_f,k)
 
 #Complement
-def complement(f,m = 1):
-    return m - f
+def complement(f):
+    return 1 - f
 
 #Sup-generating with interval [k1,k2]
-def supgen(f,index_f,k1,k2,m):
-    return jnp.minimum(erosion(f,index_f,k1),complement(dilation(f,index_f,complement(k2.transpose(),m)),m))
+def supgen(f,index_f,k1,k2):
+    return jnp.minimum(erosion(f,index_f,k1),complement(dilation(f,index_f,complement(k2.transpose()))))
 
 #Inf-generating with interval [k1,k2]
 def infgen(f,index_f,k1,k2,m):
-    return jnp.maximum(dilation(f,index_f,k1),complement(erosion(f,index_f,complement(k2.transpose(),m),m)))
+    return jnp.maximum(dilation(f,index_f,k1),complement(erosion(f,index_f,complement(k2.transpose()))))
