@@ -41,6 +41,7 @@ def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.1,b1 = 0.9
     with alive_bar(epochs) as bar:
         for e in range(epochs):
             opt_state,params = update(opt_state,params,x,y)
+            bar.title("Loss: " + str(jnp.round(lf(params,x,y),5)))
             bar()
 
     return [{'params': params[i],'forward': allp[i]['forward']} for i in range(len(params))]
