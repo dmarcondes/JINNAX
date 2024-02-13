@@ -31,13 +31,15 @@ def apply_morph_layer(x,type[i],params[i],index_x):
 #Define which operator will be applied
 oper = jmp.operator(type)
 if type == 'supgen' or type == 'ingen':
-oper = jax.vmap(lambda k: oper(x,index_x,jax.nn.sigmoid(k[0,:,:]),jax.nn.sigmoid(k[1,:,:])),in_axes = (0),out_axes = 0)
+oper = jax.vmap(lambda k: oper(x,index_x,k),in_axes = (0),out_axes = 0)
 else:
     oper = jax.vmap(lambda k: oper(f,index_f,k[0,:,:],None),in_axes = (0),out_axis = 0)
 params.shape
 oper(params)
-mp.infgen(x,index_x,jax.nn.sigmoid(k1),jax.nn.sigmoid(k2))
-f = lambda k: mp.supgen(x,index_x,jax.nn.sigmoid(k[0,:,:]),jax.nn.sigmoid(k[1,:,:]))
+k1 = params[0,0,:,:]
+k2 = params[0,1,:,:]
+oper(x,index_x,k)
+fx = oper(x,index_x,jax.nn.sigmoid(k[0,:,:]),jax.nn.sigmoid(k[1,:,:]))
 k = params[0,:,:,:]
 f(k)
 #AQUI!
@@ -78,7 +80,6 @@ for i in range(len(width)):
 
 #Forward pass
 def forward(x,params):
-p = 0
 x = x.reshape((1,x.shape[0],x.shape[1],x.shape[2]))
 for i in range(len(type)):
     #Apply sup and inf
@@ -90,7 +91,7 @@ for i in range(len(type)):
         x = 1 - x
     else:
         #Apply other layer
-        x = jax.vmap(lambda x: apply_morph_layer(x[0,:,:,:],type[i],params[i],index_x),in_axes = (0),out_axes = 0)
+        x = jax.vmap(lambda x: apply_morph_layer(x,type[i],params[i],index_x),in_axes = (0),out_axes = 0)(x[0,:,:,:])
 return x[0,:,:,:]
 
 #Return initial parameters and forward function

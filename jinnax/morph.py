@@ -121,7 +121,7 @@ def operator(type):
     elif type == 'asf':
         oper = mp.asf
     elif type == 'supgen':
-        oper = mp.supgen
+        oper = lambda x,index_x,k: mp.supgen(x,index_x,jax.lax.slice_in_dim(k,0,1),jax.lax.slice_in_dim(k,1,2))
     elif type == 'infgen':
         oper = mp.infgen
     else:
