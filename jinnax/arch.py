@@ -29,7 +29,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0):
 #Apply a morphological layer
 def apply_morph_layer(x,type,params,index_x):
     #Define which operator will be applied
-    oper = jmp.operator(type)
+    oper = mp.operator(type)
     oper = jax.vmap(oper,in_axes = (None,None,0),out_axes = 0)
     fx = oper(x,index_x,jax.nn.sigmoid(params))
     return fx
