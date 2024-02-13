@@ -59,19 +59,18 @@ def dilation(f,index_f,k):
     return db(f)
 
 #Opening of f by k
-@jax.jit
 def opening(f,index_f,k):
-    fe = erosion(f,index_f,k)
-    return dilation(fe,index_f,k)
+    eb = jax.vmap(lambda f: erosion_2D(f,index_f,k),in_axes = (0),out_axes = 0)
+    db = jax.vmap(lambda f: dilation_2D(f,index_f,k),in_axes = (0),out_axes = 0)
+    f = eb(f)
+    return db(f)
 
-#Coling of f by k
-@jax.jit
+#Colosing of f by k
 def closing(f,index_f,k):
     fd = dilation(f,index_f,k)
     return erosion(fd,index_f,k)
 
 #Alternate-sequential filter of f by k
-@jax.jit
 def asf(f,index_f,k):
     fo = opening(f,index_f,k)
     return closing(fo,index_f,k)
@@ -82,14 +81,12 @@ def complement(f):
     return 1 - f
 
 #Sup-generating with interval [k1,k2]
-@jax.jit
 def supgen(f,index_f,k1,k2):
     K1 = jnp.minimum(k1,k2)
     K2 = jnp.maximum(k1,k2)
     return jnp.minimum(erosion(f,index_f,K1),complement(dilation(f,index_f,complement(K2.transpose()))))
 
 #Inf-generating with interval [k1,k2]
-@jax.jit
 def infgen(f,index_f,k1,k2):
     K1 = jnp.minimum(k1,k2)
     K2 = jnp.maximum(k1,k2)
