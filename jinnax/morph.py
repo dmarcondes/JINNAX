@@ -111,19 +111,19 @@ vmap_inf = jax.jit(jax.vmap(inf,in_axes = (1),out_axes = 1))
 #Return operator by name
 def operator(type):
     if type == 'erosion':
-        oper = mp.erosion
+        oper = lambda x,index_x,k: erosion(x,index_x,jax.lax.slice_in_dim(k,0,1))
     elif type == 'dilation':
-        oper = mp.dilation
+        oper = lambda x,index_x,k: dilation(x,index_x,jax.lax.slice_in_dim(k,0,1))
     elif type == 'opening':
-        oper = mp.opening
+        oper = lambda x,index_x,k: opening(x,index_x,jax.lax.slice_in_dim(k,0,1))
     elif type == 'closing':
-        oper = mp.closing
+        oper = lambda x,index_x,k: closing(x,index_x,jax.lax.slice_in_dim(k,0,1))
     elif type == 'asf':
-        oper = mp.asf
+        oper = lambda x,index_x,k: asf(x,index_x,jax.lax.slice_in_dim(k,0,1))
     elif type == 'supgen':
-        oper = lambda x,index_x,k: mp.supgen(x,index_x,jax.lax.slice_in_dim(k,0,1),jax.lax.slice_in_dim(k,1,2))
+        oper = lambda x,index_x,k: supgen(x,index_x,jax.lax.slice_in_dim(k,0,1),jax.lax.slice_in_dim(k,1,2))
     elif type == 'infgen':
-        oper = mp.infgen
+        oper = lambda x,index_x,k: infgen(x,index_x,jax.lax.slice_in_dim(k,0,1),jax.lax.slice_in_dim(k,1,2))
     else:
         print('Type of layer ' + type + 'is wrong!')
         return 1
