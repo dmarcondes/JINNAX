@@ -52,19 +52,19 @@ def cmnn(type,width,size,shape_x,key = 0):
     #Forward pass
     @jax.jit
     def forward(x,params):
-    x = x.reshape((1,x.shape[0],x.shape[1],x.shape[2]))
-    for i in range(len(type)):
-        #Apply sup and inf
-        if type == 'sup':
-            x = mp.vmap_sup(x)
-        elif type == 'inf':
-            x = mp.vmap_inf(x)
-        elif type == 'complement':
-            x = 1 - x
-        else:
-            #Apply other layer
-            x = jax.vmap(lambda x: apply_morph_layer(x,type[i],params[i],index_x),in_axes = (0),out_axes = 0)(x[0,:,:,:])
-    return x[0,:,:,:]
+        x = x.reshape((1,x.shape[0],x.shape[1],x.shape[2]))
+        for i in range(len(type)):
+            #Apply sup and inf
+            if type == 'sup':
+                x = mp.vmap_sup(x)
+            elif type == 'inf':
+                x = mp.vmap_inf(x)
+            elif type == 'complement':
+                x = 1 - x
+            else:
+                #Apply other layer
+                x = jax.vmap(lambda x: apply_morph_layer(x,type[i],params[i],index_x),in_axes = (0),out_axes = 0)(x[0,:,:,:])
+        return x[0,:,:,:]
 
     #Return initial parameters and forward function
     return {'params': params,'forward': forward}
