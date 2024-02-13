@@ -40,7 +40,7 @@ def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.1,b1 = 0.9
     with alive_bar(epochs) as bar:
         for e in range(epochs):
             #Permutate x
-            x = jax.random.permutation(key[e,0])
+            x = jax.random.permutation(key[e,0],x,0)
             for b in range(batches):
                 if b < batches - 1:
                     xb = jax.lax.dynamic_slice(x,(b*bsize,0,0),(bsize,x.shape[1],x.shape[2]))
@@ -51,5 +51,5 @@ def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.1,b1 = 0.9
                 opt_state,params = update(opt_state,params,xb,yb)
             bar.title("Loss: " + str(jnp.round(lf(params,x,y),10)))
             bar()
-    
+
     return params
