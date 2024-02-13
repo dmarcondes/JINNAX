@@ -97,7 +97,34 @@ def infgen(f,index_f,k1,k2):
 def sup(f):
     return jnp.max(f,axis = 0).reshape((1,f.shape[1],f.shape[2]))
 
+#Sup vmap for arch
+vmap_sup = jax.jit(jax.vmap(sup,in_axes = (1),out_axes = 1))
+
 #Inf of array of images
 @jax.jit
 def inf(f):
     return jnp.min(f,axis = 0).reshape((1,f.shape[1],f.shape[2]))
+
+#Inf vmap for arch
+vmap_inf = jax.jit(jax.vmap(inf,in_axes = (1),out_axes = 1))
+
+#Return operator by name
+def operator(type):
+    if type == 'erosion':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.erosion(f,index_f,k1))
+    elif type == 'dilation':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.dilation(f,index_f,k1))
+    elif type == 'opening':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.opening(f,index_f,k1))
+    elif type == 'closing':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.closing(f,index_f,k1))
+    elif type == 'asf':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.asf(f,index_f,k1))
+    elif type == 'supgen':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.supgen(f,index_f,k1,k2))
+    elif type == 'infgen':
+        oper = jax.jit(lambda f,index_f,k1,k2: mp.infgen(f,index_f,k1,k2))
+    else:
+        print('Type of layer ' + type + 'is wrong!')
+        return 1
+    return oper
