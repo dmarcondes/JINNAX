@@ -32,6 +32,12 @@ def erosion(f,index_f,k):
     jit_local_erosion = local_erosion(f,k,l)
     return jit_local_erosion(index_f).reshape(f.shape)
 
+#Erosion in batches
+@jax.jit
+def erosion_batch(f,index_f,k):
+    eb = jax.vmap(lambda f: erosion(f,index_f,k),in_axes = (0),out_axes = 0)
+    return eb(f)
+
 #Local dilation of f by k for pixel (i,j)
 def local_dilation(f,k,l):
     def jit_local_dilation(index):
