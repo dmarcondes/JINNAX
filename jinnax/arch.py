@@ -35,7 +35,7 @@ def apply_morph_layer(x,type[i],params[i],index_x):
     return fx
 
 #Canonical Morphological NN
-def cmnn(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0):
+def cmnn(type,width,size,shape_x,key = 0):
     #Index window
     index_x = mp.index_array(shape_x)
 
