@@ -27,15 +27,15 @@ def local_erosion(f,k,l):
 
 #Erosion of f by k
 @jax.jit
-def erosion(f,index_f,k):
+def erosion_2D(f,index_f,k):
     l = math.floor(k.shape[0]/2)
     jit_local_erosion = local_erosion(f,k,l)
     return jit_local_erosion(index_f).reshape(f.shape)
 
 #Erosion in batches
 @jax.jit
-def erosion_batch(f,index_f,k):
-    eb = jax.vmap(lambda f: erosion(f,index_f,k),in_axes = (0),out_axes = 0)
+def erosion(f,index_f,k):
+    eb = jax.vmap(lambda f: erosion_2D(f,index_f,k),in_axes = (0),out_axes = 0)
     return eb(f)
 
 #Local dilation of f by k for pixel (i,j)
@@ -47,10 +47,16 @@ def local_dilation(f,k,l):
 
 #Dilation of f by k
 @jax.jit
-def dilation(f,index_f,k):
+def dilation_2D(f,index_f,k):
     l = math.floor(k.shape[0]/2)
     jit_local_dilation = local_dilation(f,k,l)
     return jit_local_dilation(index_f).reshape(f.shape)
+
+#Dilation in batches
+@jax.jit
+def dilation(f,index_f,k):
+    db = jax.vmap(lambda f: dilation_2D(f,index_f,k),in_axes = (0),out_axes = 0)
+    return db(f)
 
 #Opening of f by k
 @jax.jit
@@ -91,16 +97,10 @@ def infgen(f,index_f,k1,k2):
 
 #Sup of array of images
 @jax.jit
-def sup(farr):
-    f = farr[0,:,:]
-    for i in range(farr.shape[0] - 1):
-        f = jnp.maximum(f,farr[i+1,:,:])
-    return f
+def sup(f):
+    return jnp.max(f,axis = 0).reshape((1,f.shape[1],f.shape[2]))
 
 #Inf of array of images
 @jax.jit
-def inf(farr):
-    f = farr[0,:,:]
-    for i in range(farr.shape[0] - 1):
-        f = jnp.minimum(f,farr[i+1,:,:])
-    return f
+def inf(f):
+    return jnp.min(f,axis = 0).reshape((1,f.shape[1],f.shape[2]))
