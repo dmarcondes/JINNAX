@@ -27,7 +27,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0):
     return {'params': params,'forward': forward}
 
 #Apply a morphological layer
-def apply_morph_layer(x,type[i],params[i],index_x):
+def apply_morph_layer(x,type,params,index_x):
     #Define which operator will be applied
     oper = jmp.operator(type)
     oper = jax.vmap(oper,in_axes = (None,None,0),out_axes = 0)
