@@ -63,7 +63,7 @@ def cmnn(type,width,size,shape_x,key = 0):
                 x = 1 - x
             else:
                 #Apply other layer
-                x = jax.vmap(lambda x: apply_morph_layer(x,type[i],params[i],index_x),in_axes = (0),out_axes = 0)(x[0,:,:,:])
+                x = apply_morph_layer(x[0,:,:,:],type[i],params[i],index_x)
         return x[0,:,:,:]
 
     #Return initial parameters and forward function
