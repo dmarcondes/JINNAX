@@ -22,7 +22,7 @@ def index_array(shape):
 def local_erosion(f,k,l):
     def jit_local_erosion(index):
         fw = jax.lax.dynamic_slice(f, (index[0] - l, index[1] - l), (2*l + 1, 2*l + 1))
-        return jnp.minimum(jnp.maximum(jnp.min(fw - k),0.0),255.0)
+        return jnp.minimum(jnp.maximum(jnp.min(fw - k),0.0),1.0)
     return jit_local_erosion
 
 #Erosion of f by k
@@ -42,7 +42,7 @@ def erosion(f,index_f,k):
 def local_dilation(f,k,l):
     def jit_local_dilation(index):
         fw = jax.lax.dynamic_slice(f, (index[0] - l, index[1] - l), (2*l + 1, 2*l + 1))
-        return jnp.minimum(jnp.maximum(jnp.max(fw + k),0.0),255.0)
+        return jnp.minimum(jnp.maximum(jnp.max(fw + k),0.0),1.0)
     return jit_local_dilation
 
 #Dilation of f by k
@@ -80,19 +80,19 @@ def asf(f,index_f,k):
 #Complement
 @jax.jit
 def complement(f):
-    return 255 - f
+    return 1 - f
 
 #Sup-generating with interval [k1,k2]
 def supgen(f,index_f,k1,k2):
     K1 = jnp.minimum(k1,k2)
     K2 = jnp.maximum(k1,k2)
-    return jnp.minimum(erosion(f,index_f,K1),255 - dilation(f,index_f,255 - K2.transpose()))
+    return jnp.minimum(erosion(f,index_f,K1),1 - dilation(f,index_f,1 - K2.transpose()))
 
 #Inf-generating with interval [k1,k2]
 def infgen(f,index_f,k1,k2):
     K1 = jnp.minimum(k1,k2)
     K2 = jnp.maximum(k1,k2)
-    return jnp.maximum(dilation(f,index_f,K1),255 - erosion(f,index_f,255 - K2.transpose()))
+    return jnp.maximum(dilation(f,index_f,K1),1 - erosion(f,index_f,1 - K2.transpose()))
 
 #Sup of array of images
 @jax.jit
