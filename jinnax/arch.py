@@ -30,10 +30,10 @@ def fconNN(width,activation = jax.nn.tanh,key = 0):
 def apply_morph_layer(x,type,params,index_x):
     #Apply each operator
     params = jnp.minimum(jax.nn.relu(params),1.0)
-    oper = mp.operator(type)
-    fx = oper(x,index_x,params[0,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
+    oper = moperator(type)
+    fx = oper(x,index_x,params[0,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
     for i in range(1,params.shape[0]):
-        fx = oper_each(i,fx)
+        fx = jnp.append(fx,oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2])),0)
     return fx
 
 #Canonical Morphological NN

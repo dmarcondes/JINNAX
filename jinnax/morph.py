@@ -43,7 +43,7 @@ def local_dilation(f,k,l):
     def jit_local_dilation(index):
         fw = jax.lax.dynamic_slice(f, (index[0] - l, index[1] - l), (2*l + 1, 2*l + 1))
         return jnp.minimum(jnp.maximum(jnp.max(fw + k),0.0),1.0)
-    return jax.vmap(jit_local_dilation,in_axes = (0),out_axes = 0)
+    return jit_local_dilation
 
 #Dilation of f by k
 @jax.jit
@@ -113,19 +113,19 @@ vmap_inf = jax.jit(jax.vmap(inf,in_axes = (1),out_axes = 1))
 #Return operator by name
 def operator(type):
     if type == 'erosion':
-        oper = lambda x,index_x,k: erosion(x,index_x,jax.lax.slice_in_dim(k,0,1))
+        oper = lambda x,index_x,k: erosion(x,index_x,jax.lax.slice_in_dim(k,0,1).reshape((k.shape[1],k.shape[2])))
     elif type == 'dilation':
-        oper = lambda x,index_x,k: dilation(x,index_x,jax.lax.slice_in_dim(k,0,1))
+        oper = lambda x,index_x,k: dilation(x,index_x,jax.lax.slice_in_dim(k,0,1).reshape((k.shape[1],k.shape[2])))
     elif type == 'opening':
-        oper = lambda x,index_x,k: opening(x,index_x,jax.lax.slice_in_dim(k,0,1))
+        oper = lambda x,index_x,k: opening(x,index_x,jax.lax.slice_in_dim(k,0,1).reshape((k.shape[1],k.shape[2])))
     elif type == 'closing':
-        oper = lambda x,index_x,k: closing(x,index_x,jax.lax.slice_in_dim(k,0,1))
+        oper = lambda x,index_x,k: closing(x,index_x,jax.lax.slice_in_dim(k,0,1).reshape((k.shape[1],k.shape[2])))
     elif type == 'asf':
-        oper = lambda x,index_x,k: asf(x,index_x,jax.lax.slice_in_dim(k,0,1))
+        oper = lambda x,index_x,k: asf(x,index_x,jax.lax.slice_in_dim(k,0,1).reshape((k.shape[1],k.shape[2])))
     elif type == 'supgen':
-        oper = lambda x,index_x,k: supgen(x,index_x,jax.lax.slice_in_dim(k,0,1),jax.lax.slice_in_dim(k,1,2))
+        oper = lambda x,index_x,k: supgen(x,index_x,jax.lax.slice_in_dim(k,0,1).reshape((k.shape[1],k.shape[2])),jax.lax.slice_in_dim(k,1,2).reshape((k.shape[1],k.shape[2])))
     elif type == 'infgen':
-        oper = lambda x,index_x,k: infgen(x,index_x,jax.lax.slice_in_dim(k,0,1),jax.lax.slice_in_dim(k,1,2))
+        oper = lambda x,index_x,k: infgen(x,index_x,jax.lax.slice_in_dim(k,0,1).reshape((k.shape[1],k.shape[2])),jax.lax.slice_in_dim(k,1,2).reshape((k.shape[1],k.shape[2])))
     else:
         print('Type of layer ' + type + 'is wrong!')
         return 1
