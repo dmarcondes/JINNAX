@@ -29,7 +29,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0):
 #Apply a morphological layer
 def apply_morph_layer(x,type,params,index_x):
     #Apply each operator
-    params = jnp.minimum(jax.nn.relu(params),1.0)
+    params = jax.nn.relu(sigmoid)#jnp.minimum(jax.nn.relu(params),1.0)
     oper = mp.operator(type)
     fx = oper(x,index_x,params[0,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
     for i in range(1,params.shape[0]):
@@ -49,7 +49,7 @@ def cmnn(type,width,size,shape_x,key = 0):
         if type[i] == 'supgen' or type[i] == 'infgen':
             params.append(jnp.zeros((width[i],2,size[i],size[i])) + 0.5)#initializer(k[i,:],(width[i],2,size[i],size[i]),jnp.float32))
         else:
-            params.append(jnp.zeros((width[i],2,size[i],size[i])) + 0.5)#initializer(k[i,:],(width[i],1,size[i],size[i]),jnp.float32))
+            params.append(jnp.zeros((width[i],1,size[i],size[i])) + 0.5)#initializer(k[i,:],(width[i],1,size[i],size[i]),jnp.float32))
 
     #Forward pass
     @jax.jit
