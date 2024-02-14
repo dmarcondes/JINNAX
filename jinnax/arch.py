@@ -51,22 +51,22 @@ def cmnn(type,width,size,shape_x,key = 0):
         else:
             params.append(initializer(k[i,:],(width[i],1,size[i],size[i]),jnp.float32))
 
-#Forward pass
-@jax.jit
-def forward(x,params):
-    x = x.reshape((1,x.shape[0],x.shape[1],x.shape[2]))
-    for i in range(len(type)):
-        #Apply sup and inf
-        if type[i] == 'sup':
-            x = mp.vmap_sup(x)
-        elif type[i] == 'inf':
-            x = mp.vmap_inf(x)
-        elif type[i] == 'complement':
-            x = 1 - x
-        else:
-            #Apply other layer
-            x = apply_morph_layer(x[0,:,:,:],type[i],params[i],index_x)
-    return x[0,:,:,:]
+    #Forward pass
+    @jax.jit
+    def forward(x,params):
+        x = x.reshape((1,x.shape[0],x.shape[1],x.shape[2]))
+        for i in range(len(type)):
+            #Apply sup and inf
+            if type[i] == 'sup':
+                x = mp.vmap_sup(x)
+            elif type[i] == 'inf':
+                x = mp.vmap_inf(x)
+            elif type[i] == 'complement':
+                x = 1 - x
+            else:
+                #Apply other layer
+                x = apply_morph_layer(x[0,:,:,:],type[i],params[i],index_x)
+        return x[0,:,:,:]
 
     #Return initial parameters and forward function
     return {'params': params,'forward': forward}
