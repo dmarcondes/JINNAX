@@ -41,15 +41,15 @@ def cmnn(type,width,size,shape_x,key = 0):
     #Index window
     index_x = mp.index_array(shape_x)
 
-    #Initialize parameters with Glorot initialization
-    initializer = jax.nn.initializers.glorot_normal()
+    #Initialize parameters
+    initializer = jax.nn.initializers.uniform(1.0)
     k = jax.random.split(jax.random.PRNGKey(key),(max(width))) #Seed for initialization
     params = list()
     for i in range(len(width)):
         if type[i] == 'supgen' or type[i] == 'infgen':
-            params.append(jnp.abs(initializer(k[i,:],(width[i],2,size[i],size[i]),jnp.float32)))
+            params.append(initializer(k[i,:],(width[i],2,size[i],size[i]),jnp.float32))
         else:
-            params.append(jnp.abs(initializer(k[i,:],(width[i],1,size[i],size[i]),jnp.float32)))
+            params.append(initializer(k[i,:],(width[i],1,size[i],size[i]),jnp.float32))
 
     #Forward pass
     @jax.jit
