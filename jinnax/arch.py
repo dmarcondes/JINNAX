@@ -49,7 +49,7 @@ def cmnn(type,width,size,shape_x,key = 0):
         if type[i] == 'supgen' or type[i] == 'infgen':
             params.append(jnp.zeros((width[i],2,size[i],size[i])) + 0.5)#initializer(k[i,:],(width[i],2,size[i],size[i]),jnp.float32))
         else:
-            params.append(jnp.zeros((width[i],2,size[i],size[i])) + 0.5#initializer(k[i,:],(width[i],1,size[i],size[i]),jnp.float32))
+            params.append(jnp.zeros((width[i],2,size[i],size[i])) + 0.5)#initializer(k[i,:],(width[i],1,size[i],size[i]),jnp.float32))
 
     #Forward pass
     @jax.jit
