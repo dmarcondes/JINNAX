@@ -23,14 +23,14 @@ def local_erosion(f,k,l):
     def jit_local_erosion(index):
         fw = jax.lax.dynamic_slice(f, (index[0] - l, index[1] - l), (2*l + 1, 2*l + 1))
         return jnp.minimum(jnp.maximum(jnp.min(fw - k),0.0),1.0)
-    return jax.vmap(jit_local_erosion,in_axes = (0),out_axes = 0)
+    return jit_local_erosion
 
 #Erosion of f by k
 @jax.jit
 def erosion_2D(f,index_f,k):
     l = math.floor(k.shape[0]/2)
     jit_local_erosion = local_erosion(f,k,l)
-    return jit_local_erosion(index_f).reshape(f.shape)
+    return jnp.apply_along_axis(jit_local_erosion,1,index_f).reshape(f.shape)
 
 #Erosion in batches
 @jax.jit
@@ -50,7 +50,7 @@ def local_dilation(f,k,l):
 def dilation_2D(f,index_f,k):
     l = math.floor(k.shape[0]/2)
     jit_local_dilation = local_dilation(f,k,l)
-    return jit_local_dilation(index_f).reshape(f.shape)
+    return jnp.apply_along_axis(jit_local_dilation,1,index_f).reshape(f.shape)
 
 #Dilation in batches
 @jax.jit
@@ -67,8 +67,10 @@ def opening(f,index_f,k):
 
 #Colosing of f by k
 def closing(f,index_f,k):
-    fd = dilation(f,index_f,k)
-    return erosion(fd,index_f,k)
+    eb = jax.vmap(lambda f: erosion_2D(f,index_f,k),in_axes = (0),out_axes = 0)
+    db = jax.vmap(lambda f: dilation_2D(f,index_f,k),in_axes = (0),out_axes = 0)
+    f = db(f)
+    return eb(f)
 
 #Alternate-sequential filter of f by k
 def asf(f,index_f,k):

@@ -28,10 +28,12 @@ def fconNN(width,activation = jax.nn.tanh,key = 0):
 
 #Apply a morphological layer
 def apply_morph_layer(x,type,params,index_x):
-    #Define which operator will be applied
+    #Apply each operator
+    params = jnp.minimum(jax.nn.relu(params),1.0)
     oper = mp.operator(type)
-    oper = jax.vmap(oper,in_axes = (None,None,0),out_axes = 0)
-    fx = oper(x,index_x,jax.nn.sigmoid(params))
+    fx = oper(x,index_x,params[0,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
+    for i in range(1,params.shape[0]):
+        fx = oper_each(i,fx)
     return fx
 
 #Canonical Morphological NN
@@ -49,22 +51,22 @@ def cmnn(type,width,size,shape_x,key = 0):
         else:
             params.append(initializer(k[i,:],(width[i],1,size[i],size[i]),jnp.float32))
 
-    #Forward pass
-    @jax.jit
-    def forward(x,params):
-        x = x.reshape((1,x.shape[0],x.shape[1],x.shape[2]))
-        for i in range(len(type)):
-            #Apply sup and inf
-            if type[i] == 'sup':
-                x = mp.vmap_sup(x)
-            elif type[i] == 'inf':
-                x = mp.vmap_inf(x)
-            elif type[i] == 'complement':
-                x = 1 - x
-            else:
-                #Apply other layer
-                x = apply_morph_layer(x[0,:,:,:],type[i],params[i],index_x)
-        return x[0,:,:,:]
+#Forward pass
+@jax.jit
+def forward(x,params):
+    x = x.reshape((1,x.shape[0],x.shape[1],x.shape[2]))
+    for i in range(len(type)):
+        #Apply sup and inf
+        if type[i] == 'sup':
+            x = mp.vmap_sup(x)
+        elif type[i] == 'inf':
+            x = mp.vmap_inf(x)
+        elif type[i] == 'complement':
+            x = 1 - x
+        else:
+            #Apply other layer
+            x = apply_morph_layer(x[0,:,:,:],type[i],params[i],index_x)
+    return x[0,:,:,:]
 
-    #Return initial parameters and forward function
-    return {'params': params,'forward': forward}
+#Return initial parameters and forward function
+return {'params': params,'forward': forward}
