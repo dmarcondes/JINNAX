@@ -42,7 +42,7 @@ def cmnn(type,width,size,shape_x,key = 0):
     index_x = mp.index_array(shape_x)
 
     #Initialize parameters
-    initializer = jax.nn.initializers.uniform(1.0)
+    initializer = jax.nn.initializers.normal()
     k = jax.random.split(jax.random.PRNGKey(key),(max(width))) #Seed for initialization
     params = list()
     for i in range(len(width)):
