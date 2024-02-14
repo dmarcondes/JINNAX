@@ -49,7 +49,7 @@ def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.001,b1 = 0
                     xb = x[b*bsize:x.shape[0],:,:]
                     yb = y[b*bsize:y.shape[0],:,:]
                 opt_state,params = update(opt_state,params,xb,yb)
-            l = print(str(jnp.round(lf(params,x,y),10)))
+            l = str(jnp.round(lf(params,x,y),10))
             bar.title("Loss: " + l)
             bar()
 
