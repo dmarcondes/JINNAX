@@ -68,5 +68,5 @@ def forward(x,params):
             x = apply_morph_layer(x[0,:,:,:],type[i],params[i],index_x)
     return x[0,:,:,:]
 
-#Return initial parameters and forward function
-return {'params': params,'forward': forward}
+    #Return initial parameters and forward function
+    return {'params': params,'forward': forward}
