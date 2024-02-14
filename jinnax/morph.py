@@ -22,7 +22,7 @@ def index_array(shape):
 def local_erosion(f,k,l):
     def jit_local_erosion(index):
         fw = jax.lax.dynamic_slice(f, (index[0] - l, index[1] - l), (2*l + 1, 2*l + 1))
-        return jnp.minimum(jnp.maximum(jnp.min(fw - k),0.0),1.0)
+        return jnp.minimum(jnp.maximum(jnp.min(fw - k),0.0),255.0)
     return jit_local_erosion
 
 #Erosion of f by k
@@ -42,7 +42,7 @@ def erosion(f,index_f,k):
 def local_dilation(f,k,l):
     def jit_local_dilation(index):
         fw = jax.lax.dynamic_slice(f, (index[0] - l, index[1] - l), (2*l + 1, 2*l + 1))
-        return jnp.minimum(jnp.maximum(jnp.max(fw + k),0.0),1.0)
+        return jnp.minimum(jnp.maximum(jnp.max(fw + k),0.0),255.0)
     return jit_local_dilation
 
 #Dilation of f by k
