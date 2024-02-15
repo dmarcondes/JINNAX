@@ -10,6 +10,16 @@ import math
 def MSE(true,pred):
   return jnp.mean((true - pred)**2)
 
+#Croos entropy
+@jax.jit
+def CE(true,pred):
+  return jnp.mean(- true * jnp.log(pred) - (1 - true) * jnp.log(1 - pred))
+
+#IoU
+@jax.jit
+def IoU(true,pred):
+  return 1 - (jnp.sum(2 * true * pred) + 1)/(jnp.sum(true + pred) + 1)
+
 #Training function
 def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0):
     #Key
