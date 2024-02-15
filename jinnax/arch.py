@@ -144,7 +144,7 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
         l = math.floor(max_size/2)
         nn = fconNN_str(width_str,activation,key)
         forward_inner = nn['forward']
-        w_y = jax.lax.pad(jnp.array(1.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((w_max.shape[0],1)) - 1 + 0.05*jnp.abs(jax.random.normal(key = jax.random.PRNGKey(key),shape = (w_max.shape[0],1)))
+        w_y = jax.lax.pad(jnp.array(1.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((w_max.shape[0],1)) - 1 + 0.1*jnp.abs(jax.random.normal(key = jax.random.PRNGKey(key),shape = (w_max.shape[0],1)))
         params_id = jtr.train_fcnn(w_max,w_y,forward_inner,nn['params'],jtr.MSE,epochs = 10000)
 
         #Assign trained parameters
