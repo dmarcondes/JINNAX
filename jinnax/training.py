@@ -21,7 +21,7 @@ def IoU(true,pred):
   return 1 - (jnp.sum(2 * true * pred) + 1)/(jnp.sum(true + pred) + 1)
 
 #Training function
-def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0):
+def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,notebook = False):
     #Key
     key = jax.random.split(jax.random.PRNGKey(key),epochs)
 
@@ -60,7 +60,10 @@ def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.001,b1 = 0
                     yb = y[b*bsize:y.shape[0],:,:]
                 opt_state,params = update(opt_state,params,xb,yb)
             l = str(jnp.round(lf(params,x,y),10))
-            bar.title("Loss: " + l)
-            bar()
+            if(e % 100 = 0 and notebook):
+                print('Epoch: ' + str(e) + ' Loss: ' + l)
+            if not notebook:
+                bar.title("Loss: " + l)
+                bar()
 
     return params
