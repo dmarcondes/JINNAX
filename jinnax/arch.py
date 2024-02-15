@@ -133,13 +133,13 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
     initializer = jax.nn.initializers.normal()
     k = jax.random.split(jax.random.PRNGKey(key),(len(width)*max(width))) #Seed for initialization
     c = 0
-    forward_inner = fconNN_str(width_str,activation = jax.nn.tanh,key =0)['forward']
+    forward_inner = fconNN_str(width_str,activation = jax.nn.tanh,key = 0)['forward']
     params = list()
     for i in range(len(width)):
         params.append(list())
         for j in range(width[i]):
             if type[i] ==  'sup' or type[i] ==  'inf' or type[i] ==  'complement':
-                params[i].append(jnp.array(0))
+                params[i].append(jnp.array(0.0,dtype = jnp.float32))
             else:
                 tmp = fconNN_str(width_str,activation = jax.nn.tanh,key = k[c,0])
                 params[i].append(tmp['params'])
