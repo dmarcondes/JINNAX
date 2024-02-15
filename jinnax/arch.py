@@ -62,7 +62,7 @@ def apply_morph_layer(x,type,params,index_x):
     return fx
 
 #Apply a morphological layer in iterated NN
-def apply_morph_layer_iter(x,type,params,index_x,w,forward_inner.d):
+def apply_morph_layer_iter(x,type,params,index_x,w,forward_inner,d):
     #Compute structural elements
     k = None
     if type == 'supgen' or type == 'infgen':
