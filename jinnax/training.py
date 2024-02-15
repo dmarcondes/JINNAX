@@ -4,6 +4,7 @@ import jax.numpy as jnp
 import optax
 from alive_progress import alive_bar
 import math
+import time
 
 #MSE
 @jax.jit
@@ -47,6 +48,7 @@ def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.001,b1 = 0
       return opt_state,params
 
     #Train
+    t0 = time.time()
     with alive_bar(epochs) as bar:
         for e in range(epochs):
             #Permutate x
@@ -61,7 +63,7 @@ def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.001,b1 = 0
                 opt_state,params = update(opt_state,params,xb,yb)
             l = str(jnp.round(lf(params,x,y),10))
             if(e % 100 == 0 and notebook):
-                print('Epoch: ' + str(e) + ' Loss: ' + l)
+                print('Epoch: ' + str(e) + 'Time: ' + str(jnp.round(time.time() - t0,2)) 's Loss: ' + l)
             if not notebook:
                 bar.title("Loss: " + l)
                 bar()
