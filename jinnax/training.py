@@ -60,7 +60,7 @@ def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.001,b1 = 0
                     yb = y[b*bsize:y.shape[0],:,:]
                 opt_state,params = update(opt_state,params,xb,yb)
             l = str(jnp.round(lf(params,x,y),10))
-            if(e % 100 = 0 and notebook):
+            if(e % 100 == 0 and notebook):
                 print('Epoch: ' + str(e) + ' Loss: ' + l)
             if not notebook:
                 bar.title("Loss: " + l)
