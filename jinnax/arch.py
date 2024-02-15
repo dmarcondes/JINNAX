@@ -2,6 +2,7 @@
 import jax
 import jax.numpy as jnp
 import jinnax.morph as mp
+import jinnax.training as jtr
 import math
 
 #Simple fully connected architecture. Return the function for the forward pass
@@ -125,15 +126,27 @@ def cmnn(type,width,size,shape_x,key = 0):
     return {'params': params,'forward': forward}
 
 #Canonical Morphological NN with iterated NN
-def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0):
+def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0,init = 'identity'):
     #Index window
     index_x = mp.index_array(shape_x)
 
+    #Create w to apply str NN
+    unique_size = set(size)
+    w = {}
+    for d in unique_size:
+        w[str(d)] = jnp.array([[x1.tolist(),x2.tolist()] for x1 in jnp.linspace(-jnp.floor(d/2),jnp.floor(d/2),d) for x2 in jnp.linspace(jnp.floor(d/2),-jnp.floor(d/2),d)])
+
     #Initialize parameters
-    initializer = jax.nn.initializers.normal()
-    k = jax.random.split(jax.random.PRNGKey(key),(len(width)*max(width))) #Seed for initialization
-    c = 0
-    forward_inner = fconNN_str(width_str,activation = jax.nn.tanh,key = 0)['forward']
+    if init == 'identity':
+    #Train inner NN to generate zero and one kernel
+    max_size = max(size)
+    w_max = w[str(max_size)]
+    nn = fconNN_str(width_str,activation,key)
+    forward_inner = nn0['forward']
+    params0 = train_fcnn(w_max,jnp.zeros((w_max.shape[0],1)),forward_inner,nn['params'],jtr.MSE,epochs = 10000)
+    params1 = train_fcnn(w_max,jnp.zeros((w_max.shape[0],1)) + 1.0,forward_inner,nn['params'],jtr.MSE,epochs = 10000)
+
+    #Assign trained parameters
     params = list()
     for i in range(len(width)):
         params.append(list())
@@ -141,18 +154,27 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
             if type[i] ==  'sup' or type[i] ==  'inf' or type[i] ==  'complement':
                 params[i].append(jnp.array(0.0,dtype = jnp.float32))
             else:
-                tmp = fconNN_str(width_str,activation = jax.nn.tanh,key = k[c,0])
-                params[i].append(tmp['params'])
+                params[i].append(params0)
                 if type[i] == 'supgen' or type[i] == 'infgen':
-                    tmp2 = fconNN_str(width_str,activation = jax.nn.tanh,key = k[c,1])
-                    params[i].append(tmp2['params'])
-                c = c + 1
-
-    #Create w to apply str NN
-    unique_size = set(size)
-    w = {}
-    for d in unique_size:
-        w[str(d)] = jnp.array([[x1.tolist(),x2.tolist()] for x1 in jnp.linspace(-jnp.floor(d/2),jnp.floor(d/2),d) for x2 in jnp.linspace(jnp.floor(d/2),-jnp.floor(d/2),d)])
+                    params[i].append(params1)
+    elif init == 'random':
+        initializer = jax.nn.initializers.normal()
+        k = jax.random.split(jax.random.PRNGKey(key),(len(width)*max(width))) #Seed for initialization
+        c = 0
+        forward_inner = fconNN_str(width_str,activation = jax.nn.tanh,key = 0)['forward']
+        params = list()
+        for i in range(len(width)):
+            params.append(list())
+            for j in range(width[i]):
+                if type[i] ==  'sup' or type[i] ==  'inf' or type[i] ==  'complement':
+                    params[i].append(jnp.array(0.0,dtype = jnp.float32))
+                else:
+                    tmp = fconNN_str(width_str,activation = jax.nn.tanh,key = k[c,0])
+                    params[i].append(tmp['params'])
+                    if type[i] == 'supgen' or type[i] == 'infgen':
+                        tmp2 = fconNN_str(width_str,activation = jax.nn.tanh,key = k[c,1])
+                        params[i].append(tmp2['params'])
+                    c = c + 1
 
     #Forward pass
     @jax.jit

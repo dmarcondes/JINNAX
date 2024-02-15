@@ -7,6 +7,7 @@ import numpy as np
 import random
 import sys
 from PIL import Image
+from IPython.display import display
 
 #Read and organize a data.frame
 def read_data_frame(file,sep = None,header = None,sheet = 0):
@@ -119,3 +120,12 @@ def save_images(images,files_path):
         else:
             tmp = Image.fromarray(np.uint8(jnp.round(255*images[0,:,:]))).convert('RGB')
         tmp.save(files_path[0])
+
+#Print images
+def print_images(images):
+    for i in range(images.shape[0]):
+        if len(images.shape) == 4:
+            tmp = Image.fromarray(np.uint8(jnp.round(255*images[i,:,:,:]))).convert('RGB')
+        else:
+            tmp = Image.fromarray(np.uint8(jnp.round(255*images[i,:,:]))).convert('RGB')
+        display(tmp)
