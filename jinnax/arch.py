@@ -142,7 +142,7 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
         max_size = max(size)
         w_max = w[str(max_size)]
         nn = fconNN_str(width_str,activation,key)
-        forward_inner = nn0['forward']
+        forward_inner = nn['forward']
         params0 = train_fcnn(w_max,jnp.zeros((w_max.shape[0],1)),forward_inner,nn['params'],jtr.MSE,epochs = 10000)
         params1 = train_fcnn(w_max,jnp.zeros((w_max.shape[0],1)) + 1.0,forward_inner,nn['params'],jtr.MSE,epochs = 10000)
 
