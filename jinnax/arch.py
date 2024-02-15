@@ -138,25 +138,25 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
 
     #Initialize parameters
     if init == 'identity':
-    #Train inner NN to generate zero and one kernel
-    max_size = max(size)
-    w_max = w[str(max_size)]
-    nn = fconNN_str(width_str,activation,key)
-    forward_inner = nn0['forward']
-    params0 = train_fcnn(w_max,jnp.zeros((w_max.shape[0],1)),forward_inner,nn['params'],jtr.MSE,epochs = 10000)
-    params1 = train_fcnn(w_max,jnp.zeros((w_max.shape[0],1)) + 1.0,forward_inner,nn['params'],jtr.MSE,epochs = 10000)
+        #Train inner NN to generate zero and one kernel
+        max_size = max(size)
+        w_max = w[str(max_size)]
+        nn = fconNN_str(width_str,activation,key)
+        forward_inner = nn0['forward']
+        params0 = train_fcnn(w_max,jnp.zeros((w_max.shape[0],1)),forward_inner,nn['params'],jtr.MSE,epochs = 10000)
+        params1 = train_fcnn(w_max,jnp.zeros((w_max.shape[0],1)) + 1.0,forward_inner,nn['params'],jtr.MSE,epochs = 10000)
 
-    #Assign trained parameters
-    params = list()
-    for i in range(len(width)):
-        params.append(list())
-        for j in range(width[i]):
-            if type[i] ==  'sup' or type[i] ==  'inf' or type[i] ==  'complement':
-                params[i].append(jnp.array(0.0,dtype = jnp.float32))
-            else:
-                params[i].append(params0)
-                if type[i] == 'supgen' or type[i] == 'infgen':
-                    params[i].append(params1)
+        #Assign trained parameters
+        params = list()
+        for i in range(len(width)):
+            params.append(list())
+            for j in range(width[i]):
+                if type[i] ==  'sup' or type[i] ==  'inf' or type[i] ==  'complement':
+                    params[i].append(jnp.array(0.0,dtype = jnp.float32))
+                else:
+                    params[i].append(params0)
+                    if type[i] == 'supgen' or type[i] == 'infgen':
+                        params[i].append(params1)
     elif init == 'random':
         initializer = jax.nn.initializers.normal()
         k = jax.random.split(jax.random.PRNGKey(key),(len(width)*max(width))) #Seed for initialization
