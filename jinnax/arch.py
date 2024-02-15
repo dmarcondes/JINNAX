@@ -47,7 +47,7 @@ def fconNN_str(width,activation = jax.nn.tanh,key = 0):
       *hidden,output = params
       for layer in hidden:
         x = activation(x @ layer['W'] + layer['B'])
-      return -0.25 * jax.nn.tanh(x @ output['W'] + output['B']) + 1.25
+      return jax.nn.tanh(x @ output['W'] + output['B'])
 
     #Return initial parameters and forward function
     return {'params': params,'forward': forward}
@@ -144,7 +144,7 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
         l = math.floor(max_size/2)
         nn = fconNN_str(width_str,activation,key)
         forward_inner = nn['forward']
-        w_y = jax.lax.pad(jnp.array(2.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((w_max.shape[0],1))- 2
+        w_y = jax.lax.pad(jnp.array(1.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((w_max.shape[0],1)) - 1
         params_id = jtr.train_fcnn(w_max,w_y,forward_inner,nn['params'],jtr.MSE,epochs = 10000)
 
         #Assign trained parameters
@@ -155,9 +155,9 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
                 if type[i] ==  'sup' or type[i] ==  'inf' or type[i] ==  'complement':
                     params[i].append(jnp.array(0.0,dtype = jnp.float32))
                 else:
-                    params[i].append(params0)
+                    params[i].append(params_id)
                     if type[i] == 'supgen' or type[i] == 'infgen':
-                        params[i].append(params1)
+                        params[i].append(params_id)
     elif init == 'random':
         initializer = jax.nn.initializers.normal()
         k = jax.random.split(jax.random.PRNGKey(key),(len(width)*max(width))) #Seed for initialization
