@@ -47,7 +47,7 @@ def fconNN_str(width,activation = jax.nn.tanh,key = 0):
       *hidden,output = params
       for layer in hidden:
         x = activation(x @ layer['W'] + layer['B'])
-      return x @ output['W'] + output['B']
+      return 2 * jax.nn.sigmoid(x @ output['W'] + output['B']) - 1
 
     #Return initial parameters and forward function
     return {'params': params,'forward': forward}
@@ -144,9 +144,9 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
         l = math.floor(max_size/2)
         nn = fconNN_str(width_str,activation,key)
         forward_inner = nn['forward']
-        w_y = jax.lax.pad(jnp.array(1.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((w_max.shape[0],1)) - 1 + 0.1*jnp.abs(jax.random.normal(key = jax.random.PRNGKey(key),shape = (w_max.shape[0],1)))
-        params_id = jtr.train_fcnn(w_max,w_y,forward_inner,nn['params'],jtr.MSE,epochs = 10000)
-
+        w_y = jax.lax.pad(jnp.array(0.5).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((w_max.shape[0],1)) - 1 #+ 0.1*jnp.abs(jax.random.normal(key = jax.random.PRNGKey(key),shape = (w_max.shape[0],1)))
+        params_id = jtr.train_fcnn(w_max,w_y,forward_inner,params_id,jtr.MSE,epochs = 10000,batches = 2,lr = 1e-5)
+        forward_inner(w_max,params_id)
         #Assign trained parameters
         params = list()
         for i in range(len(width)):
