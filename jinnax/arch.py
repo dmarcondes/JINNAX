@@ -225,7 +225,7 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
                 struct[i].append(jnp.array(0.0,dtype = jnp.float32))
             else:
                 for j in range(width[i]):
-                    struct[i].append(forward_inner(w[str(size[i])],params[i][j]).reshape((w[str(size[i])],w[str(size[i])])))
+                    struct[i].append(forward_inner(w[str(size[i])],params[i][j]).reshape((size[i],size[i])))
         return struct
 
     #Return initial parameters and forward function
