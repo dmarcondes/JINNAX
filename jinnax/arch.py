@@ -4,6 +4,7 @@ import jax.numpy as jnp
 import jinnax.morph as mp
 import jinnax.training as jtr
 import math
+import time
 
 #Simple fully connected architecture. Return the function for the forward pass
 def fconNN(width,activation = jax.nn.tanh,key = 0):
@@ -57,9 +58,15 @@ def apply_morph_layer(x,type,params,index_x):
     #Apply each operator
     params = 2 * jax.nn.tanh(params)
     oper = mp.operator(type)
-    fx = oper(x,index_x,params[0,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
-    for i in range(1,params.shape[0]):
-        fx = jnp.append(fx,oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2])),0)
+    fx = None
+    unif = jax.random.uniform(jax.random.PRNGKey(round(time.time() * 1e6)),(params.shape[0],1))
+    while fx is None:
+        for i in range(params.shape[0]):
+            if unif[i,0] >= 1 - 1/params.shape[0]:
+                if fx is None:
+                    fx = oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
+                else:
+                    fx = jnp.append(fx,oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2])),0)
     return fx
 
 #Apply a morphological layer in iterated NN
@@ -85,9 +92,15 @@ def apply_morph_layer_iter(x,type,params,index_x,w,forward_inner,d):
 
     #Apply each operator
     oper = mp.operator(type)
-    fx = oper(x,index_x,params[0,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
-    for i in range(1,params.shape[0]):
-        fx = jnp.append(fx,oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2])),0)
+    fx = None
+    unif = jax.random.uniform(jax.random.PRNGKey(round(time.time() * 1e6)),(params.shape[0],1))
+    while fx is None:
+        for i in range(params.shape[0]):
+            if unif[i,0] >= 1 - 1/params.shape[0]:
+                if fx is None:
+                    fx = oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
+                else:
+                    fx = jnp.append(fx,oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2])),0)
     return fx
 
 #Canonical Morphological NN
