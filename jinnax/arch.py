@@ -126,7 +126,7 @@ def cmnn(type,width,size,shape_x,key = 0):
     return {'params': params,'forward': forward}
 
 #Canonical Morphological NN with iterated NN
-def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0,init = 'identity'):
+def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0,init = 'identity',loss = jtr.MSE_SA,sa = False,epochs = 1,batches = 1000,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,notebook = False):
     #Index window
     index_x = mp.index_array(shape_x)
 
@@ -146,7 +146,7 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
         nn = fconNN_str(width_str,activation,key)
         forward_inner = nn['forward']
         w_y = jax.lax.pad(jnp.array(1.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((w_max.shape[0],1)) - 1 #+ 0.1*jnp.abs(jax.random.normal(key = jax.random.PRNGKey(key),shape = (w_max.shape[0],1)))
-        params_id = jtr.train_fcnn(w_max,w_y,forward_inner,nn['params'],jtr.MSE_SA,epochs = 10000,lr = 1e-5,sa = True)
+        params_id = jtr.train_fcnn(w_max,w_y,forward_inner,nn['params'],loss,sa,epochs,batches,lr,b1,b2,eps,eps_root,key,notebook)
         kernel = forward_inner(w_max,params_id)
         #Assign trained parameters
         params = list()
