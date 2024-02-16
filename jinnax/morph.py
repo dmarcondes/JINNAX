@@ -106,8 +106,11 @@ def infgen(f,index_f,k1,k2):
 
 #Sup of array of images
 @jax.jit
-def sup(f):
-    return jnp.max(f,axis = 0).reshape((1,f.shape[1],f.shape[2]))
+def sup(f,leak = sqrt(1/255)):
+    fs = f[0,:,:]
+    for i in range(f.shape[0] - 1):
+        fs = 0.5 * (fs + f[i,:,:] - jnp.sqrt((fs - f[i,:,:]) ** 2 + leak))
+    return fs
 
 #Sup vmap for arch
 vmap_sup = jax.jit(jax.vmap(sup,in_axes = (1),out_axes = 1))
@@ -115,7 +118,7 @@ vmap_sup = jax.jit(jax.vmap(sup,in_axes = (1),out_axes = 1))
 #Inf of array of images
 @jax.jit
 def inf(f):
-    return jnp.min(f,axis = 0).reshape((1,f.shape[1],f.shape[2]))
+    return - sup(-f)
 
 #Inf vmap for arch
 vmap_inf = jax.jit(jax.vmap(inf,in_axes = (1),out_axes = 1))
