@@ -156,7 +156,7 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
             #Upper limit
             nn = fconNN_str(width_str,activation,key)
             forward_inner = nn['forward']
-            w_y = jax.lax.pad(jnp.array(-2.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((w_max.shape[0],1)) + 2
+            w_y = jax.lax.pad(jnp.array(0.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((w_max.shape[0],1)) + 2
             params_ul = jtr.train_fcnn(w_max,w_y,forward_inner,nn['params'],loss,sa,epochs,batches,lr,b1,b2,eps,eps_root,key,notebook)
             ul = forward_inner(w_max,params_ul)
 
