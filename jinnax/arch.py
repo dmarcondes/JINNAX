@@ -60,14 +60,11 @@ def apply_morph_layer(x,type,params,index_x):
     params = 2 * jax.nn.tanh(params)
     oper = mp.operator(type)
     fx = None
-    unif = jax.random.uniform(jax.random.PRNGKey(round(time.time() * 1e6)),(params.shape[0],1))
-    while fx is None:
-        for i in range(params.shape[0]):
-            if random.uniform(0,1) >= 1/float(params.shape[0]) or params.shape[0] == 1:
-                if fx is None:
-                    fx = oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
-                else:
-                    fx = jnp.append(fx,oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2])),0)
+    for i in range(params.shape[0]):
+        if fx is None:
+            fx = oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
+        else:
+            fx = jnp.append(fx,oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2])),0)
     return fx
 
 #Apply a morphological layer in iterated NN
@@ -94,13 +91,11 @@ def apply_morph_layer_iter(x,type,params,index_x,w,forward_inner,d):
     #Apply each operator
     oper = mp.operator(type)
     fx = None
-    while fx is None:
-        for i in range(params.shape[0]):
-            if random.uniform(0,1) >= 1/float(params.shape[0]) or params.shape[0] == 1:
-                if fx is None:
-                    fx = oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
-                else:
-                    fx = jnp.append(fx,oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2])),0)
+    for i in range(params.shape[0]):
+        if fx is None:
+            fx = oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
+        else:
+            fx = jnp.append(fx,oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2])),0)
     return fx
 
 #Canonical Morphological NN
