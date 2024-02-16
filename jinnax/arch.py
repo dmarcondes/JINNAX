@@ -92,6 +92,8 @@ def apply_morph_layer_iter(x,type,params,index_x,w,forward_inner,d):
 
 #Canonical Morphological NN
 def cmnn(x,type,width,size,shape_x,key = 0):
+    key = jax.random.split(jax.random.PRNGKey(key),(len(width),jnp.max(width)))
+
     #Index window
     index_x = mp.index_array(shape_x)
 
@@ -104,13 +106,16 @@ def cmnn(x,type,width,size,shape_x,key = 0):
             if type[i] == 'supgen' or type[i] == 'infgen':
                 ll = jnp.arctanh(mp.struct_lower(x,size[i])/2).reshape((1,1,size[i],size[i]))
                 ul = jnp.arctanh(mp.struct_upper(x,size[i])/2).reshape((1,1,size[i],size[i]))
-                interval = jnp.append(ll,ul,1)
+                su = jnp.std(ul)
+                sl = jnp.std(ll)
+                for j in range(width[i] - 1):
+                    interval = jnp.append(ll + sl*jax.random.normal(jax.random.PRNGKey(key[i,j]),interval.shape),ul + ul*jax.random.normal(jax.random.PRNGKey(key[i,j]),interval.shape),1)
+                    p = jnp.append(p,interval,0)
             else:
-                ll = ll = jnp.arctanh(mp.struct_lower(x,size[i])/2).reshape((1,1,size[i],size[i]))
-                interval = ll
-            p = interval
-            for j in range(width[i] - 1):
-                p = jnp.append(p,interval,0)
+                ll = jnp.arctanh(mp.struct_lower(x,size[i])/2).reshape((1,1,size[i],size[i]))
+                for j in range(width[i] - 1):
+                    interval = ll + sl*jax.random.normal(jax.random.PRNGKey(key[i,j]),interval.shape)
+                    p = jnp.append(p,interval,0)
             params.append(p)
 
     #Forward pass
