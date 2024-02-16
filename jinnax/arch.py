@@ -113,6 +113,7 @@ def cmnn(x,type,width,size,shape_x,key = 0):
                     p = jnp.append(p,interval,0)
             else:
                 ll = jnp.arctanh(mp.struct_lower(x,size[i])/2).reshape((1,1,size[i],size[i]))
+                sl = jnp.std(ll)
                 for j in range(width[i] - 1):
                     interval = ll + sl*jax.random.normal(jax.random.PRNGKey(key[i,j]),interval.shape)
                     p = jnp.append(p,interval,0)
