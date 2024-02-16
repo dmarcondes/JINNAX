@@ -35,8 +35,11 @@ def erosion_2D(f,index_f,k):
 #Erosion in batches
 @jax.jit
 def erosion(f,index_f,k):
-    eb = jax.vmap(lambda f: erosion_2D(f,index_f,k),in_axes = (0),out_axes = 0)
-    return eb(f)
+    l = math.floor(k.shape[0]/2)
+    f = jax.lax.pad(f,0.0,((0,0,0),(l,l,0),(l,l,0)))
+    eb = jax.vmap(lambda f: erosion_2D(f,index_f,k),in_axes = (0),out_axes = 0)(f)
+    eb = jax.lax.pad(f,0.0,((0,0,0),(-l,-l,0),(-l,-l,0)))
+    return eb
 
 #Local dilation of f by k for pixel (i,j)
 def local_dilation(f,k,l):
@@ -130,3 +133,18 @@ def operator(type):
         print('Type of layer ' + type + 'is wrong!')
         return 1
     return oper
+
+#Structuring element of the identity operator in a sample
+def struct_lower(x,d):
+    #Function to apply to each index
+    l = math.floor(d/2)
+    x = jax.lax.pad(x,0.0,((0,0,0),(l,l,0),(l,l,0)))
+    index_x = index_array((x.shape[1],x.shape[2]))
+    def struct_lower(index,x):
+        fw = jax.lax.dynamic_slice(x, (index[0] - l, index[1] - l), (2*l + 1, 2*l + 1))
+        return fw - x[index[0],index[1]]
+    k = jax.vmap(lambda x: jnp.apply_along_axis(lambda index: struct_lower(index,x),1,index_x))(x).reshape((x.shape[0],x.shape[1],x.shape[2],3,3))
+    k = jax.lax.pad(k,0.0,((0,0,0),(-l,-l,0),(-l,-l,0),(0,0,0),(0,0,0)))
+    k = k.reshape((k.shape[0]*k.shape[1]*k.shape[2],d,d))
+    k = jnp.apply_along_axis(jnp.min,0,k)
+    return k

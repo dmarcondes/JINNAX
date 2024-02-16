@@ -133,7 +133,7 @@ def cmnn(type,width,size,shape_x,key = 0):
     return {'params': params,'forward': forward}
 
 #Canonical Morphological NN with iterated NN
-def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0,init = 'identity',loss = jtr.MSE_SA,sa = True,epochs = 1000,batches = 1,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,notebook = False):
+def cmnn_iter(type,width,width_str,size,shape_x,x = None,activation = jax.nn.tanh,key = 0,init = 'identity',loss = jtr.MSE_SA,sa = True,epochs = 1000,batches = 1,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,notebook = False):
     #Index window
     index_x = mp.index_array(shape_x)
 
@@ -155,15 +155,16 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
         #Lower limit
         nn = fconNN_str(width_str,activation,key)
         forward_inner = nn['forward']
-        w_y = jax.lax.pad(jnp.array(1.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((w_max.shape[0],1)) - 1
+        w_y = mp.struct_lower(x,max_size).reshape((w_max.shape[0],1))
         params_ll = jtr.train_fcnn(w_max,w_y,forward_inner,nn['params'],loss,sa,epochs,batches,lr,b1,b2,eps,eps_root,key,notebook)
-        ll = forward_inner(w_max,params_ll)
+        ll = forward_inner(w_max,params_ll,index_x)
 
+        #infgen does not work, fix later
         if 'supgen' in type or 'infgen' in type:
             #Upper limit
             nn = fconNN_str(width_str,activation,key)
             forward_inner = nn['forward']
-            w_y = jax.lax.pad(jnp.array(0.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((w_max.shape[0],1)) + 2
+            w_y = mp.struct_upper(x,max_size).reshape((w_max.shape[0],1))
             params_ul = jtr.train_fcnn(w_max,w_y,forward_inner,nn['params'],loss,sa,epochs,batches,lr,b1,b2,eps,eps_root,key,notebook)
             ul = forward_inner(w_max,params_ul)
 
