@@ -137,8 +137,7 @@ def train_fcnn(x,y,forward,params,loss,sa = False,epochs = 1,batches = 1,lr = 0.
                         yb = y[b*bsize:y.shape[0],:]
                     opt_state,params = update(opt_state,params,xb,yb)
             else:
-                xb = x
-                yb = y
+                opt_state,params = update(opt_state,params,x,y)
             l = str(jnp.round(lf(params,x,y),10))
             if(e % 100 == 0 and notebook):
                 print('Epoch: ' + str(e) + ' Time: ' + str(jnp.round(time.time() - t0,2)) + ' s Loss: ' + l)
