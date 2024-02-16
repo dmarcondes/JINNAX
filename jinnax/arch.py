@@ -62,7 +62,7 @@ def apply_morph_layer(x,type,params,index_x):
     unif = jax.random.uniform(jax.random.PRNGKey(round(time.time() * 1e6)),(params.shape[0],1))
     while fx is None:
         for i in range(params.shape[0]):
-            if unif[i,0] >= 1 - 1/params.shape[0]:
+            if unif[i,0] >= 1.0 - 1/float(params.shape[0]):
                 if fx is None:
                     fx = oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
                 else:
@@ -96,7 +96,7 @@ def apply_morph_layer_iter(x,type,params,index_x,w,forward_inner,d):
     unif = jax.random.uniform(jax.random.PRNGKey(round(time.time() * 1e6)),(params.shape[0],1))
     while fx is None:
         for i in range(params.shape[0]):
-            if unif[i,0] >= 1 - 1/params.shape[0]:
+            if unif[i,0] >= 1.0 - 1/float(params.shape[0]):
                 if fx is None:
                     fx = oper(x,index_x,params[i,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
                 else:
