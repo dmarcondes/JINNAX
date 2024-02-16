@@ -153,5 +153,5 @@ def struct_lower(x,d):
     k = jax.vmap(lambda x: jnp.apply_along_axis(lambda index: struct_lower(index,x),1,index_x))(x).reshape((x.shape[0],x.shape[1],x.shape[2],3,3))
     k = jax.lax.pad(k,0.0,((0,0,0),(-l,-l,0),(-l,-l,0),(0,0,0),(0,0,0)))
     k = k.reshape((k.shape[0]*k.shape[1]*k.shape[2],d,d))
-    k = jnp.apply_along_axis(jnp.median,0,k)
+    k = jnp.apply_along_axis(jnp.mean,0,k)
     return k
