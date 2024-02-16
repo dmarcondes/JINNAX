@@ -141,5 +141,6 @@ def train_fcnn(x,y,forward,params,loss,sa = False,epochs = 1,batches = 1,lr = 0.
             if not notebook:
                 bar.title("Loss: " + l)
                 bar()
-
+    
+    del param[-1]
     return params
