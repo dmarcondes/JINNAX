@@ -208,4 +208,4 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
         return x[0,:,:,:]
 
     #Return initial parameters and forward function
-    return {'params': params,'forward': forward,'kernel': kernel}
+    return {'params': params,'forward': forward,'ll': ll,'ul': ul}
