@@ -157,7 +157,7 @@ def cmnn_iter(type,width,width_str,size,shape_x,x = None,activation = jax.nn.tan
         forward_inner = nn['forward']
         w_y = mp.struct_lower(x,max_size).reshape((w_max.shape[0],1))
         params_ll = jtr.train_fcnn(w_max,w_y,forward_inner,nn['params'],loss,sa,epochs,batches,lr,b1,b2,eps,eps_root,key,notebook)
-        ll = forward_inner(w_max,params_ll,index_x)
+        ll = forward_inner(w_max,params_ll).reshape((max_size,max_size))
 
         #infgen does not work, fix later
         if 'supgen' in type or 'infgen' in type:
@@ -166,7 +166,7 @@ def cmnn_iter(type,width,width_str,size,shape_x,x = None,activation = jax.nn.tan
             forward_inner = nn['forward']
             w_y = mp.struct_upper(x,max_size).reshape((w_max.shape[0],1))
             params_ul = jtr.train_fcnn(w_max,w_y,forward_inner,nn['params'],loss,sa,epochs,batches,lr,b1,b2,eps,eps_root,key,notebook)
-            ul = forward_inner(w_max,params_ul)
+            ul = forward_inner(w_max,params_ul).reshape((max_size,max_size))
 
         #Assign trained parameters
         params = list()
