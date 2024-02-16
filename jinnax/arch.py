@@ -152,7 +152,7 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
         params_ll = jtr.train_fcnn(w_max,w_y,forward_inner,nn['params'],loss,sa,epochs,batches,lr,b1,b2,eps,eps_root,key,notebook)
         ll = forward_inner(w_max,params_ll)
 
-        if type == 'supgen' or type == 'infgen':
+        if 'supgen' in type or 'infgen' in type:
             #Upper limit
             w_y = jax.lax.pad(jnp.array(-1.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((w_max.shape[0],1)) + 2
             params_ul = jtr.train_fcnn(w_max,w_y,forward_inner,nn['params'],loss,sa,epochs,batches,lr,b1,b2,eps,eps_root,key,notebook)
