@@ -250,7 +250,7 @@ def cmnn_iter(type,width,width_str,size,shape_x,x = None,activation = jax.nn.tan
                 for j in range(width[i]):
                     k0 = forward_inner(w[str(size[i])],params[i][2*j]).reshape((1,size[i],size[i]))
                     k1 = forward_inner(w[str(size[i])],params[i][2*j + 1]).reshape((1,size[i],size[i]))
-                    struct[i].append(jnp.append(k0,k1,1))
+                    struct[i].append(jnp.append(k0,k1,0))
             else:
                 for j in range(width[i]):
                     struct[i].append(forward_inner(w[str(size[i])],params[i][j]).reshape((size[i],size[i])))
