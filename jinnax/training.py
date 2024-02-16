@@ -14,7 +14,7 @@ def MSE(true,pred):
 #MSE self-adaptative
 @jax.jit
 def MSE_SA(true,pred,wheight):
-  return jax.nn.sigmoid(wheight) * jnp.mean((true - pred)**2)
+  return jnp.mean(jax.nn.sigmoid(wheight) * (true - pred)**2)
 
 #Croos entropy
 @jax.jit
@@ -24,7 +24,7 @@ def CE(true,pred):
 #Croos entropy self-adaptative
 @jax.jit
 def CE_SA(true,pred,wheight):
-  return jax.nn.sigmoid(wheight) * jnp.mean((- true * jnp.log(pred + 1e-5) - (1 - true) * jnp.log(1 - pred + 1e-5)))
+  return jnp.mean(jax.nn.sigmoid(wheight) * (- true * jnp.log(pred + 1e-5) - (1 - true) * jnp.log(1 - pred + 1e-5)))
 
 #IoU
 @jax.jit
@@ -34,7 +34,7 @@ def IoU(true,pred):
 #IoU self-adaptative
 @jax.jit
 def IoU_SA(true,pred,wheight):
-  return jax.nn.sigmoid(wheight) * (1 - (jnp.sum(2 * true * pred) + 1)/(jnp.sum(true + pred) + 1))
+  return 1 - (jnp.sum(jax.nn.sigmoid(wheight) *2 * true * pred) + 1)/(jnp.sum(jax.nn.sigmoid(wheight) * (true + pred + 1)))
 
 #Training function MNN
 def train_morph(x,y,forward,params,loss,sa = False,epochs = 1,batches = 1,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,notebook = False):
