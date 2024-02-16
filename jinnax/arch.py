@@ -109,13 +109,13 @@ def cmnn(x,type,width,size,shape_x,key = 0):
                 su = jnp.std(ul)
                 sl = jnp.std(ll)
                 for j in range(width[i] - 1):
-                    interval = jnp.append(ll + sl*jax.random.normal(jax.random.PRNGKey(key[i,j]),interval.shape),ul + ul*jax.random.normal(jax.random.PRNGKey(key[i,j]),interval.shape),1)
+                    interval = jnp.append(ll + sl*jax.random.normal(jax.random.PRNGKey(key[i,j]),ll.shape),ul + ul*jax.random.normal(jax.random.PRNGKey(key[i,j]),ul.shape),1)
                     p = jnp.append(p,interval,0)
             else:
                 ll = jnp.arctanh(mp.struct_lower(x,size[i])/2).reshape((1,1,size[i],size[i]))
                 sl = jnp.std(ll)
                 for j in range(width[i] - 1):
-                    interval = ll + sl*jax.random.normal(jax.random.PRNGKey(key[i,j]),interval.shape)
+                    interval = ll + sl*jax.random.normal(jax.random.PRNGKey(key[i,j]),ll.shape)
                     p = jnp.append(p,interval,0)
             params.append(p)
 
