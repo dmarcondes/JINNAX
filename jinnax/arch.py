@@ -92,7 +92,7 @@ def apply_morph_layer_iter(x,type,params,index_x,w,forward_inner,d):
 
 #Canonical Morphological NN
 def cmnn(x,type,width,size,shape_x,key = 0):
-    key = jax.random.split(jax.random.PRNGKey(key),(len(width),max(width)))
+    key = jax.random.split(jax.random.PRNGKey(key),(len(width),max(width)))[:,:,0]
 
     #Index window
     index_x = mp.index_array(shape_x)
