@@ -37,7 +37,7 @@ def IoU_SA(true,pred,wheight):
   return 1 - (jnp.sum(jax.nn.sigmoid(wheight) *2 * true * pred) + 1)/(jnp.sum(jax.nn.sigmoid(wheight) * (true + pred + 1)))
 
 #Training function MNN
-def train_morph(x,y,forward,params,loss,sa = False,epochs = 1,batches = 1,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,notebook = False):
+def train_morph(x,y,forward,params,loss,sa = False,epochs = 1,batches = 1,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,notebook = False,epoch_print = 100):
     #Key
     key = jax.random.split(jax.random.PRNGKey(key),epochs)
 
@@ -89,7 +89,7 @@ def train_morph(x,y,forward,params,loss,sa = False,epochs = 1,batches = 1,lr = 0
             else:
                 opt_state,params = update(opt_state,params,x,y)
             l = str(jnp.round(lf(params,x,y),10))
-            if(e % 100 == 0 and notebook):
+            if(e % epoch_print == 0 and notebook):
                 print('Epoch: ' + str(e) + ' Time: ' + str(jnp.round(time.time() - t0,2)) + ' s Loss: ' + l)
             if not notebook:
                 bar.title("Loss: " + l)

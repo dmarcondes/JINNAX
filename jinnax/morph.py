@@ -3,7 +3,6 @@ import jax
 import jax.numpy as jnp
 import math
 
-
 #Structuring element from function
 def struct_function(k,d):
     w = jnp.array([[x1.tolist(),x2.tolist()] for x1 in jnp.linspace(-jnp.floor(d/2),jnp.floor(d/2),d) for x2 in jnp.linspace(jnp.floor(d/2),-jnp.floor(d/2),d)])
