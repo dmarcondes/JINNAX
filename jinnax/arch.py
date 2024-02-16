@@ -5,6 +5,7 @@ import jinnax.morph as mp
 import jinnax.training as jtr
 import math
 import time
+import random
 
 #Simple fully connected architecture. Return the function for the forward pass
 def fconNN(width,activation = jax.nn.tanh,key = 0):
