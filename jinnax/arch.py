@@ -117,8 +117,8 @@ def cmnn(x,type,width,size,shape_x,key = 0):
             params.append(jnp.array(0.0))
         else:
             if type[i] == 'supgen' or type[i] == 'infgen':
-                ll = jnp.arctanh(mp.struct_lower(x,size[i])/2).reshape((1,1,size[i],size[i]))
-                ul = jnp.arctanh(mp.struct_upper(x,size[i])/2).reshape((1,1,size[i],size[i]))
+                ll = jnp.arctanh(mp.struct_lower(x,size[i])/2 + 1e-5).reshape((1,1,size[i],size[i]))
+                ul = jnp.arctanh(mp.struct_upper(x,size[i])/2 + 1e-5).reshape((1,1,size[i],size[i]))
                 su = jnp.std(ul)
                 sl = jnp.std(ll)
                 p = jnp.append(ll + sl*jax.random.normal(jax.random.PRNGKey(key[i,-1]),ll.shape),ul + ul*jax.random.normal(jax.random.PRNGKey(key[i,-1]),ul.shape),1)
@@ -126,7 +126,7 @@ def cmnn(x,type,width,size,shape_x,key = 0):
                     interval = jnp.append(ll + sl*jax.random.normal(jax.random.PRNGKey(key[i,j]),ll.shape),ul + ul*jax.random.normal(jax.random.PRNGKey(key[i,j]),ul.shape),1)
                     p = jnp.append(p,interval,0)
             else:
-                ll = jnp.arctanh(mp.struct_lower(x,size[i])/2).reshape((1,1,size[i],size[i]))
+                ll = jnp.arctanh(mp.struct_lower(x,size[i])/2 + 1e-5).reshape((1,1,size[i],size[i]))
                 sl = jnp.std(ll)
                 p = sl*jax.random.normal(jax.random.PRNGKey(key[i,-1]),ll.shape)
                 for j in range(width[i] - 1):
