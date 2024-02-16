@@ -91,7 +91,7 @@ def apply_morph_layer_iter(x,type,params,index_x,w,forward_inner,d):
     return fx
 
 #Canonical Morphological NN
-def cmnn(type,width,size,shape_x,key = 0):
+def cmnn(x,type,width,size,shape_x,key = 0):
     #Index window
     index_x = mp.index_array(shape_x)
 
@@ -99,13 +99,11 @@ def cmnn(type,width,size,shape_x,key = 0):
     params = list()
     for i in range(len(width)):
         if type[i] == 'supgen' or type[i] == 'infgen':
-            l = math.floor(size[i]/2)
-            ll = jnp.arctanh((jax.lax.pad(jnp.array(1.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((1,1,size[i],size[i])) - 1)/2)
-            ul = jnp.arctanh((jax.lax.pad(jnp.array(0.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((1,1,size[i],size[i])) + 1.999)/2)
+            ll = jnp.arctanh(mp.struct_lower(x,size[i])/2).reshape((1,1,size[i],size[i]))
+            ul = jnp.arctanh(mp.struct_upper(x,size[i])/2).reshape((1,1,size[i],size[i]))
             interval = jnp.append(ll,ul,1)
         else:
-            l = math.floor(size[i]/2)
-            ll = jnp.arctanh((jax.lax.pad(jnp.array(1.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((1,1,size[i],size[i])) - 1)/2)
+            ll = ll = jnp.arctanh(mp.struct_lower(x,size[i])/2).reshape((1,1,size[i],size[i]))
             interval = ll
         p = interval
         for j in range(width[i] - 1):
