@@ -55,7 +55,7 @@ def fconNN_str(width,activation = jax.nn.tanh,key = 0):
 #Apply a morphological layer
 def apply_morph_layer(x,type,params,index_x):
     #Apply each operator
-    params = jnp.minimum(jax.nn.relu(params),1.0)
+    params = 2 * jax.nn.tanh(params)
     oper = mp.operator(type)
     fx = oper(x,index_x,params[0,:,:,:]).reshape((1,x.shape[0],x.shape[1],x.shape[2]))
     for i in range(1,params.shape[0]):
@@ -96,14 +96,21 @@ def cmnn(type,width,size,shape_x,key = 0):
     index_x = mp.index_array(shape_x)
 
     #Initialize parameters
-    initializer = jax.nn.initializers.normal()
-    k = jax.random.split(jax.random.PRNGKey(key),(max(width))) #Seed for initialization
     params = list()
     for i in range(len(width)):
         if type[i] == 'supgen' or type[i] == 'infgen':
-            params.append(jnp.abs(initializer(k[i,:],(width[i],2,size[i],size[i]),jnp.float32)))
+            l = math.floor(size[i]/2)
+            ll = jnp.arctanh((jax.lax.pad(jnp.array(1.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((1,1,size[i],size[i])) - 1)/2)
+            ul = jnp.arctanh((jax.lax.pad(jnp.array(0.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((1,1,size[i],size[i])) + 1.999)/2)
+            interval = jnp.append(ll,ul,1)
         else:
-            params.append(jnp.abs(initializer(k[i,:],(width[i],1,size[i],size[i]),jnp.float32)))
+            l = math.floor(size[i]/2)
+            ll = jnp.arctanh((jax.lax.pad(jnp.array(1.0).reshape((1,1)),0.0,((l,l,0),(l,l,0))).reshape((1,1,size[i],size[i])) - 1)/2)
+            interval = ll
+        p = interval
+        for j in range(width[i] - 1):
+            p = jnp.append(p,interval,0)`
+        params.append(p)
 
     #Forward pass
     @jax.jit
