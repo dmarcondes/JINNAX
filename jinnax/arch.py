@@ -214,5 +214,19 @@ def cmnn_iter(type,width,width_str,size,shape_x,activation = jax.nn.tanh,key = 0
                 x = apply_morph_layer_iter(x[0,:,:,:],type[i],params[i],index_x,w[str(size[i])],forward_inner,size[i])
         return x[0,:,:,:]
 
+    #Compute structuring elements
+    @jax.jit
+    def compute_struct(params):
+        #Compute for each layer
+        struct = list()
+        for i in range(len(width)):
+            struct.append(list())
+            if type[i] ==  'sup' or type[i] ==  'inf' or type[i] ==  'complement':
+                struct[i].append(jnp.array(0.0,dtype = jnp.float32))
+            else:
+                for j in range(width[i]):
+                    struct[i].append(forward_inner(w[str(size[i])],params[i][j]).reshape((w[str(size[i])],w[str(size[i])])))
+        return struct
+
     #Return initial parameters and forward function
-    return {'params': params,'forward': forward,'ll': ll,'ul': ul}
+    return {'params': params,'forward': forward,'ll': ll,'ul': ul,'compute_struct': compute_struct}
