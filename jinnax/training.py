@@ -36,7 +36,7 @@ def train_morph(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.001,b1 = 0
     #Loss function
     @jax.jit
     def lf(params,x,y):
-        return jnp.mean(jax.vmap(loss),in_axes = (0,0))(forward(x,params),y)
+        return jnp.mean(jax.vmap(loss,in_axes = (0,0))(forward(x,params),y))
 
     #Training function
     grad_loss = jax.jit(jax.grad(lf,0))
@@ -86,7 +86,7 @@ def train_fcnn(x,y,forward,params,loss,epochs = 1,batches = 1,lr = 0.001,b1 = 0.
     #Loss function
     @jax.jit
     def lf(params,x,y):
-        return jnp.mean(jax.vmap(loss),in_axes = (0,0))(forward(x,params),y)
+        return jnp.mean(jax.vmap(loss,in_axes = (0,0))(forward(x,params),y))
 
     #Training function
     grad_loss = jax.jit(jax.grad(lf,0))
