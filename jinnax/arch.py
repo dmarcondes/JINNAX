@@ -246,6 +246,11 @@ def cmnn_iter(type,width,width_str,size,shape_x,x = None,activation = jax.nn.tan
             struct.append(list())
             if type[i] ==  'sup' or type[i] ==  'inf' or type[i] ==  'complement':
                 struct[i].append(jnp.array(0.0,dtype = jnp.float32))
+            elif type[i] in ['infgen','supgen']:
+                for j in range(width[i]):
+                    k0 = forward_inner(w[str(size[i])],params[i][j][0]).reshape((1,size[i],size[i]))
+                    k1 = forward_inner(w[str(size[i])],params[i][j][1]).reshape((1,size[i],size[i]))
+                    struct[i].append(jnp.append(k0,k1,1))
             else:
                 for j in range(width[i]):
                     struct[i].append(forward_inner(w[str(size[i])],params[i][j]).reshape((size[i],size[i])))
