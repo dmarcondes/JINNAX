@@ -98,17 +98,20 @@ def cmnn(x,type,width,size,shape_x,key = 0):
     #Initialize parameters
     params = list()
     for i in range(len(width)):
-        if type[i] == 'supgen' or type[i] == 'infgen':
-            ll = jnp.arctanh(mp.struct_lower(x,size[i])/2).reshape((1,1,size[i],size[i]))
-            ul = jnp.arctanh(mp.struct_upper(x,size[i])/2).reshape((1,1,size[i],size[i]))
-            interval = jnp.append(ll,ul,1)
+        if type[i] in ['sup','inf','complement']:
+            params.append(jnp.array(0.0))
         else:
-            ll = ll = jnp.arctanh(mp.struct_lower(x,size[i])/2).reshape((1,1,size[i],size[i]))
-            interval = ll
-        p = interval
-        for j in range(width[i] - 1):
-            p = jnp.append(p,interval,0)
-        params.append(p)
+            if type[i] == 'supgen' or type[i] == 'infgen':
+                ll = jnp.arctanh(mp.struct_lower(x,size[i])/2).reshape((1,1,size[i],size[i]))
+                ul = jnp.arctanh(mp.struct_upper(x,size[i])/2).reshape((1,1,size[i],size[i]))
+                interval = jnp.append(ll,ul,1)
+            else:
+                ll = ll = jnp.arctanh(mp.struct_lower(x,size[i])/2).reshape((1,1,size[i],size[i]))
+                interval = ll
+            p = interval
+            for j in range(width[i] - 1):
+                p = jnp.append(p,interval,0)
+            params.append(p)
 
     #Forward pass
     @jax.jit
