@@ -109,7 +109,7 @@ def cmnn(type,width,size,shape_x,key = 0):
             interval = ll
         p = interval
         for j in range(width[i] - 1):
-            p = jnp.append(p,interval,0)`
+            p = jnp.append(p,interval,0)
         params.append(p)
 
     #Forward pass
