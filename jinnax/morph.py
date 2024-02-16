@@ -110,7 +110,7 @@ def sup(f,leak = math.sqrt(1/255)):
     fs = f[0,:,:]
     for i in range(f.shape[0] - 1):
         fs = 0.5 * (fs + f[i,:,:] - jnp.sqrt((fs - f[i,:,:]) ** 2 + leak))
-    return fs
+    return fs.reshape((1,f.shape[1],f.shape[2]))
 
 #Sup vmap for arch
 vmap_sup = jax.jit(jax.vmap(sup,in_axes = (1),out_axes = 1))
