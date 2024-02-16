@@ -106,7 +106,7 @@ def infgen(f,index_f,k1,k2):
 
 #Sup of array of images
 @jax.jit
-def sup(f,leak = sqrt(1/255)):
+def sup(f,leak = math.sqrt(1/255)):
     fs = f[0,:,:]
     for i in range(f.shape[0] - 1):
         fs = 0.5 * (fs + f[i,:,:] - jnp.sqrt((fs - f[i,:,:]) ** 2 + leak))
