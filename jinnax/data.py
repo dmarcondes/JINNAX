@@ -32,49 +32,102 @@ def read_data_frame(file,sep = None,header = None,sheet = 0):
     return dat
 
 #Generate d-dimensional data for PINN training
-def generate_dDimdataPINN(u,xlo,xhi,tlo,thi,Nx,Nt,Nc,d = 1,posx = 'grid',post = 'grid',posc = 'grid',sigmaB = 0,sigmaI = 0,sigmaS = 0):
+def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nc,Ntc,tlo = 0,d = 1,poss = 'grid',post = 'grid',posc = 'grid',posct = 'grid',sigmaS = 0,sigmaB = 0,sigmaI = 0):
+    """Generate data for PINN simulation.
+
+    Generate spatio-temporal data in a d-dimension cube.
+
+    Parameters
+    ----------
+    u : function
+        Solution of the PDE
+    xlo : float
+        Lower bound of each x coordinate
+    xup : float
+        Upper bound of each x coordinate
+    tlo : float
+        Lower bound of the time interval. Default 0
+    tup :
+        Upper bound of the time interval
+    Ns : int
+        Number of points along each x coordinate for sensor data
+    Nt : int
+        Number of points along the time axis for sensor data
+    Nc : int
+        Number of points along each x coordinate for collocation points
+    Ntc : int
+        Number of points along the time axis for collocation points
+    d : int
+        Domain dimension. Default 1
+    poss : str
+        Position of points the spatial domain. Either 'grid' or 'random' for uniform sampling. Default 'grid'
+    post : str
+        Position of points in the time interval. Either 'grid' or 'random' for uniform sampling. Default 'grid'
+    posc : str
+        Position of the collocation points in the x domain. Either 'grid' or 'random' for uniform sampling. Default 'grid'
+    posct : str
+        Position of the collocation points in the time interval. Either 'grid' or 'random' for uniform sampling. Default 'grid'
+    sigmaS : str
+        Standard deviation of the Gaussian noise of sensor data (x inside the domain). Default 0
+    sigmaB : str
+        Standard deviation of the Gaussian noise of boundary data. Default 0
+    sigmaI : str
+        Standard deviation of the Gaussian noise of initial data. Default 0
+
+    Returns
+    -------
+    dict-like object with generated data
+
+    Examples
+    --------
+    >>> count_words("text.txt")
+    """
+
     #Repeat x limits
     xlo = [xlo for i in range(d)]
-    xhi = [xhi for i in range(d)]
+    xup = [xup for i in range(d)]
 
     #Sample sensor data
-    if posx == 'grid':
-        x_sensor = [[x.tolist()] for x in jnp.linspace(xlo[0],xhi[0],Nx)[1:-1]]
+    if poss == 'grid':
+        x_sensor = [[x.tolist()] for x in jnp.linspace(xlo[0],xup[0],Ns)[1:-1]]
         for i in range(d-1):
-            x_sensor =  [x1 + [x2.tolist()] for x1 in x_sensor for x2 in jnp.linspace(xlo[i+1],xhi[i+1],Nx)[1:-1]]
-    elif posx == 'uniform':
-        x_sensor = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[0],maxval = xhi[0],shape = ((Nx - 2) ** d,1))
+            x_sensor =  [x1 + [x2.tolist()] for x1 in x_sensor for x2 in jnp.linspace(xlo[i+1],xup[i+1],Ns)[1:-1]]
+    elif poss == 'uniform':
+        x_sensor = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[0],maxval = xup[0],shape = ((Ns - 2) ** d,1))
         for i in range(d-1):
-            x_sensor =  jnp.append(x_sensor,jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[i+1],maxval = xhi[i+1],shape = ((Nx - 2) ** d,1)),1)
+            x_sensor =  jnp.append(x_sensor,jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[i+1],maxval = xup[i+1],shape = ((Ns - 2) ** d,1)),1)
     x_sensor = jnp.array(x_sensor,dtype = jnp.float32)
     if post == 'grid':
-        t_sensor = jnp.linspace(tlo,thi,Nt)[1:]
+        t_sensor = jnp.linspace(tlo,tup,Nt)[1:]
     elif post == 'uniform':
-        t_sensor = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = tlo,maxval = thi,shape = (Nt - 1,))
+        t_sensor = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = tlo,maxval = tup,shape = (Nt - 1,))
     xt_sensor = jnp.array([x.tolist() + [t.tolist()] for x in x_sensor for t in t_sensor],dtype = jnp.float32)
     u_sensor = jnp.array([[u(x,t) + sigmaS*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_sensor for t in t_sensor],dtype = jnp.float32)
 
     #Set collocation points (always in an interior grid)
+    if posct == 'grid':
+        t_collocation = jnp.linspace(tlo,tup,Ntc + 1)[1:]
+    else:
+        t_collocation = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = tlo,maxval = tup,shape = (Ntc,))
+
     if posc == 'grid':
-        x_collocation = [[x.tolist()] for x in jnp.linspace(xlo[0],xhi[0],Nc + 2)[1:-1]]
+        x_collocation = [[x.tolist()] for x in jnp.linspace(xlo[0],xup[0],Nc + 2)[1:-1]]
         for i in range(d-1):
-            x_collocation =  [x1 + [x2.tolist()] for x1 in x_collocation for x2 in jnp.linspace(xlo[i+1],xhi[i+1],Nc + 2)[1:-1]]
-        t_collocation = jnp.linspace(tlo,thi,Nc + 1)[1:]
+            x_collocation =  [x1 + [x2.tolist()] for x1 in x_collocation for x2 in jnp.linspace(xlo[i+1],xup[i+1],Nc + 2)[1:-1]]
         xt_collocation = jnp.array([x + [t.tolist()] for x in x_collocation for t in t_collocation],dtype = jnp.float32)
     else:
-        x_collocation = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[0],maxval = xhi[0],shape = (Nc ** d,1))
+        x_collocation = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[0],maxval = xup[0],shape = (Nc ** d,1))
         for i in range(d-1):
-            x_collocation =  jnp.append(x_collocation,jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[i+1],maxval = xhi[i+1],shape = (Nc ** d,1)),1)
-        t_collocation = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = tlo,maxval = thi,shape = (Nc,))
+            x_collocation =  jnp.append(x_collocation,jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[i+1],maxval = xup[i+1],shape = (Nc ** d,1)),1)
         xt_collocation = jnp.array([x.tolist() + [t.tolist()] for x in x_collocation for t in t_collocation],dtype = jnp.float32)
 
     #Sample boundary data
     t_boundary = jnp.append(t_sensor,0)
     x_boundary = jnp.array([[xlo[0]] + x.tolist() for x in jnp.delete(x_sensor,0,1)],dtype = jnp.float32)
-    x_boundary = jnp.append(x_boundary,jnp.array([[xhi[0]] + x.tolist() for x in jnp.delete(x_sensor,0,1)],dtype = jnp.float32),0)
+    x_boundary = jnp.append(x_boundary,jnp.array([[xup[0]] + x.tolist() for x in jnp.delete(x_sensor,0,1)],dtype = jnp.float32),0)
     for i in range(d-1):
         x_boundary = jnp.append(x_boundary,jnp.append(jnp.append(x_sensor[:,0:(i+1)],jnp.repeat(xlo[i+1],x_sensor.shape[0]).reshape(x_sensor.shape[0],1),1),x_sensor[:,(i+2):],1),0)
-        x_boundary = jnp.append(x_boundary,jnp.append(jnp.append(x_sensor[:,0:(i+1)],jnp.repeat(xhi[i+1],x_sensor.shape[0]).reshape(x_sensor.shape[0],1),1),x_sensor[:,(i+2):],1),0)
+        x_boundary = jnp.append(x_boundary,jnp.append(jnp.append(x_sensor[:,0:(i+1)],jnp.repeat(xup[i+1],x_sensor.shape[0]).reshape(x_sensor.shape[0],1),1),x_sensor[:,(i+2):],1),0)
     x_boundary = jnp.unique(x_boundary,axis = 0)
     xt_boundary = jnp.array([x.tolist() + [t.tolist()] for x in x_boundary for t in t_boundary],dtype = jnp.float32)
     u_boundary = jnp.array([[u(x,t) + sigmaB*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_boundary for t in t_boundary],dtype = jnp.float32)
