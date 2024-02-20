@@ -257,7 +257,7 @@ def train_pinn(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
                     l = l + ' L2 error: ' + str(jnp.round(res['l2_error'][0],6))
                 print(l)
                 if save:
-                    pickle.dump({'params': params,'forward': forward},file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle', protocol=pickle.HIGHEST_PROTOCOL)
+                    pickle.dump({'params': params,'forward': forward},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol=pickle.HIGHEST_PROTOCOL)
             bar()
     def u(xt):
         return forward(xt,params)
