@@ -316,7 +316,7 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 4,d2 = Tru
     if plot:
         plt.show()
     if save:
-        fig.savefig(file_name + '_slices.png',bbox_inches='tight')
+        fig.savefig(file_name + '_slices.png')
     plt.close()
 
     #2d plot
@@ -333,7 +333,7 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 4,d2 = Tru
         if plot:
             plt.show()
         if save:
-            fig.savefig(file_name + '_2d.png',bbox_inches='tight')
+            fig.savefig(file_name + '_2d.png')
         plt.close()
 
     return df
