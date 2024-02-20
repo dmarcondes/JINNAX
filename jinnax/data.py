@@ -102,7 +102,7 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb,Nc,Ntc,tlo = 0,d = 1,poss = 'grid',
 
     if post == 'grid':
         t_sensor = jnp.linspace(tlo,tup,Nt + 1)[1:]
-    elif post == 'uniform':
+    else:
         t_sensor = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = tlo,maxval = tup,shape = (Nt,))
     xt_sensor = jnp.array([x.tolist() + [t.tolist()] for x in x_sensor for t in t_sensor],dtype = jnp.float32)
     u_sensor = jnp.array([[u(x,t) + sigmas*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_sensor for t in t_sensor],dtype = jnp.float32)
