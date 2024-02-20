@@ -1,2 +1,3 @@
 tests.py
 cifar_tests.py
+test_pinn.py

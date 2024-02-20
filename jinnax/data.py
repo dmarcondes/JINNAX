@@ -131,8 +131,10 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb,Nc,Ntc,tlo = 0,d = 1,poss = 'grid',
         x_boundary =  [x1 + [x2.tolist()] for x1 in x_boundary for x2 in jnp.linspace(xlo[i+1],xup[i+1],Nb)]
     x_boundary = jnp.array(x_boundary,dtype = jnp.float32)
     new_xb = x_boundary[0,:].reshape((1,d))
+    x_max = jnp.maximum(x_boundary)
+    x_min = jnp.minimum(x_boundary)
     for i in range(x_boundary.shape[0]):
-        if xlo[0] in x_boundary[i,:].tolist() or xup[0] in x_boundary[i,:].tolist():
+        if x_min in x_boundary[i,:].tolist() or x_max in x_boundary[i,:].tolist():
             new_xb = jnp.append(new_xb,x_boundary[i,:].reshape((1,d)),0)
     x_boundary = jnp.unique(new_xb,axis = 0)
     xt_boundary = jnp.array([x.tolist() + [t.tolist()] for x in x_boundary for t in t_boundary],dtype = jnp.float32)

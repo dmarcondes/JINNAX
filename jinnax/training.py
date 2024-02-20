@@ -16,6 +16,11 @@ def MSE(true,pred):
 def MSE_SA(true,pred,wheight):
   return jnp.mean(jax.nn.sigmoid(wheight) * (true - pred)**2)
 
+#L2 error
+@jax.jit
+def L2error(pred,true):
+  return jnp.sqrt(jnp.sum((true - pred)**2))/jnp.sqrt(jnp.sum(true ** 2))
+
 #Croos entropy
 @jax.jit
 def CE(true,pred):
@@ -158,4 +163,53 @@ def train_fcnn(x,y,forward,params,loss,sa = False,epochs = 1,batches = 1,lr = 0.
                 bar()
 
     del params[-1]
+    return params
+
+#Training PINN
+def train_pinn(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.tanh,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100):
+    #Initialize architecture
+    nnet = jar.fconNN(width,activation,key)
+    forward = nnet['forward']
+    params = nnet['params']
+
+    #Loss function
+    @jax.jit
+    def lf(params,x):
+        loss = 0
+        if x['sensor'] is not None:
+            loss = loss + jnp.mean(jax.vmap(MSE,in_axes = (0,0))(forward(x['sensor'],params),x['usensor']))
+        if x['boundary'] is not None:
+            loss = loss + jnp.mean(jax.vmap(MSE,in_axes = (0,0))(forward(x['boundary'],params),x['uboundary']))
+        if x['initial'] is not None:
+            loss = loss + jnp.mean(jax.vmap(MSE,in_axes = (0,0))(forward(x['initial'],params),x['uinitial']))
+        if x['collocation'] is not None:
+            x_col = x['collocation'][:,:-1].reshape((x['collocation'].shape[0],x['collocation'].shape[1] - 1))
+            t_col = x['collocation'][:,-1].reshape((x['collocation'].shape[0],1))
+            loss = loss + MSE(pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col),0)
+        return loss
+
+    #Optmizer NN
+    optimizer = optax.adam(lr,b1,b2,eps,eps_root)
+    opt_state = optimizer.init(params)
+
+    #Training function
+    grad_loss = jax.jit(jax.grad(lf,0))
+    @jax.jit
+    def update(opt_state,params,x):
+      grads = grad_loss(params,x)
+      updates, opt_state = optimizer.update(grads, opt_state)
+      params = optax.apply_updates(params, updates)
+      return opt_state,params
+
+    #Train
+    with alive_bar(epochs) as bar:
+        for e in range(epochs):
+            opt_state,params = update(opt_state,params,data)
+            if e % epoch_print == 0:
+                l = 'Loss: ' + str(jnp.round(lf(params,data),6))
+                if test_data is not None:
+                    l = l + ' L2 error: ' + str(jnp.round(L2error(forward(test_data['xt'],params),test_data['u']),6))
+                print(l)
+            bar()
+
     return params
