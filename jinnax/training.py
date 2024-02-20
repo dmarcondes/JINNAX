@@ -287,52 +287,53 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 4,d2 = Tru
         print('L2 error: ' + str(jnp.round(l2_error,6)))
 
     #Plots
-    if plot:
-        fig, ax = plt.subplots(int(times/3),3)
-        fig.tight_layout()
-        tlo = jnp.min(xt[:,-1])
-        tup = jnp.max(xt[:,-1])
-        ylo = jnp.min(jnp.append(u,upred,0))
-        yup = jnp.max(jnp.append(u,upred,0))
-        k = 0
-        t_values = np.linspace(tlo,tup,times)
-        for i in range(int(times/3)):
-            for j in range(3):
-                if k < len(t_values):
-                    t = t_values[k]
-                    t = xt[jnp.abs(xt[:,-1] - t) == jnp.min(jnp.abs(xt[:,-1] - t)),-1][0].tolist()
-                    x_plot = xt[xt[:,-1] == t,:-1]
-                    y_plot = upred[xt[:,-1] == t,:]
-                    u_plot = u[xt[:,-1] == t,:]
-                    #ax[k].set_aspect(1)
-                    ax[i,j].plot(x_plot[:,0],u_plot[:,0],'b-',linewidth=2,label='Exact')
-                    ax[i,j].plot(x_plot[:,0],y_plot,'r--',linewidth=2,label='Prediction')
-                    ax[i,j].set_title('$t = %.2f$' % (t),fontsize=10)
-                    ax[i,j].set_xlabel('$x$')
-                    ax[i,j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
-                    k = k + 1
+    fig, ax = plt.subplots(int(times/3),3)
+    fig.tight_layout()
+    tlo = jnp.min(xt[:,-1])
+    tup = jnp.max(xt[:,-1])
+    ylo = jnp.min(jnp.append(u,upred,0))
+    yup = jnp.max(jnp.append(u,upred,0))
+    k = 0
+    t_values = np.linspace(tlo,tup,times)
+    for i in range(int(times/3)):
+        for j in range(3):
+            if k < len(t_values):
+                t = t_values[k]
+                t = xt[jnp.abs(xt[:,-1] - t) == jnp.min(jnp.abs(xt[:,-1] - t)),-1][0].tolist()
+                x_plot = xt[xt[:,-1] == t,:-1]
+                y_plot = upred[xt[:,-1] == t,:]
+                u_plot = u[xt[:,-1] == t,:]
+                #ax[k].set_aspect(1)
+                ax[i,j].plot(x_plot[:,0],u_plot[:,0],'b-',linewidth=2,label='Exact')
+                ax[i,j].plot(x_plot[:,0],y_plot,'r--',linewidth=2,label='Prediction')
+                ax[i,j].set_title('$t = %.2f$' % (t),fontsize=10)
+                ax[i,j].set_xlabel('$x$')
+                ax[i,j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
+                k = k + 1
 
+
+    fig = plt.gcf()
+    if plot:
+        plt.show()
+    if save:
+        fig.savefig(file_name + '_slices.png',bbox_inches='tight')
+    plt.close()
+
+    #2d plot
+    if d2:
+        fig, ax = plt.subplots(1,2)
+        l = int(jnp.sqrt(xt.shape[0]).tolist())
+        ax[0].pcolormesh(xt[:,-1].reshape((l,l)),xt[:,0].reshape((l,l)),u[:,0].reshape((l,l)),cmap = 'RdBu',vmin = ylo.tolist(),vmax = yup.tolist())
+        ax[0].set_title('Exact')
+        ax[1].pcolormesh(xt[:,-1].reshape((l,l)),xt[:,0].reshape((l,l)),upred[:,0].reshape((l,l)),cmap = 'RdBu',vmin = ylo.tolist(),vmax = yup.tolist())
+        ax[1].set_title('Predicted')
+        fig.colorbar(c, ax=ax)
 
         fig = plt.gcf()
-        plt.show()
-        if save:
-            fig.savefig(file_name + '_slices.png',bbox_inches='tight')
-        plt.close()
-
-        #2d plot
-        if d2:
-            fig, ax = plt.subplots(1,2)
-            l = int(jnp.sqrt(xt.shape[0]).tolist())
-            ax[0].pcolormesh(xt[:,-1].reshape((l,l)),xt[:,0].reshape((l,l)),u[:,0].reshape((l,l)),cmap = 'RdBu',vmin = ylo.tolist(),vmax = yup.tolist())
-            ax[0].set_title('Exact')
-            ax[1].pcolormesh(xt[:,-1].reshape((l,l)),xt[:,0].reshape((l,l)),upred[:,0].reshape((l,l)),cmap = 'RdBu',vmin = ylo.tolist(),vmax = yup.tolist())
-            ax[1].set_title('Predicted')
-            fig.colorbar(c, ax=ax)
-
-            fig = plt.gcf()
+        if plot:
             plt.show()
-            if save:
-                fig.savefig(file_name + '_2d.png',bbox_inches='tight')
-            plt.close()
+        if save:
+            fig.savefig(file_name + '_2d.png',bbox_inches='tight')
+        plt.close()
 
     return df
