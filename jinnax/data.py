@@ -32,7 +32,7 @@ def read_data_frame(file,sep = None,header = None,sheet = 0):
     return dat
 
 #Generate d-dimensional data for PINN training
-def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb,Nc,Ntc,tlo = 0,d = 1,poss = 'grid',post = 'grid',posc = 'grid',posct = 'grid',sigmas = 0,sigmab = 0,sigmai = 0):
+def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb = None,Nc = None,Ntc = None,train = True,tlo = 0,d = 1,poss = 'grid',post = 'grid',posc = 'grid',posct = 'grid',sigmas = 0,sigmab = 0,sigmai = 0):
     """Generate data for PINN simulation.
 
     Generate spatio-temporal data in a d-dimension cube.
@@ -59,6 +59,8 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb,Nc,Ntc,tlo = 0,d = 1,poss = 'grid',
         Number of points along each x coordinate for collocation points
     Ntc : int
         Number of points along the time axis for collocation points
+    train : logical
+        Wheter to generate train (True) or test (False) data. Default True
     d : int
         Domain dimension. Default 1
     poss : str
@@ -105,47 +107,53 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb,Nc,Ntc,tlo = 0,d = 1,poss = 'grid',
     u_sensor = u_sensor.reshape((u_sensor.shape[0],1))
 
     #Set collocation points (always in an interior grid)
-    if posct == 'grid':
-        t_collocation = jnp.linspace(tlo,tup,Ntc)
-    else:
-        t_collocation = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = tlo,maxval = tup,shape = (Ntc,))
+    if train:
+        if posct == 'grid':
+            t_collocation = jnp.linspace(tlo,tup,Ntc)
+        else:
+            t_collocation = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = tlo,maxval = tup,shape = (Ntc,))
 
-    if posc == 'grid':
-        x_collocation = [[x.tolist()] for x in jnp.linspace(xlo[0],xup[0],Nc + 2)[1:-1]]
-        for i in range(d-1):
-            x_collocation =  [x1 + [x2.tolist()] for x1 in x_collocation for x2 in jnp.linspace(xlo[i+1],xup[i+1],Nc + 2)[1:-1]]
-        xt_collocation = jnp.array([x + [t.tolist()] for x in x_collocation for t in t_collocation],dtype = jnp.float32)
-    else:
-        x_collocation = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[0],maxval = xup[0],shape = (Nc ** d,1))
-        for i in range(d-1):
-            x_collocation =  jnp.append(x_collocation,jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[i+1],maxval = xup[i+1],shape = (Nc ** d,1)),1)
-        xt_collocation = jnp.array([x.tolist() + [t.tolist()] for x in x_collocation for t in t_collocation],dtype = jnp.float32)
+        if posc == 'grid':
+            x_collocation = [[x.tolist()] for x in jnp.linspace(xlo[0],xup[0],Nc + 2)[1:-1]]
+            for i in range(d-1):
+                x_collocation =  [x1 + [x2.tolist()] for x1 in x_collocation for x2 in jnp.linspace(xlo[i+1],xup[i+1],Nc + 2)[1:-1]]
+            xt_collocation = jnp.array([x + [t.tolist()] for x in x_collocation for t in t_collocation],dtype = jnp.float32)
+        else:
+            x_collocation = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[0],maxval = xup[0],shape = (Nc ** d,1))
+            for i in range(d-1):
+                x_collocation =  jnp.append(x_collocation,jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[i+1],maxval = xup[i+1],shape = (Nc ** d,1)),1)
+            xt_collocation = jnp.array([x.tolist() + [t.tolist()] for x in x_collocation for t in t_collocation],dtype = jnp.float32)
 
     #Sample boundary data
-    t_boundary = jnp.append(t_sensor,0)
-    x_boundary = [[x.tolist()] for x in jnp.linspace(xlo[0],xup[0],Nb)]
-    for i in range(d-1):
-        x_boundary =  [x1 + [x2.tolist()] for x1 in x_boundary for x2 in jnp.linspace(xlo[i+1],xup[i+1],Nb)]
-    x_boundary = jnp.array(x_boundary,dtype = jnp.float32)
-    new_xb = x_boundary[0,:].reshape((1,d))
-    x_max = jnp.max(x_boundary)
-    x_min = jnp.min(x_boundary)
-    for i in range(x_boundary.shape[0]):
-        if x_min in x_boundary[i,:].tolist() or x_max in x_boundary[i,:].tolist():
-            new_xb = jnp.append(new_xb,x_boundary[i,:].reshape((1,d)),0)
-    x_boundary = jnp.unique(new_xb,axis = 0)
-    xt_boundary = jnp.array([x.tolist() + [t.tolist()] for x in x_boundary for t in t_boundary],dtype = jnp.float32)
-    u_boundary = jnp.array([[u(x,t) + sigmab*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_boundary for t in t_boundary],dtype = jnp.float32)
-    u_boundary = u_boundary.reshape((u_boundary.shape[0],1))
+    if train:
+        t_boundary = jnp.append(t_sensor,0)
+        x_boundary = [[x.tolist()] for x in jnp.linspace(xlo[0],xup[0],Nb)]
+        for i in range(d-1):
+            x_boundary =  [x1 + [x2.tolist()] for x1 in x_boundary for x2 in jnp.linspace(xlo[i+1],xup[i+1],Nb)]
+        x_boundary = jnp.array(x_boundary,dtype = jnp.float32)
+        new_xb = x_boundary[0,:].reshape((1,d))
+        x_max = jnp.max(x_boundary)
+        x_min = jnp.min(x_boundary)
+        for i in range(x_boundary.shape[0]):
+            if x_min in x_boundary[i,:].tolist() or x_max in x_boundary[i,:].tolist():
+                new_xb = jnp.append(new_xb,x_boundary[i,:].reshape((1,d)),0)
+        x_boundary = jnp.unique(new_xb,axis = 0)
+        xt_boundary = jnp.array([x.tolist() + [t.tolist()] for x in x_boundary for t in t_boundary],dtype = jnp.float32)
+        u_boundary = jnp.array([[u(x,t) + sigmab*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_boundary for t in t_boundary],dtype = jnp.float32)
+        u_boundary = u_boundary.reshape((u_boundary.shape[0],1))
 
     #Sample initial data
-    x_initial = x_sensor
-    xt_initial = jnp.array([x.tolist() + [t] for x in x_initial for t in [0.0]],dtype = jnp.float32)
-    u_initial = jnp.array([[u(x,t) + sigmai*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_initial for t in jnp.array([0.0])],dtype = jnp.float32)
-    u_initial = u_initial.reshape((u_initial.shape[0],1))
+    if train:
+        x_initial = x_sensor
+        xt_initial = jnp.array([x.tolist() + [t] for x in x_initial for t in [0.0]],dtype = jnp.float32)
+        u_initial = jnp.array([[u(x,t) + sigmai*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_initial for t in jnp.array([0.0])],dtype = jnp.float32)
+        u_initial = u_initial.reshape((u_initial.shape[0],1))
 
     #Create data structure
-    dat = {'sensor': xt_sensor,'usensor': u_sensor,'boundary': xt_boundary,'uboundary': u_boundary,'initial': xt_initial,'uinitial': u_initial,'collocation': xt_collocation}
+    if train:
+        dat = {'sensor': xt_sensor,'usensor': u_sensor,'boundary': xt_boundary,'uboundary': u_boundary,'initial': xt_initial,'uinitial': u_initial,'collocation': xt_collocation}
+    else:
+        dat = {'xt': xt_sensor,'u': u_sensor}
 
     return dat
 

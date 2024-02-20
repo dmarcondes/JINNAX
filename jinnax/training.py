@@ -254,7 +254,7 @@ def train_pinn(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
                 l = 'Loss: ' + str(jnp.round(lf(params,data),6))
                 if test_data is not None:
                     res = process_result(test_data,lambda xt: forward(xt,params),data,plot = plot,times = times,d2 = d2,save = save,file_name = file_name + '_epoch' + str(e).rjust(6, '0'),print = False)
-                    l = l + ' L2 error: ' + str(jnp.round(res['error'][0],6))
+                    l = l + ' L2 error: ' + str(jnp.round(res['l2_error'][0],6))
                 print(l)
                 if save:
                     pickle.dump({'params': params,'forward': forward},file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle', protocol=pickle.HIGHEST_PROTOCOL)
