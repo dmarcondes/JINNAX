@@ -342,8 +342,8 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 3,d2 = Tru
     #Dimension
     d = test_data['xt'].shape[1] - 1
 
-    #Number of plots multiple of 3
-    times = 3 * round(times/3.0)
+    #Number of plots multiple of 5
+    times = 5 * round(times/5.0)
 
     #Data
     xt = test_data['xt']
@@ -364,7 +364,7 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 3,d2 = Tru
 
     #Plots
     if d == 1:
-        fig, ax = plt.subplots(int(times/3),3)
+        fig, ax = plt.subplots(int(times/5),5)
         fig.tight_layout()
         tlo = jnp.min(xt[:,-1])
         tup = jnp.max(xt[:,-1])
@@ -372,8 +372,8 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 3,d2 = Tru
         yup = jnp.max(jnp.append(u,upred,0))
         k = 0
         t_values = np.linspace(tlo,tup,times)
-        for i in range(int(times/3)):
-            for j in range(3):
+        for i in range(int(times/5)):
+            for j in range(5):
                 if k < len(t_values):
                     t = t_values[k]
                     t = xt[jnp.abs(xt[:,-1] - t) == jnp.min(jnp.abs(xt[:,-1] - t)),-1][0].tolist()
