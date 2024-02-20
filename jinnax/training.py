@@ -5,6 +5,7 @@ import optax
 from alive_progress import alive_bar
 import math
 import time
+from jinnax import arch as jar
 
 #MSE
 @jax.jit
@@ -211,5 +212,7 @@ def train_pinn(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
                     l = l + ' L2 error: ' + str(jnp.round(L2error(forward(test_data['xt'],params),test_data['u']),6))
                 print(l)
             bar()
+    def u(xt):
+        return forward(xt,params)
 
-    return params
+    return {'u': u,'params': params,'forward': forward}
