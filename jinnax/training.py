@@ -9,6 +9,7 @@ from jinnax import arch as jar
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
 #MSE
 @jax.jit
@@ -202,7 +203,7 @@ def train_pinn(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
     d2 : logical
         Whether to plot 2D plot. Default False
     save : logical
-        Whether to save the plots and L2 error. Default False
+        Whether to save the plots, L2 error and current parameters. Default False
     file_name : str
         File prefix to save the plots and L2 error. Default 'result_pinn'
 
@@ -255,6 +256,8 @@ def train_pinn(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
                     res = process_result(test_data,lambda xt: forward(xt,params),data,plot = plot,times = times,d2 = d2,save = save,file_name = file_name + '_epoch' + str(e).rjust(6, '0'),print = False)
                     l = l + ' L2 error: ' + str(jnp.round(res['error'][0],6))
                 print(l)
+                if save:
+                    pickle.dump({'params': params,'forward': forward},file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle', protocol=pickle.HIGHEST_PROTOCOL)
             bar()
     def u(xt):
         return forward(xt,params)
@@ -310,7 +313,7 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 3,d2 = Tru
     boundary_sample = train_data['boundary'].shape[0]
     initial_sample = train_data['initial'].shape[0]
     collocation_sample = train_data['collocation'].shape[0]
-    df = pd.DataFrame(np.array([sensor_sample,boundary_sample,initial_sample,collocation_sample,l2_error.tolist()]).reshape((1,5)), columns=['sensor_sample','boundary_sample','initial_sample','collocation_sample','error'])
+    df = pd.DataFrame(np.array([sensor_sample,boundary_sample,initial_sample,collocation_sample,l2_error.tolist()]).reshape((1,5)), columns=['sensor_sample','boundary_sample','initial_sample','collocation_sample','l2_error'])
     if save:
         df.to_csv(file_name + '.csv',index = False)
     if print:
