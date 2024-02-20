@@ -304,11 +304,18 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 4,d2 = Tru
                 y_plot = upred[xt[:,-1] == t,:]
                 u_plot = u[xt[:,-1] == t,:]
                 #ax[k].set_aspect(1)
-                ax[i,j].plot(x_plot[:,0],u_plot[:,0],'b-',linewidth=2,label='Exact')
-                ax[i,j].plot(x_plot[:,0],y_plot,'r--',linewidth=2,label='Prediction')
-                ax[i,j].set_title('$t = %.2f$' % (t),fontsize=10)
-                ax[i,j].set_xlabel('$x$')
-                ax[i,j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
+                if int(times/3) > 1:
+                    ax[i,j].plot(x_plot[:,0],u_plot[:,0],'b-',linewidth=2,label='Exact')
+                    ax[i,j].plot(x_plot[:,0],y_plot,'r--',linewidth=2,label='Prediction')
+                    ax[i,j].set_title('$t = %.2f$' % (t),fontsize=10)
+                    ax[i,j].set_xlabel('$x$')
+                    ax[i,j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
+                else:
+                    ax[j].plot(x_plot[:,0],u_plot[:,0],'b-',linewidth=2,label='Exact')
+                    ax[j].plot(x_plot[:,0],y_plot,'r--',linewidth=2,label='Prediction')
+                    ax[j].set_title('$t = %.2f$' % (t),fontsize=10)
+                    ax[j].set_xlabel('$x$')
+                    ax[j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
                 k = k + 1
 
 
@@ -327,7 +334,7 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 4,d2 = Tru
         ax[0].set_title('Exact')
         ax[1].pcolormesh(xt[:,-1].reshape((l,l)),xt[:,0].reshape((l,l)),upred[:,0].reshape((l,l)),cmap = 'RdBu',vmin = ylo.tolist(),vmax = yup.tolist())
         ax[1].set_title('Predicted')
-        fig.colorbar(c, ax=ax)
+        #fig.colorbar(c, ax=ax)
 
         fig = plt.gcf()
         if plot:
