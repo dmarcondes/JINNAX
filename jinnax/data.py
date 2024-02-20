@@ -79,10 +79,6 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb,Nc,Ntc,tlo = 0,d = 1,poss = 'grid',
     Returns
     -------
     dict-like object with generated data
-
-    Examples
-    --------
-    >>> count_words("text.txt")
     """
 
     #Repeat x limits
@@ -105,7 +101,8 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb,Nc,Ntc,tlo = 0,d = 1,poss = 'grid',
     else:
         t_sensor = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = tlo,maxval = tup,shape = (Nt,))
     xt_sensor = jnp.array([x.tolist() + [t.tolist()] for x in x_sensor for t in t_sensor],dtype = jnp.float32)
-    u_sensor = jnp.array([[u(x,t) + sigmas*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_sensor for t in t_sensor],dtype = jnp.float32)
+    u_sensor = jnp.array([u(x,t) + sigmas*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize))) for x in x_sensor for t in t_sensor],dtype = jnp.float32)
+    u_sensor = u_sensor.reshape((u_sensor.shape[0],1))
 
     #Set collocation points (always in an interior grid)
     if posct == 'grid':
@@ -139,11 +136,13 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb,Nc,Ntc,tlo = 0,d = 1,poss = 'grid',
     x_boundary = jnp.unique(new_xb,axis = 0)
     xt_boundary = jnp.array([x.tolist() + [t.tolist()] for x in x_boundary for t in t_boundary],dtype = jnp.float32)
     u_boundary = jnp.array([[u(x,t) + sigmab*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_boundary for t in t_boundary],dtype = jnp.float32)
+    u_boundary = u_boundary.reshape((u_boundary.shape[0],1))
 
     #Sample initial data
     x_initial = x_sensor
     xt_initial = jnp.array([x.tolist() + [t] for x in x_initial for t in [0.0]],dtype = jnp.float32)
     u_initial = jnp.array([[u(x,t) + sigmai*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_initial for t in jnp.array([0.0])],dtype = jnp.float32)
+    u_initial = u_initial.reshape((u_initial.shape[0],1))
 
     #Create data structure
     dat = {'sensor': xt_sensor,'usensor': u_sensor,'boundary': xt_boundary,'uboundary': u_boundary,'initial': xt_initial,'uinitial': u_initial,'collocation': xt_collocation}
