@@ -7,6 +7,11 @@ import math
 import time
 import random
 
+#MSE self-adaptative
+@jax.jit
+def MSE_SA(true,pred,wheight):
+  return jnp.mean(jax.nn.sigmoid(wheight) * (true - pred)**2)
+
 #Simple fully connected architecture. Return the function for the forward pass
 def fconNN(width,activation = jax.nn.tanh,key = 0):
     #Initialize parameters with Glorot initialization
@@ -150,7 +155,7 @@ def cmnn(x,type,width,size,shape_x,key = 0):
     return {'params': params,'forward': forward}
 
 #Canonical Morphological NN with iterated NN
-def cmnn_iter(type,width,width_str,size,shape_x,x = None,activation = jax.nn.tanh,key = 0,init = 'identity',loss = jtr.MSE_SA,sa = True,epochs = 1000,batches = 1,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,notebook = False):
+def cmnn_iter(type,width,width_str,size,shape_x,x = None,activation = jax.nn.tanh,key = 0,init = 'identity',loss = MSE_SA,sa = True,epochs = 1000,batches = 1,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,notebook = False):
     #Index window
     index_x = mp.index_array(shape_x)
 

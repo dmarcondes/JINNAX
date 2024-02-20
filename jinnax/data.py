@@ -8,6 +8,7 @@ import random
 import sys
 from PIL import Image
 from IPython.display import display
+__docformat__ = "numpy"
 
 #Read and organize a data.frame
 def read_data_frame(file,sep = None,header = None,sheet = 0):
@@ -33,54 +34,91 @@ def read_data_frame(file,sep = None,header = None,sheet = 0):
 
 #Generate d-dimensional data for PINN training
 def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb = None,Nc = None,Ntc = None,train = True,tlo = 0,d = 1,poss = 'grid',post = 'grid',posc = 'grid',posct = 'grid',sigmas = 0,sigmab = 0,sigmai = 0):
-    """Generate data for PINN simulation.
-
-    Generate spatio-temporal data in a d-dimension cube.
+    """Generate spatio-temporal data in a d-dimension cube for PINN simulation.
 
     Parameters
     ----------
     u : function
+
         Solution of the PDE
+
     xlo : float
+
         Lower bound of each x coordinate
+
     xup : float
+
         Upper bound of each x coordinate
+
     tlo : float
+
         Lower bound of the time interval. Default 0
+
     tup :
+
         Upper bound of the time interval
+
     Ns : int
+
         Number of points along each x coordinate for sensor data
+
     Nt : int
+
         Number of points along the time axis for sensor data
+
     Nb : int
+
         Number of points along each x coordinate for boundary data
+
     Nc : int
+
         Number of points along each x coordinate for collocation points
+
     Ntc : int
+
         Number of points along the time axis for collocation points
+
     train : logical
+
         Wheter to generate train (True) or test (False) data. Default True
+
     d : int
+
         Domain dimension. Default 1
+
     poss : str
+
         Position of sensor data in spatial domain. Either 'grid' or 'random' for uniform sampling. Default 'grid'
+
     post : str
+
         Position of points in the time interval. Either 'grid' or 'random' for uniform sampling. Default 'grid'
+
     posc : str
+
         Position of the collocation points in the x domain. Either 'grid' or 'random' for uniform sampling. Default 'grid'
+
     posct : str
+
         Position of the collocation points in the time interval. Either 'grid' or 'random' for uniform sampling. Default 'grid'
+
     sigmas : str
+
         Standard deviation of the Gaussian noise of sensor data (x inside the domain). Default 0
+
     sigmab : str
+
         Standard deviation of the Gaussian noise of boundary data. Default 0
+
     sigmai : str
+
         Standard deviation of the Gaussian noise of initial data. Default 0
 
     Returns
     -------
+
     dict-like object with generated data
+
     """
 
     #Repeat x limits
