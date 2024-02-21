@@ -125,7 +125,7 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb = None,Ntb = None,Ni = None,Nc = No
     if isinstance(xup,int):
         xup = [xup for i in range(d)]
 
-    #Sample sensor data
+    #Sensor data
     if Ns is not None and Nt is not None:
         if poss == 'grid':
             #Create the grid for the first coordinate
@@ -186,7 +186,7 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb = None,Ntb = None,Ni = None,Nc = No
         #Return None if collocation data should not be generated
         xt_collocation = None
 
-    #Sample boundary data
+    #Boundary data
     if train and Ntb is not None and Nb is not None:
         if postb == 'grid':
             #Create the Ntb grid of (tlo,tup]
@@ -254,7 +254,7 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb = None,Ntb = None,Ni = None,Nc = No
         xt_boundary = None
         u_boundary = None
 
-    #Sample initial data
+    #Initial data
     if train and Ni is not None:
         if posi == 'grid':
             #Create the grid for the first coordinate
@@ -275,6 +275,10 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb = None,Ntb = None,Ni = None,Nc = No
         #Calculate u at each point
         u_initial = jnp.array([[u(x,t) + sigmai*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_initial for t in jnp.array([0.0])],dtype = jnp.float32)
         u_initial = u_initial.reshape((u_initial.shape[0],1))
+    else:
+        #Return None if initial data should not be generated
+        xt_initial = None
+        u_initial = None
 
     #Create data structure
     if train:
