@@ -56,7 +56,7 @@ def L2error(pred,true):
     -------
     L2-error
     """
-  return jnp.sqrt(jnp.sum((true - pred)**2))/jnp.sqrt(jnp.sum(true ** 2))
+    return jnp.sqrt(jnp.sum((true - pred)**2))/jnp.sqrt(jnp.sum(true ** 2))
 
 #Simple fully connected architecture. Return the initial parameters and the function for the forward pass
 def fconNN(width,activation = jax.nn.tanh,key = 0):
