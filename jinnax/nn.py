@@ -16,7 +16,6 @@ __docformat__ = "numpy"
 @jax.jit
 def MSE(pred,true):
     """
-    
     Mean square error
     ----------
 
