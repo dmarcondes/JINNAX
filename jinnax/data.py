@@ -260,10 +260,10 @@ def generate_PINNdata(u,xlo,xup,tlo,tup,Ns = None,Nts = None,Nb = None,Ntb = Non
     if train and Ni is not None:
         if posi == 'grid':
             #Create the grid for the first coordinate
-            x_initial = [[x.tolist()] for x in jnp.linspace(xlo[0],xup[0],Ni + 2)[1:-1]]
+            x_initial = [[x.tolist()] for x in jnp.linspace(xlo[0],xup[0],Ni)]
             for i in range(d-1):
                 #Product with the grid of the i-th coordinate
-                x_initial =  [x1 + [x2.tolist()] for x1 in x_initial for x2 in jnp.linspace(xlo[i+1],xup[i+1],Ni + 2)[1:-1]]
+                x_initial =  [x1 + [x2.tolist()] for x1 in x_initial for x2 in jnp.linspace(xlo[i+1],xup[i+1],Ni)]
         else:
             #Sample Ni^d points for the first coordinate
             x_initial = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[0],maxval = xup[0],shape = (Ni ** d,1))
