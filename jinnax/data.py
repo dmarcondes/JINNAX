@@ -11,7 +11,7 @@ from IPython.display import display
 __docformat__ = "numpy"
 
 #Generate d-dimensional data for PINN training
-def generate_PINNdata(u,xlo,xup,tlo,tup,Ns = None,Nts = None,Nb = None,Ntb = None,Ni = None,Nc = None,Ntc = None,train = True,d = 1,poss = 'grid',post = 'grid',posi = 'grid',posb = 'grid',postb = 'grid',posc = 'grid',postc = 'grid',sigmas = 0,sigmab = 0,sigmai = 0):
+def generate_PINNdata(u,xlo,xup,tlo,tup,Ns = None,Nts = None,Nb = None,Ntb = None,Ni = None,Nc = None,Ntc = None,train = True,d = 1,poss = 'grid',posts = 'grid',posi = 'grid',posb = 'grid',postb = 'grid',posc = 'grid',postc = 'grid',sigmas = 0,sigmab = 0,sigmai = 0):
     """
     generate_PINNdata: Generate spatio-temporal data in a d-dimension cube for PINN simulation
     ----------
@@ -78,7 +78,7 @@ def generate_PINNdata(u,xlo,xup,tlo,tup,Ns = None,Nts = None,Nb = None,Ntb = Non
 
         Position of sensor data in spatial domain. Either 'grid' or 'random' for uniform sampling. Default 'grid'
 
-    post : str
+    posts : str
 
         Position of sensor data in the time interval. Either 'grid' or 'random' for uniform sampling. Default 'grid'
 
@@ -143,7 +143,7 @@ def generate_PINNdata(u,xlo,xup,tlo,tup,Ns = None,Nts = None,Nb = None,Ntb = Non
                 x_sensor =  jnp.append(x_sensor,jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[i+1],maxval = xup[i+1],shape = (Ns ** d,1)),1)
         x_sensor = jnp.array(x_sensor,dtype = jnp.float32)
 
-        if post == 'grid':
+        if posts == 'grid':
             #Create the Nt grid of (tlo,tup]
             t_sensor = jnp.linspace(tlo,tup,Nts + 1)[1:]
         else:
