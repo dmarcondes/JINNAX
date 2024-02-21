@@ -16,6 +16,7 @@ __docformat__ = "numpy"
 @jax.jit
 def MSE(pred,true):
     """
+    
     Mean square error
     ----------
 
@@ -144,7 +145,7 @@ def train_PIIN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
 
     epoch_print : int
 
-        Number of epochs to calculate, svae and print test error, and display and save plots. Default 100
+        Number of epochs to calculate, save and print test error, and display and save plots. Default 100
 
     plot : logical
 
@@ -168,7 +169,7 @@ def train_PIIN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
 
     Returns
     -------
-    dict-like object with estimated function, estimated parameters and the nueral network function for the forward pass
+    dict-like object with the estimated function, the estimated parameters and the neural network function for the forward pass
     """
 
     #Initialize architecture
