@@ -11,8 +11,10 @@ from IPython.display import display
 __docformat__ = "numpy"
 
 #Generate d-dimensional data for PINN training
-def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb = None,Ntb = None,Ni = None,Nc = None,Ntc = None,train = True,tlo = 0,d = 1,poss = 'grid',post = 'grid',posi = 'grid',posb = 'grid',postb = 'grid',posc = 'grid',postc = 'grid',sigmas = 0,sigmab = 0,sigmai = 0):
-    """Generate spatio-temporal data in a d-dimension cube for PINN simulation.
+def generate_PINNdata(u,xlo,xup,tlo,tup,Ns = None,Nts = None,Nb = None,Ntb = None,Ni = None,Nc = None,Ntc = None,train = True,d = 1,poss = 'grid',post = 'grid',posi = 'grid',posb = 'grid',postb = 'grid',posc = 'grid',postc = 'grid',sigmas = 0,sigmab = 0,sigmai = 0):
+    """
+    generate_PINNdata: Generate spatio-temporal data in a d-dimension cube for PINN simulation
+    ----------
 
     Parameters
     ----------
@@ -30,43 +32,43 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb = None,Ntb = None,Ni = None,Nc = No
 
     tlo : float
 
-        Lower bound of the time interval. Default 0
+        Lower bound of the time interval.
 
-    tup :
+    tup : float
 
         Upper bound of the time interval
 
-    Ns : int
+    Ns : int, None
 
-        Number of points along each x coordinate for sensor data
+        Number of points along each x coordinate for sensor data. None for not generating sensor data
 
-    Nt : int
+    Nts : int, None
 
-        Number of points along the time axis for sensor data
+        Number of points along the time axis for sensor data. None for not generating sensor data
 
-    Nb : int
+    Nb : int, None
 
-        Number of points along each x coordinate for boundary data
+        Number of points along each x coordinate for boundary data. None for not generating boundary data
 
-    Ntb : int
+    Ntb : int, None
 
-        Number of points along the time axis for boundary data
+        Number of points along the time axis for boundary data. None for not generating boundary data
 
-    Ni : int
+    Ni : int, None
 
-        Number of points along each x coordinate for initial data
+        Number of points along each x coordinate for initial data. None for not generating initial data
 
-    Nc : int
+    Nc : int, None
 
-        Number of points along each x coordinate for collocation points
+        Number of points along each x coordinate for collocation points. None for not generating collocation points
 
-    Ntc : int
+    Ntc : int, None
 
-        Number of points along the time axis for collocation points
+        Number of points along the time axis for collocation points. None for not generating collocation points
 
     train : logical
 
-        Wheter to generate train (True) or test (False) data. Teste data is generated only inside the domain. Default True
+        Wheter to generate train (True) or test (False) data. Only sensor data is generated for test data. Default True
 
     d : int
 
@@ -102,7 +104,7 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb = None,Ntb = None,Ni = None,Nc = No
 
     sigmas : str
 
-        Standard deviation of the Gaussian noise of sensor data (x inside the domain). Default 0
+        Standard deviation of the Gaussian noise of sensor data. Default 0
 
     sigmab : str
 
@@ -126,7 +128,7 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb = None,Ntb = None,Ni = None,Nc = No
         xup = [xup for i in range(d)]
 
     #Sensor data
-    if Ns is not None and Nt is not None:
+    if Ns is not None and Nts is not None:
         if poss == 'grid':
             #Create the grid for the first coordinate
             x_sensor = [[x.tolist()] for x in jnp.linspace(xlo[0],xup[0],Ns + 2)[1:-1]]
@@ -143,10 +145,10 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb = None,Ntb = None,Ni = None,Nc = No
 
         if post == 'grid':
             #Create the Nt grid of (tlo,tup]
-            t_sensor = jnp.linspace(tlo,tup,Nt + 1)[1:]
+            t_sensor = jnp.linspace(tlo,tup,Nts + 1)[1:]
         else:
             #Sample Nt points from (tlo,tup)
-            t_sensor = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = tlo,maxval = tup,shape = (Nt,))
+            t_sensor = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = tlo,maxval = tup,shape = (Nts,))
         #Product of x and t
         xt_sensor = jnp.array([x.tolist() + [t.tolist()] for x in x_sensor for t in t_sensor],dtype = jnp.float32)
         #Calculate u at each point
@@ -290,7 +292,9 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb = None,Ntb = None,Ni = None,Nc = No
 
 #Read and organize a data.frame
 def read_data_frame(file,sep = None,header = 'infer',sheet = 0):
-    """Read a data file and convert to JAX array.
+    """
+    Read a data file and convert to JAX array.
+    -------
 
     Parameters
     ----------

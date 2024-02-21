@@ -5,7 +5,6 @@ import optax
 from alive_progress import alive_bar
 import math
 import time
-from jinnax import arch as jar
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt

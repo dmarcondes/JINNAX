@@ -1,9 +1,8 @@
 """
- Python package `pdoc` provides types, functions, and a command-line
- interface for accessing public documentation of Python modules, and
- for presenting it in a user-friendly, industry-standard open format.
- It is best suited for small- to medium-sized projects with tidy,
- hierarchical APIs.
+ Python package `jinnax` provides functions to generate synthetic data and easily train
+ Physics-informed Neural Networks in `JAX`. It has the modules `data` and `nn` for data generation
+ and neural network training.
 
- .. include:: ./documentation.md
- """ 
+ A tutorial of `jinnax` is available at [Google Colab](https://colab.research.google.com/github/dmarcondes/JINNAX/blob/master/Tutorial_PINN_simulation_with_JINNAX.ipynb)
+ where more details about its data generating and training functions can be found.
+ """
