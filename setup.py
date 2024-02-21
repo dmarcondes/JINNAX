@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 VERSION = '0.0.1'
-DESCRIPTION = 'Interface to train Informed neural Networks in JAX'
-LONG_DESCRIPTION = 'Interface to train Informed neural Networks in JAX'
+DESCRIPTION = 'Interface to train Physics-informed Neural Networks in JAX'
+LONG_DESCRIPTION = 'Interface to train Physics-informed Neural Networks in JAX'
 
 # Setting up
 setup(
@@ -14,8 +14,7 @@ setup(
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         packages=find_packages(),
-        install_requires=['pandas','openpyxl','jax','pillow','optax','alive_progress','IPython'], # add any additional packages that
-        # needs to be installed along with your package. Eg: 'caer'
+        install_requires=['pandas','openpyxl','jax','pillow','optax','alive_progress','IPython','numpy','matplotlib','pickle'], 
 
         keywords=['python', 'JAX', 'PINN'],
         classifiers= [
