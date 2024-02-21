@@ -230,7 +230,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
                 #If there is test data, compute current L2 error
                 if test_data is not None:
                     #Compute L2 error and build plots
-                    res = process_result(test_data,lambda xt: forward(xt,params),data,plot = plot,times = times,d2 = d2,save = save,file_name = file_name + '_epoch' + str(e).rjust(6, '0'),print = False)
+                    res = process_result(test_data,lambda xt: forward(xt,params),data,plot = plot,times = times,d2 = d2,save = save,file_name = file_name + '_epoch' + str(e).rjust(6, '0'),print_res = False)
                     l = l + ' L2 error: ' + str(jnp.round(res['l2_error'][0],6))
                 #Print
                 print(l)
@@ -246,7 +246,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
     return {'u': u,'params': params,'forward': forward}
 
 #Process result
-def process_result(test_data,u_trained,train_data,plot = True,times = 5,d2 = True,save = False,file_name = 'result_pinn',print = True):
+def process_result(test_data,u_trained,train_data,plot = True,times = 5,d2 = True,save = False,file_name = 'result_pinn',print_res = True):
     """
     Process the results of a Physics-informed Neural Network
     ----------
@@ -285,7 +285,7 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 5,d2 = Tru
 
         File prefix to save the plots and the L2 error. Default 'result_pinn'
 
-    print : logical
+    print_res : logical
 
         Wheter to print the L2 error. Default True
 
@@ -314,7 +314,7 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 5,d2 = Tru
     df = pd.DataFrame(np.array([sensor_sample,boundary_sample,initial_sample,collocation_sample,l2_error.tolist()]).reshape((1,5)), columns=['sensor_sample','boundary_sample','initial_sample','collocation_sample','l2_error'])
     if save:
         df.to_csv(file_name + '.csv',index = False)
-    if print:
+    if print_res:
         print('L2 error: ' + str(jnp.round(l2_error,6)))
 
     #Plots
