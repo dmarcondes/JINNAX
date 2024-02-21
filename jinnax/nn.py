@@ -103,7 +103,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0):
     return {'params': params,'forward': forward}
 
 #Training PINN
-def train_PIIN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.tanh,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,plot = False,times = 5,d2 = False,save = False,file_name = 'result_pinn'):
+def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.tanh,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,plot = False,times = 5,d2 = False,save = False,file_name = 'result_pinn'):
     """
     Train a Physics-informed Neural Network
     ----------
