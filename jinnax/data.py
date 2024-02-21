@@ -120,9 +120,9 @@ def generate_PINNdata(u,xlo,xup,tup,Ns,Nt,Nb = None,Ntb = None,Ni = None,Nc = No
     """
 
     #Repeat x limits
-    if len(xlo) == 1:
+    if isinstance(xlo,int):
         xlo = [xlo for i in range(d)]
-    if len(xup) == 1:
+    if isinstance(xup,int):
         xup = [xup for i in range(d)]
 
     #Sample sensor data
