@@ -338,11 +338,13 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 5,d2 = Tru
                         ax[i,j].plot(x_plot[:,0],u_plot[:,0],'b-',linewidth=2,label='Exact')
                         ax[i,j].plot(x_plot[:,0],y_plot,'r--',linewidth=2,label='Prediction')
                         ax[i,j].set_title('$t = %.2f$' % (t),fontsize=10)
+                        ax[i,j].set_xlabel(' ')
                         ax[i,j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
                     else:
                         ax[j].plot(x_plot[:,0],u_plot[:,0],'b-',linewidth=2,label='Exact')
                         ax[j].plot(x_plot[:,0],y_plot,'r--',linewidth=2,label='Prediction')
                         ax[j].set_title('$t = %.2f$' % (t),fontsize=10)
+                        ax[j].set_xlabel(' ')
                         ax[j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
                     k = k + 1
 
