@@ -319,8 +319,7 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 5,d2 = Tru
 
     #Plots
     if d == 1:
-        fig, ax = plt.subplots(int(times/5),5)
-        fig.tight_layout()
+        fig, ax = plt.subplots(int(times/5),5,figsize = (10*int(times/5),2*int(times/5)))
         tlo = jnp.min(xt[:,-1])
         tup = jnp.max(xt[:,-1])
         ylo = jnp.min(jnp.append(u,upred,0))
