@@ -122,9 +122,9 @@ def generate_PINNdata(u,xl,xu,tl,tu,Ns = None,Nts = None,Nb = None,Ntb = None,N0
     """
 
     #Repeat x limits
-    if isinstance(xl,int):
+    if isinstance(xl,int) or isinstance(xl,float):
         xl = [xl for i in range(d)]
-    if isinstance(xu,int):
+    if isinstance(xu,int) or isinstance(xu,float):
         xu = [xu for i in range(d)]
 
     #Sensor data
