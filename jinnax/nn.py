@@ -172,7 +172,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
     """
 
     #Initialize architecture
-    nnet = jar.fconNN(width,activation,key)
+    nnet = fconNN(width,activation,key)
     forward = nnet['forward']
     params = nnet['params']
 
