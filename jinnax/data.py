@@ -11,7 +11,7 @@ from IPython.display import display
 __docformat__ = "numpy"
 
 #Generate d-dimensional data for PINN training
-def generate_PINNdata(u,xlo,xup,tlo,tup,Ns = None,Nts = None,Nb = None,Ntb = None,Ni = None,Nc = None,Ntc = None,train = True,d = 1,poss = 'grid',posts = 'grid',posi = 'grid',posb = 'grid',postb = 'grid',posc = 'grid',postc = 'grid',sigmas = 0,sigmab = 0,sigmai = 0):
+def generate_PINNdata(u,xlo,xup,tlo,tup,Ns = None,Nts = None,Nb = None,Ntb = None,N0 = None,Nc = None,Ntc = None,train = True,d = 1,poss = 'grid',posts = 'grid',pos0 = 'grid',posb = 'grid',postb = 'grid',posc = 'grid',postc = 'grid',sigmas = 0,sigmab = 0,sigma0 = 0):
     """
     generate_PINNdata: Generate spatio-temporal data in a d-dimension cube for PINN simulation
     ----------
@@ -54,7 +54,7 @@ def generate_PINNdata(u,xlo,xup,tlo,tup,Ns = None,Nts = None,Nb = None,Ntb = Non
 
         Number of points along the time axis for boundary data. None for not generating boundary data
 
-    Ni : int, None
+    N0 : int, None
 
         Number of points along each x coordinate for initial data. None for not generating initial data
 
@@ -90,7 +90,7 @@ def generate_PINNdata(u,xlo,xup,tlo,tup,Ns = None,Nts = None,Nb = None,Ntb = Non
 
         Position of boundary data in the time interval. Either 'grid' or 'random' for uniform sampling. Default 'grid'
 
-    posi : int
+    pos0 : int
 
         Position of initial data in spatial domain. Either 'grid' or 'random' for uniform sampling. Default 'grid'
 
@@ -110,7 +110,7 @@ def generate_PINNdata(u,xlo,xup,tlo,tup,Ns = None,Nts = None,Nb = None,Ntb = Non
 
         Standard deviation of the Gaussian noise of boundary data. Default 0
 
-    sigmai : str
+    sigma0 : str
 
         Standard deviation of the Gaussian noise of initial data. Default 0
 
@@ -257,25 +257,25 @@ def generate_PINNdata(u,xlo,xup,tlo,tup,Ns = None,Nts = None,Nb = None,Ntb = Non
         u_boundary = None
 
     #Initial data
-    if train and Ni is not None:
-        if posi == 'grid':
+    if train and N0 is not None:
+        if pos0 == 'grid':
             #Create the grid for the first coordinate
-            x_initial = [[x.tolist()] for x in jnp.linspace(xlo[0],xup[0],Ni)]
+            x_initial = [[x.tolist()] for x in jnp.linspace(xlo[0],xup[0],N0)]
             for i in range(d-1):
                 #Product with the grid of the i-th coordinate
-                x_initial =  [x1 + [x2.tolist()] for x1 in x_initial for x2 in jnp.linspace(xlo[i+1],xup[i+1],Ni)]
+                x_initial =  [x1 + [x2.tolist()] for x1 in x_initial for x2 in jnp.linspace(xlo[i+1],xup[i+1],N0)]
         else:
-            #Sample Ni^d points for the first coordinate
-            x_initial = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[0],maxval = xup[0],shape = (Ni ** d,1))
+            #Sample N0^d points for the first coordinate
+            x_initial = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[0],maxval = xup[0],shape = (N0 ** d,1))
             for i in range(d-1):
-                #Sample Ni^d points for the i-th coordinate and append collumn-wise
-                x_initial =  jnp.append(x_initial,jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[i+1],maxval = xup[i+1],shape = (Ni ** d,1)),1)
+                #Sample N0^d points for the i-th coordinate and append collumn-wise
+                x_initial =  jnp.append(x_initial,jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xlo[i+1],maxval = xup[i+1],shape = (N0 ** d,1)),1)
         x_initial = jnp.array(x_initial,dtype = jnp.float32)
 
         #Product of x and t
         xt_initial = jnp.array([x.tolist() + [t] for x in x_initial for t in [0.0]],dtype = jnp.float32)
         #Calculate u at each point
-        u_initial = jnp.array([[u(x,t) + sigmai*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_initial for t in jnp.array([0.0])],dtype = jnp.float32)
+        u_initial = jnp.array([[u(x,t) + sigma0*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_initial for t in jnp.array([0.0])],dtype = jnp.float32)
         u_initial = u_initial.reshape((u_initial.shape[0],1))
     else:
         #Return None if initial data should not be generated
