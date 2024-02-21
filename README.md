@@ -1,4 +1,4 @@
-#JINNAX: Physics-informed Neural Networks simulation with JAX
+# JINNAX: Physics-informed Neural Networks simulation with JAX
 
 Python package `jinnax` provides functions to generate synthetic data and easily train
 Physics-informed Neural Networks in `JAX`. It has the modules `data` and `nn` for data generation
