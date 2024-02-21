@@ -1,0 +1,10 @@
+README.md
+setup.py
+jinnax/__init__.py
+jinnax/data.py
+jinnax/nn.py
+jinnax.egg-info/PKG-INFO
+jinnax.egg-info/SOURCES.txt
+jinnax.egg-info/dependency_links.txt
+jinnax.egg-info/requires.txt
+jinnax.egg-info/top_level.txt

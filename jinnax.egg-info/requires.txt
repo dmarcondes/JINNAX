@@ -1,0 +1,9 @@
+IPython
+alive_progress
+jax
+matplotlib
+numpy
+openpyxl
+optax
+pandas
+pillow
