@@ -303,9 +303,9 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
     #Data
     xt = test_data['xt']
     u = test_data['u']
-    upred = fir['u'](xt)
+    upred = fit['u'](xt)
     if train_data['sensor'] is not None:
-        upred_train = fir['u'](train_data['sensor'])
+        upred_train = fit['u'](train_data['sensor'])
 
     #Results
     l2_error_test = L2error(upred,u).tolist()
