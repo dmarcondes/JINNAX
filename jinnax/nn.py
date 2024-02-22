@@ -231,7 +231,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
                 if test_data is not None:
                     #Compute L2 error and build plots
                     res = process_result(test_data,lambda xt: forward(xt,params),data,plot = plot,times = times,d2 = d2,save = save,file_name = file_name + '_epoch' + str(e).rjust(6, '0'),print_res = False)
-                    l = l + ' L2 error: ' + str(jnp.round(res['l2_error'][0],6))
+                    l = l + ' L2 error: ' + str(jnp.round(res['l2_error_test'][0],6))
                 #Print
                 print(l)
                 if save:
