@@ -308,12 +308,12 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 5,d2 = Tru
         upred_train = u_trained(train_data['sensor'])
 
     #Results
-    l2_error_test = L2error(upred,u)
-    MSE_test = MSE(upred,u)
+    l2_error_test = L2error(upred,u).tolist()
+    MSE_test = MSE(upred,u).tolist()
     if train_data['sensor'] is not None:
         sensor_sample = train_data['sensor'].shape[0]
-        l2_error_train = L2error(upred_train,train_data['usensor'])
-        MSE_train = MSE(upred_train,train_data['usensor'])
+        l2_error_train = L2error(upred_train,train_data['usensor']).tolist()
+        MSE_train = MSE(upred_train,train_data['usensor']).tolist()
     else:
         sensor_sample = 0
         l2_error_train = -1
@@ -330,7 +330,7 @@ def process_result(test_data,u_trained,train_data,plot = True,times = 5,d2 = Tru
         collocation_sample = train_data['collocation'].shape[0]
     else:
         collocation_sample = 0
-    df = pd.DataFrame(np.array([sensor_sample,boundary_sample,initial_sample,collocation_sample,l2_error_test.tolist(),MSE_test.tolist(),l2_error_train.tolist(),MSE_train.tolist()]).reshape((1,8)),
+    df = pd.DataFrame(np.array([sensor_sample,boundary_sample,initial_sample,collocation_sample,l2_error_test,MSE_test,l2_error_train,MSE_train]).reshape((1,8)),
         columns=['sensor_sample','boundary_sample','initial_sample','collocation_sample','l2_error_test','MSE_test','l2_error_train','MSE_train'])
     if save:
         df.to_csv(file_name + '.csv',index = False)
