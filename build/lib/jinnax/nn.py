@@ -325,7 +325,7 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
     if train_data['initial'] is not None:
         initial_sample = train_data['initial'].shape[0]
     else:
-        initial_sanmple = 0
+        initial_sample = 0
     if train_data['collocation'] is not None:
         collocation_sample = train_data['collocation'].shape[0]
     else:
