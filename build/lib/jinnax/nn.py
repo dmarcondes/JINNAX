@@ -330,7 +330,7 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
         collocation_sample = train_data['collocation'].shape[0]
     else:
         collocation_sample = 0
-    df = pd.DataFrame(np.array([fit['time'],sensor_sample,boundary_sample,initial_sample,collocation_sample,l2_error_test,MSE_test,l2_error_train,MSE_train]).reshape((1,8)),
+    df = pd.DataFrame(np.array([fit['time'],sensor_sample,boundary_sample,initial_sample,collocation_sample,l2_error_test,MSE_test,l2_error_train,MSE_train]).reshape((1,9)),
         columns=['training_time','sensor_sample','boundary_sample','initial_sample','collocation_sample','l2_error_test','MSE_test','l2_error_train','MSE_train'])
     if save:
         df.to_csv(file_name + '.csv',index = False)
