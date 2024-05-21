@@ -234,9 +234,9 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
                     l = l + ' L2 error: ' + str(jnp.round(res['l2_error_test'][0],6))
                 #Print
                 print(l)
-                if save:
-                    #Save current parameters
-                    pickle.dump({'params': params,'width': width},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+            if save:
+                #Save current parameters
+                pickle.dump({'params': params,'width': width},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
             #Update alive_bar
             bar()
     #Define estimated function
