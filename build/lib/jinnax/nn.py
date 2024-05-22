@@ -107,7 +107,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0):
     return {'params': params,'forward': forward}
 
 #Training PINN
-def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.tanh,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn'):
+def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activation = jax.nn.tanh,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn'):
     """
     Train a Physics-informed Neural Network
     ----------
@@ -133,6 +133,10 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
     epochs : int
 
         Number of training epochs. Default 100
+
+    at_each : int
+
+        Save results for epochs multiple of at_each. Default 10
 
     activation : jax.nn activation
 
@@ -230,7 +234,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
                     l = l + ' L2 error: ' + str(jnp.round(l2_test,6))
                 #Print
                 print(l)
-            if save:
+            if (e % at_each == 0 or e == epochs - 1) and save:
                 #Save current parameters
                 pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': lf(params,data)},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
             #Update alive_bar
