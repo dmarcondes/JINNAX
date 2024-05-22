@@ -160,7 +160,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
 
     Returns
     -------
-    dict-like object with the estimated function, the estimated parameters and the neural network function for the forward pass
+    dict-like object with the estimated function, the estimated parameters, the neural network function for the forward pass and the training time
     """
 
     #Initialize architecture
@@ -800,7 +800,7 @@ def demo_time_pinn1D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
             xt_step = test_data['xt'][test_data['xt'][:,-1] == t]
             u_step = test_data['u'][test_data['xt'][:,-1] == t]
             #Initialize plot
-            fig, ax = plt.subplots(int(len(epochs)/2),2,figsize = (6,10*len(epochs)/2))
+            fig, ax = plt.subplots(int(len(epochs)/2),2,figsize = (10,5*len(epochs)/2))
             #Create
             index = 0
             for i in range(int(len(epochs)/2)):
