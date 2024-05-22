@@ -72,7 +72,7 @@
 </span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="c1">#Generate d-dimensional data for PINN training</span>
 </span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="k">def</span> <span class="nf">generate_PINNdata</span><span class="p">(</span><span class="n">u</span><span class="p">,</span><span class="n">xl</span><span class="p">,</span><span class="n">xu</span><span class="p">,</span><span class="n">tl</span><span class="p">,</span><span class="n">tu</span><span class="p">,</span><span class="n">Ns</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">Nts</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">Nb</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">Ntb</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">N0</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">Nc</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">Ntc</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">train</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span><span class="n">d</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="n">poss</span> <span class="o">=</span> <span class="s1">&#39;grid&#39;</span><span class="p">,</span><span class="n">posts</span> <span class="o">=</span> <span class="s1">&#39;grid&#39;</span><span class="p">,</span><span class="n">pos0</span> <span class="o">=</span> <span class="s1">&#39;grid&#39;</span><span class="p">,</span><span class="n">posb</span> <span class="o">=</span> <span class="s1">&#39;grid&#39;</span><span class="p">,</span><span class="n">postb</span> <span class="o">=</span> <span class="s1">&#39;grid&#39;</span><span class="p">,</span><span class="n">posc</span> <span class="o">=</span> <span class="s1">&#39;grid&#39;</span><span class="p">,</span><span class="n">postc</span> <span class="o">=</span> <span class="s1">&#39;grid&#39;</span><span class="p">,</span><span class="n">sigmas</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span><span class="n">sigmab</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span><span class="n">sigma0</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
 </span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="sd">    generate_PINNdata: Generate spatio-temporal data in a d-dimension cube for PINN simulation</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="sd">    Generate spatio-temporal data in a d-dimensional cube for PINN simulation</span>
 </span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="sd">    ----------</span>
 </span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a>
 </span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a><span class="sd">    Parameters</span>
@@ -91,7 +91,7 @@
 </span><span id="L-32"><a href="#L-32"><span class="linenos"> 32</span></a>
 </span><span id="L-33"><a href="#L-33"><span class="linenos"> 33</span></a><span class="sd">    tl : float</span>
 </span><span id="L-34"><a href="#L-34"><span class="linenos"> 34</span></a>
-</span><span id="L-35"><a href="#L-35"><span class="linenos"> 35</span></a><span class="sd">        Lower bound of the time interval.</span>
+</span><span id="L-35"><a href="#L-35"><span class="linenos"> 35</span></a><span class="sd">        Lower bound of the time interval</span>
 </span><span id="L-36"><a href="#L-36"><span class="linenos"> 36</span></a>
 </span><span id="L-37"><a href="#L-37"><span class="linenos"> 37</span></a><span class="sd">    tu : float</span>
 </span><span id="L-38"><a href="#L-38"><span class="linenos"> 38</span></a>
@@ -448,7 +448,7 @@
     <a class="headerlink" href="#generate_PINNdata"></a>
             <div class="pdoc-code codehilite"><pre><span></span><span id="generate_PINNdata-15"><a href="#generate_PINNdata-15"><span class="linenos"> 15</span></a><span class="k">def</span> <span class="nf">generate_PINNdata</span><span class="p">(</span><span class="n">u</span><span class="p">,</span><span class="n">xl</span><span class="p">,</span><span class="n">xu</span><span class="p">,</span><span class="n">tl</span><span class="p">,</span><span class="n">tu</span><span class="p">,</span><span class="n">Ns</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">Nts</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">Nb</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">Ntb</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">N0</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">Nc</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">Ntc</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span><span class="n">train</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span><span class="n">d</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="n">poss</span> <span class="o">=</span> <span class="s1">&#39;grid&#39;</span><span class="p">,</span><span class="n">posts</span> <span class="o">=</span> <span class="s1">&#39;grid&#39;</span><span class="p">,</span><span class="n">pos0</span> <span class="o">=</span> <span class="s1">&#39;grid&#39;</span><span class="p">,</span><span class="n">posb</span> <span class="o">=</span> <span class="s1">&#39;grid&#39;</span><span class="p">,</span><span class="n">postb</span> <span class="o">=</span> <span class="s1">&#39;grid&#39;</span><span class="p">,</span><span class="n">posc</span> <span class="o">=</span> <span class="s1">&#39;grid&#39;</span><span class="p">,</span><span class="n">postc</span> <span class="o">=</span> <span class="s1">&#39;grid&#39;</span><span class="p">,</span><span class="n">sigmas</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span><span class="n">sigmab</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span><span class="n">sigma0</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
 </span><span id="generate_PINNdata-16"><a href="#generate_PINNdata-16"><span class="linenos"> 16</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="generate_PINNdata-17"><a href="#generate_PINNdata-17"><span class="linenos"> 17</span></a><span class="sd">    generate_PINNdata: Generate spatio-temporal data in a d-dimension cube for PINN simulation</span>
+</span><span id="generate_PINNdata-17"><a href="#generate_PINNdata-17"><span class="linenos"> 17</span></a><span class="sd">    Generate spatio-temporal data in a d-dimensional cube for PINN simulation</span>
 </span><span id="generate_PINNdata-18"><a href="#generate_PINNdata-18"><span class="linenos"> 18</span></a><span class="sd">    ----------</span>
 </span><span id="generate_PINNdata-19"><a href="#generate_PINNdata-19"><span class="linenos"> 19</span></a>
 </span><span id="generate_PINNdata-20"><a href="#generate_PINNdata-20"><span class="linenos"> 20</span></a><span class="sd">    Parameters</span>
@@ -467,7 +467,7 @@
 </span><span id="generate_PINNdata-33"><a href="#generate_PINNdata-33"><span class="linenos"> 33</span></a>
 </span><span id="generate_PINNdata-34"><a href="#generate_PINNdata-34"><span class="linenos"> 34</span></a><span class="sd">    tl : float</span>
 </span><span id="generate_PINNdata-35"><a href="#generate_PINNdata-35"><span class="linenos"> 35</span></a>
-</span><span id="generate_PINNdata-36"><a href="#generate_PINNdata-36"><span class="linenos"> 36</span></a><span class="sd">        Lower bound of the time interval.</span>
+</span><span id="generate_PINNdata-36"><a href="#generate_PINNdata-36"><span class="linenos"> 36</span></a><span class="sd">        Lower bound of the time interval</span>
 </span><span id="generate_PINNdata-37"><a href="#generate_PINNdata-37"><span class="linenos"> 37</span></a>
 </span><span id="generate_PINNdata-38"><a href="#generate_PINNdata-38"><span class="linenos"> 38</span></a><span class="sd">    tu : float</span>
 </span><span id="generate_PINNdata-39"><a href="#generate_PINNdata-39"><span class="linenos"> 39</span></a>
@@ -759,7 +759,7 @@
 </span></pre></div>
 
 
-            <div class="docstring"><h2 id="generate_pinndata-generate-spatio-temporal-data-in-a-d-dimension-cube-for-pinn-simulation">generate_PINNdata: Generate spatio-temporal data in a d-dimension cube for PINN simulation</h2>
+            <div class="docstring"><h2 id="generate-spatio-temporal-data-in-a-d-dimensional-cube-for-pinn-simulation">Generate spatio-temporal data in a d-dimensional cube for PINN simulation</h2>
 
 <h6 id="parameters">Parameters</h6>
 
@@ -771,7 +771,7 @@ Lower bound of each x coordinate</li>
 <li><strong>xu</strong> (float):
 Upper bound of each x coordinate</li>
 <li><strong>tl</strong> (float):
-Lower bound of the time interval.</li>
+Lower bound of the time interval</li>
 <li><strong>tu</strong> (float):
 Upper bound of the time interval</li>
 <li><strong>Ns</strong> (int, None):

@@ -13,7 +13,7 @@ __docformat__ = "numpy"
 #Generate d-dimensional data for PINN training
 def generate_PINNdata(u,xl,xu,tl,tu,Ns = None,Nts = None,Nb = None,Ntb = None,N0 = None,Nc = None,Ntc = None,train = True,d = 1,poss = 'grid',posts = 'grid',pos0 = 'grid',posb = 'grid',postb = 'grid',posc = 'grid',postc = 'grid',sigmas = 0,sigmab = 0,sigma0 = 0):
     """
-    generate_PINNdata: Generate spatio-temporal data in a d-dimension cube for PINN simulation
+    Generate spatio-temporal data in a d-dimensional cube for PINN simulation
     ----------
 
     Parameters
@@ -32,7 +32,7 @@ def generate_PINNdata(u,xl,xu,tl,tu,Ns = None,Nts = None,Nb = None,Ntb = None,N0
 
     tl : float
 
-        Lower bound of the time interval.
+        Lower bound of the time interval
 
     tu : float
 

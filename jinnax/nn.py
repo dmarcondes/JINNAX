@@ -148,7 +148,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
 
     epoch_print : int
 
-        Number of epochs to calculate, save and print test error, and display and save plots. Default 100
+        Number of epochs to calculate and print test errors. Default 100
 
     save : logical
 
@@ -156,7 +156,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
 
     file_name : str
 
-        File prefix to save the plots, the L2 error and the current parameters. Default 'result_pinn'
+        File prefix to save the current parameters. Default 'result_pinn'
 
     Returns
     -------
@@ -800,7 +800,7 @@ def demo_time_pinn1D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
             xt_step = test_data['xt'][test_data['xt'][:,-1] == t]
             u_step = test_data['u'][test_data['xt'][:,-1] == t]
             #Initialize plot
-            fig, ax = plt.subplots(int(len(epochs)/2),2,figsize = (10*len(epochs)/2,6))
+            fig, ax = plt.subplots(int(len(epochs)/2),2,figsize = (6,10*len(epochs)/2))
             #Create
             index = 0
             for i in range(int(len(epochs)/2)):

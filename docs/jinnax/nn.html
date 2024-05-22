@@ -231,7 +231,7 @@
 </span><span id="L-148"><a href="#L-148"><span class="linenos">148</span></a>
 </span><span id="L-149"><a href="#L-149"><span class="linenos">149</span></a><span class="sd">    epoch_print : int</span>
 </span><span id="L-150"><a href="#L-150"><span class="linenos">150</span></a>
-</span><span id="L-151"><a href="#L-151"><span class="linenos">151</span></a><span class="sd">        Number of epochs to calculate, save and print test error, and display and save plots. Default 100</span>
+</span><span id="L-151"><a href="#L-151"><span class="linenos">151</span></a><span class="sd">        Number of epochs to calculate and print test errors. Default 100</span>
 </span><span id="L-152"><a href="#L-152"><span class="linenos">152</span></a>
 </span><span id="L-153"><a href="#L-153"><span class="linenos">153</span></a><span class="sd">    save : logical</span>
 </span><span id="L-154"><a href="#L-154"><span class="linenos">154</span></a>
@@ -239,7 +239,7 @@
 </span><span id="L-156"><a href="#L-156"><span class="linenos">156</span></a>
 </span><span id="L-157"><a href="#L-157"><span class="linenos">157</span></a><span class="sd">    file_name : str</span>
 </span><span id="L-158"><a href="#L-158"><span class="linenos">158</span></a>
-</span><span id="L-159"><a href="#L-159"><span class="linenos">159</span></a><span class="sd">        File prefix to save the plots, the L2 error and the current parameters. Default &#39;result_pinn&#39;</span>
+</span><span id="L-159"><a href="#L-159"><span class="linenos">159</span></a><span class="sd">        File prefix to save the current parameters. Default &#39;result_pinn&#39;</span>
 </span><span id="L-160"><a href="#L-160"><span class="linenos">160</span></a>
 </span><span id="L-161"><a href="#L-161"><span class="linenos">161</span></a><span class="sd">    Returns</span>
 </span><span id="L-162"><a href="#L-162"><span class="linenos">162</span></a><span class="sd">    -------</span>
@@ -883,7 +883,7 @@
 </span><span id="L-800"><a href="#L-800"><span class="linenos">800</span></a>            <span class="n">xt_step</span> <span class="o">=</span> <span class="n">test_data</span><span class="p">[</span><span class="s1">&#39;xt&#39;</span><span class="p">][</span><span class="n">test_data</span><span class="p">[</span><span class="s1">&#39;xt&#39;</span><span class="p">][:,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">t</span><span class="p">]</span>
 </span><span id="L-801"><a href="#L-801"><span class="linenos">801</span></a>            <span class="n">u_step</span> <span class="o">=</span> <span class="n">test_data</span><span class="p">[</span><span class="s1">&#39;u&#39;</span><span class="p">][</span><span class="n">test_data</span><span class="p">[</span><span class="s1">&#39;xt&#39;</span><span class="p">][:,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">t</span><span class="p">]</span>
 </span><span id="L-802"><a href="#L-802"><span class="linenos">802</span></a>            <span class="c1">#Initialize plot</span>
-</span><span id="L-803"><a href="#L-803"><span class="linenos">803</span></a>            <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epochs</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span><span class="mi">2</span><span class="p">,</span><span class="n">figsize</span> <span class="o">=</span> <span class="p">(</span><span class="mi">10</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">epochs</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span><span class="mi">6</span><span class="p">))</span>
+</span><span id="L-803"><a href="#L-803"><span class="linenos">803</span></a>            <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epochs</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span><span class="mi">2</span><span class="p">,</span><span class="n">figsize</span> <span class="o">=</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="mi">10</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">epochs</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>
 </span><span id="L-804"><a href="#L-804"><span class="linenos">804</span></a>            <span class="c1">#Create</span>
 </span><span id="L-805"><a href="#L-805"><span class="linenos">805</span></a>            <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
 </span><span id="L-806"><a href="#L-806"><span class="linenos">806</span></a>            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epochs</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)):</span>
@@ -1155,7 +1155,7 @@ Seed for parameters initialization. Default 0</li>
 </span><span id="train_PINN-149"><a href="#train_PINN-149"><span class="linenos">149</span></a>
 </span><span id="train_PINN-150"><a href="#train_PINN-150"><span class="linenos">150</span></a><span class="sd">    epoch_print : int</span>
 </span><span id="train_PINN-151"><a href="#train_PINN-151"><span class="linenos">151</span></a>
-</span><span id="train_PINN-152"><a href="#train_PINN-152"><span class="linenos">152</span></a><span class="sd">        Number of epochs to calculate, save and print test error, and display and save plots. Default 100</span>
+</span><span id="train_PINN-152"><a href="#train_PINN-152"><span class="linenos">152</span></a><span class="sd">        Number of epochs to calculate and print test errors. Default 100</span>
 </span><span id="train_PINN-153"><a href="#train_PINN-153"><span class="linenos">153</span></a>
 </span><span id="train_PINN-154"><a href="#train_PINN-154"><span class="linenos">154</span></a><span class="sd">    save : logical</span>
 </span><span id="train_PINN-155"><a href="#train_PINN-155"><span class="linenos">155</span></a>
@@ -1163,7 +1163,7 @@ Seed for parameters initialization. Default 0</li>
 </span><span id="train_PINN-157"><a href="#train_PINN-157"><span class="linenos">157</span></a>
 </span><span id="train_PINN-158"><a href="#train_PINN-158"><span class="linenos">158</span></a><span class="sd">    file_name : str</span>
 </span><span id="train_PINN-159"><a href="#train_PINN-159"><span class="linenos">159</span></a>
-</span><span id="train_PINN-160"><a href="#train_PINN-160"><span class="linenos">160</span></a><span class="sd">        File prefix to save the plots, the L2 error and the current parameters. Default &#39;result_pinn&#39;</span>
+</span><span id="train_PINN-160"><a href="#train_PINN-160"><span class="linenos">160</span></a><span class="sd">        File prefix to save the current parameters. Default &#39;result_pinn&#39;</span>
 </span><span id="train_PINN-161"><a href="#train_PINN-161"><span class="linenos">161</span></a>
 </span><span id="train_PINN-162"><a href="#train_PINN-162"><span class="linenos">162</span></a><span class="sd">    Returns</span>
 </span><span id="train_PINN-163"><a href="#train_PINN-163"><span class="linenos">163</span></a><span class="sd">    -------</span>
@@ -1272,11 +1272,11 @@ Hyperparameters of the Adam algorithm. Default lr = 0.001, b1 = 0.9, b2 = 0.999,
 <li><strong>key</strong> (int):
 Seed for parameters initialization. Default 0</li>
 <li><strong>epoch_print</strong> (int):
-Number of epochs to calculate, save and print test error, and display and save plots. Default 100</li>
+Number of epochs to calculate and print test errors. Default 100</li>
 <li><strong>save</strong> (logical):
 Whether to save the current parameters. Default False</li>
 <li><strong>file_name</strong> (str):
-File prefix to save the plots, the L2 error and the current parameters. Default 'result_pinn'</li>
+File prefix to save the current parameters. Default 'result_pinn'</li>
 </ul>
 
 <h6 id="returns">Returns</h6>
@@ -2075,7 +2075,7 @@ Framerate for video</li>
 </span><span id="demo_time_pinn1D-801"><a href="#demo_time_pinn1D-801"><span class="linenos">801</span></a>            <span class="n">xt_step</span> <span class="o">=</span> <span class="n">test_data</span><span class="p">[</span><span class="s1">&#39;xt&#39;</span><span class="p">][</span><span class="n">test_data</span><span class="p">[</span><span class="s1">&#39;xt&#39;</span><span class="p">][:,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">t</span><span class="p">]</span>
 </span><span id="demo_time_pinn1D-802"><a href="#demo_time_pinn1D-802"><span class="linenos">802</span></a>            <span class="n">u_step</span> <span class="o">=</span> <span class="n">test_data</span><span class="p">[</span><span class="s1">&#39;u&#39;</span><span class="p">][</span><span class="n">test_data</span><span class="p">[</span><span class="s1">&#39;xt&#39;</span><span class="p">][:,</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">t</span><span class="p">]</span>
 </span><span id="demo_time_pinn1D-803"><a href="#demo_time_pinn1D-803"><span class="linenos">803</span></a>            <span class="c1">#Initialize plot</span>
-</span><span id="demo_time_pinn1D-804"><a href="#demo_time_pinn1D-804"><span class="linenos">804</span></a>            <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epochs</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span><span class="mi">2</span><span class="p">,</span><span class="n">figsize</span> <span class="o">=</span> <span class="p">(</span><span class="mi">10</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">epochs</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span><span class="mi">6</span><span class="p">))</span>
+</span><span id="demo_time_pinn1D-804"><a href="#demo_time_pinn1D-804"><span class="linenos">804</span></a>            <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epochs</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span><span class="mi">2</span><span class="p">,</span><span class="n">figsize</span> <span class="o">=</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="mi">10</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">epochs</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>
 </span><span id="demo_time_pinn1D-805"><a href="#demo_time_pinn1D-805"><span class="linenos">805</span></a>            <span class="c1">#Create</span>
 </span><span id="demo_time_pinn1D-806"><a href="#demo_time_pinn1D-806"><span class="linenos">806</span></a>            <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
 </span><span id="demo_time_pinn1D-807"><a href="#demo_time_pinn1D-807"><span class="linenos">807</span></a>            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epochs</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)):</span>
