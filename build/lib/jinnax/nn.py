@@ -806,15 +806,34 @@ def demo_time_pinn1D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
                 fig, ax = plt.subplots(1,1,figsize = (10,5))
             #Create
             index = 0
-            for i in range(int(len(epochs)/2)):
-                for j in range(min(2,len(epochs))):
+            if int(len(epochs)/2) > 1:
+                for i in range(int(len(epochs)/2)):
+                    for j in range(min(2,len(epochs))):
+                        upred_step = upred[index][test_data['xt'][:,-1] == t]
+                        ax[i,j].plot(xt_step[:,0],u_step[:,0],'b-',linewidth=2,label='Exact')
+                        ax[i,j].plot(xt_step[:,0],upred_step[:,0],'r--',linewidth=2,label='Prediction')
+                        ax[i,j].set_title('Epoch = ' + str(epochs[index]),fontsize=10)
+                        ax[i,j].set_xlabel(' ')
+                        ax[i,j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
+                        index = index + 1
+            elif len(epochs) > 1:
+                for j in range(2):
                     upred_step = upred[index][test_data['xt'][:,-1] == t]
-                    ax[i,j].plot(xt_step[:,0],u_step[:,0],'b-',linewidth=2,label='Exact')
-                    ax[i,j].plot(xt_step[:,0],upred_step[:,0],'r--',linewidth=2,label='Prediction')
-                    ax[i,j].set_title('Epoch = ' + str(epochs[index]),fontsize=10)
-                    ax[i,j].set_xlabel(' ')
-                    ax[i,j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
+                    ax[j].plot(xt_step[:,0],u_step[:,0],'b-',linewidth=2,label='Exact')
+                    ax[j].plot(xt_step[:,0],upred_step[:,0],'r--',linewidth=2,label='Prediction')
+                    ax[j].set_title('Epoch = ' + str(epochs[index]),fontsize=10)
+                    ax[j].set_xlabel(' ')
+                    ax[j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
                     index = index + 1
+            else:
+                upred_step = upred[index][test_data['xt'][:,-1] == t]
+                ax.plot(xt_step[:,0],u_step[:,0],'b-',linewidth=2,label='Exact')
+                ax.plot(xt_step[:,0],upred_step[:,0],'r--',linewidth=2,label='Prediction')
+                ax.set_title('Epoch = ' + str(epochs[index]),fontsize=10)
+                ax.set_xlabel(' ')
+                ax.set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
+                index = index + 1
+
 
             #Title
             fig.suptitle(title + 't = ' + str(round(t,4)))
