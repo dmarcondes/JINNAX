@@ -275,7 +275,7 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
 
     save : logical
 
-        Whether to save the plots and the L2 error. Default False
+        Whether to save the plots. Default False
 
     show : logical
 
@@ -283,7 +283,7 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
 
     file_name : str
 
-        File prefix to save the plots and the L2 error. Default 'result_pinn'
+        File prefix to save the plots. Default 'result_pinn'
 
     print_res : logical
 
@@ -291,7 +291,7 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
 
     Returns
     -------
-    pandas data frame with L2 error
+    pandas data frame with L2 and MSE errors
     """
 
     #Dimension
@@ -301,39 +301,20 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
     times = 5 * round(times/5.0)
 
     #Data
-    xt = test_data['xt']
-    u = test_data['u']
-    upred = fit(xt)
-    if train_data['sensor'] is not None:
-        upred_train = fit(train_data['sensor'])
+    td = get_train_data(train_data)
+    xt_train = td['x']
+    u_train = td['y']
+    upred_train = fit(xt_train)
+    upred_test = fit(test_data['xt'])
 
     #Results
-    l2_error_test = L2error(upred,u).tolist()
-    MSE_test = MSE(upred,u).tolist()
-    if train_data['sensor'] is not None:
-        sensor_sample = train_data['sensor'].shape[0]
-        l2_error_train = L2error(upred_train,train_data['usensor']).tolist()
-        MSE_train = MSE(upred_train,train_data['usensor']).tolist()
-    else:
-        sensor_sample = 0
-        l2_error_train = -1
-        MSE_train = -1
-    if train_data['boundary'] is not None:
-        boundary_sample = train_data['boundary'].shape[0]
-    else:
-        boundary_sample = 0
-    if train_data['initial'] is not None:
-        initial_sample = train_data['initial'].shape[0]
-    else:
-        initial_sample = 0
-    if train_data['collocation'] is not None:
-        collocation_sample = train_data['collocation'].shape[0]
-    else:
-        collocation_sample = 0
-    df = pd.DataFrame(np.array([sensor_sample,boundary_sample,initial_sample,collocation_sample,l2_error_test,MSE_test,l2_error_train,MSE_train]).reshape((1,9)),
-        columns=['sensor_sample','boundary_sample','initial_sample','collocation_sample','l2_error_test','MSE_test','l2_error_train','MSE_train'])
-    if save:
-        df.to_csv(file_name + '.csv',index = False)
+    l2_error_test = L2error(upred_test,test_data['u']).tolist()
+    MSE_test = MSE(upred_test,test_data['u']).tolist()
+    l2_error_train = L2error(upred_train,u_train).tolist()
+    MSE_train = MSE(upred_train,u_train).tolist()
+
+    df = pd.DataFrame(np.array([l2_error_test,MSE_test,l2_error_train,MSE_train]).reshape((1,4)),
+        columns=['l2_error_test','MSE_test','l2_error_train','MSE_train'])
     if print_res:
         print('L2 error test: ' + str(jnp.round(l2_error_test,6)) + ' L2 error train: ' + str(jnp.round(l2_error_train,6)) + ' MSE error test: ' + str(jnp.round(MSE_test,6)) + ' MSE error train: ' + str(jnp.round(MSE_train,6)) )
 
