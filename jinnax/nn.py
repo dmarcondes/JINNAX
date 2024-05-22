@@ -263,7 +263,7 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
 
     plot : logical
 
-        Wheter to generate plots comparing the exact and estimated solutions when the spatial dimension is one. Default True
+        Whether to generate plots comparing the exact and estimated solutions when the spatial dimension is one. Default True
 
     times : int
 
@@ -287,7 +287,7 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
 
     print_res : logical
 
-        Wheter to print the L2 error. Default True
+        Whether to print the L2 error. Default True
 
     Returns
     -------
@@ -336,17 +336,17 @@ def plot_pinn1D(times,xt,u,upred,d2 = True,save = False,show = True,file_name = 
 
         Number of points along the time interval to plot. Default 5
 
-    xt : array
+    xt : jax.numpy.array
 
         Test data xt array
 
-    u : array
+    u : jax.numpy.array
 
         Test data u(x,t) array
 
-    upred : array
+    upred : jax.numpy.array
 
-        Predicted upred(x,t) array
+        Predicted upred(x,t) array on test data
 
     d2 : logical
 
@@ -450,7 +450,7 @@ def plot_pinn1D(times,xt,u,upred,d2 = True,save = False,show = True,file_name = 
 #Get train data in one array
 def get_train_data(train_data):
     """
-    Process treining sample
+    Process training sample
     ----------
 
     Parameters
@@ -505,7 +505,7 @@ def get_train_data(train_data):
     return {'xy': xydata,'x': xdata,'y': ydata,'sensor_sample': sensor_sample,'boundary_sample': boundary_sample,'initial_sample': initial_sample,'collocation_sample': collocation_sample}
 
 #Process training
-def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_sample = 10000,save = False,file_name_save = 'result_pinn',key = 435,ec = 1e-6,lamb = 1):
+def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_sample = 10000,save = False,file_name_save = 'result_pinn',key = 0,ec = 1e-6,lamb = 1):
     """
     Process the training of a Physics-informed Neural Network
     ----------
@@ -526,11 +526,11 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
 
     bolstering : logical
 
-        Whether to compute bolstering mean square error
+        Whether to compute bolstering mean square error. Default True
 
     mc_sample : int
 
-        Number of sample for Monte Carlo integration in bolstering
+        Number of sample for Monte Carlo integration in bolstering. Default 10000
 
     save : logical
 
@@ -542,15 +542,15 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
 
     key : int
 
-        Key for random samples in bolstering
+        Key for random samples in bolstering. Default 0
 
     ec : float
 
-        Stopping criteria error for EM algorithm in bolstering
+        Stopping criteria error for EM algorithm in bolstering. Default 1e-6
 
     lamb : float
 
-        Hyperparameter of EM algorithm in bolstering
+        Hyperparameter of EM algorithm in bolstering. Default 1
 
     Returns
     -------
@@ -680,7 +680,7 @@ def demo_train_pinn1D(test_data,file_name,at_each = 100,times = 5,d2 = True,file
 
     framerate : int
 
-        Framerate for video
+        Framerate for video. Default 10
 
     Returns
     -------
@@ -762,7 +762,7 @@ def demo_time_pinn1D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
 
     framerate : int
 
-        Framerate for video
+        Framerate for video. Default 10
 
     Returns
     -------
@@ -800,11 +800,14 @@ def demo_time_pinn1D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
             xt_step = test_data['xt'][test_data['xt'][:,-1] == t]
             u_step = test_data['u'][test_data['xt'][:,-1] == t]
             #Initialize plot
-            fig, ax = plt.subplots(int(len(epochs)/2),2,figsize = (10,5*len(epochs)/2))
+            if len(epochs) > 1:
+                fig, ax = plt.subplots(int(len(epochs)/2),2,figsize = (10,5*len(epochs)/2))
+            else:
+                fig, ax = plt.subplots(1,1,figsize = (10,5))
             #Create
             index = 0
             for i in range(int(len(epochs)/2)):
-                for j in range(2):
+                for j in range(min(2,len(epochs))):
                     upred_step = upred[index][test_data['xt'][:,-1] == t]
                     ax[i,j].plot(xt_step[:,0],u_step[:,0],'b-',linewidth=2,label='Exact')
                     ax[i,j].plot(xt_step[:,0],upred_step[:,0],'r--',linewidth=2,label='Prediction')

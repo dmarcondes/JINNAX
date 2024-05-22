@@ -68,7 +68,7 @@ def generate_PINNdata(u,xl,xu,tl,tu,Ns = None,Nts = None,Nb = None,Ntb = None,N0
 
     train : logical
 
-        Wheter to generate train (True) or test (False) data. Only sensor data is generated for test data. Default True
+        Whether to generate train (True) or test (False) data. Only sensor data is generated for test data. Default True
 
     d : int
 
