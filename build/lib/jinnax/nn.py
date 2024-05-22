@@ -516,43 +516,46 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
     ep = []
 
     #Process training
-    for e in range(epochs):
-        if e % at_each == 0 or e == epochs - 1:
-            ep = ep + [e]
+    with alive_bar(epochs) as bar:
+        for e in range(epochs):
+            if e % at_each == 0 or e == epochs - 1:
+                ep = ep + [e]
 
-            #Read parameters
-            params = pd.read_pickle(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle')
+                #Read parameters
+                params = pd.read_pickle(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle')
 
-            #Time
-            time = time + [params['time']]
+                #Time
+                time = time + [params['time']]
 
-            #Define learned function
-            def psi(x):
-                return forward(x,params['params'])
+                #Define learned function
+                def psi(x):
+                    return forward(x,params['params'])
 
-            #Train MSE and L2
-            if xdata is not None:
-                train_mse = train_mse + [MSE(psi(xdata),ydata).tolist()]
-                train_L2 = train_L2 + [L2error(psi(xdata),ydata).tolist()]
-            else:
-                train_mse = train_mse + [None]
-                train_L2 = train_L2 + [None]
+                #Train MSE and L2
+                if xdata is not None:
+                    train_mse = train_mse + [MSE(psi(xdata),ydata).tolist()]
+                    train_L2 = train_L2 + [L2error(psi(xdata),ydata).tolist()]
+                else:
+                    train_mse = train_mse + [None]
+                    train_L2 = train_L2 + [None]
 
-            #Test MSE and L2
-            test_mse = test_mse + [MSE(psi(test_data['xt']),test_data['u']).tolist()]
-            test_L2 = test_L2 + [L2error(psi(test_data['xt']),test_data['u']).tolist()]
+                #Test MSE and L2
+                test_mse = test_mse + [MSE(psi(test_data['xt']),test_data['u']).tolist()]
+                test_L2 = test_L2 + [L2error(psi(test_data['xt']),test_data['u']).tolist()]
 
-            #Bolstering
-            if bolstering:
-                kx = gk.kernel_estimator(xdata,random.PRNGKey(keys[e]),method = "mpe",lamb = lamb,ec = ec)
-                kxy = gk.kernel_estimator(xydata,random.PRNGKey(keys[e]),method = "mpe",lamb = lamb,ec = ec)
-                bolstX = bolstX + [gb.bolstering(psi,xdata,ydata,kx,random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
-                bolstXY = bolstXY + [gb.bolstering(psi,xdata,ydata,kxy,random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
-            else:
-                bolst = bolst + [None]
+                #Bolstering
+                if bolstering:
+                    kx = gk.kernel_estimator(xdata,random.PRNGKey(keys[e]),method = "mpe",lamb = lamb,ec = ec)
+                    kxy = gk.kernel_estimator(xydata,random.PRNGKey(keys[e]),method = "mpe",lamb = lamb,ec = ec)
+                    bolstX = bolstX + [gb.bolstering(psi,xdata,ydata,kx,random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
+                    bolstXY = bolstXY + [gb.bolstering(psi,xdata,ydata,kxy,random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
+                else:
+                    bolst = bolst + [None]
 
-            #Loss
-            loss = loss + [params['loss'].tolist()]
+                #Loss
+                loss = loss + [params['loss'].tolist()]
+        #Update alive_bar
+        bar()
 
     #Create data frame
     df = pd.DataFrame(np.column_stack([ep,time,[sensor_sample] * len(ep),[boundary_sample] * len(ep),[initial_sample] * len(ep),[collocation_sample] * len(ep),loss,
