@@ -386,11 +386,11 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
         #2d plot
         if d2:
             fig, ax = plt.subplots(1,2)
-            l1 = jnp.unique(xt[:,-1]).shape[0]#int(jnp.sqrt(xt.shape[0]).tolist())
+            l1 = jnp.unique(xt[:,-1]).shape[0]
             l2 = jnp.unique(xt[:,0]).shape[0]
             ax[0].pcolormesh(xt[:,-1].reshape((l2,l1)),xt[:,0].reshape((l2,l1)),u[:,0].reshape((l2,l1)),cmap = 'RdBu',vmin = ylo.tolist(),vmax = yup.tolist())
             ax[0].set_title('Exact')
-            ax[1].pcolormesh(xt[:,-1].reshape((l,l)),xt[:,0].reshape((l,l)),upred[:,0].reshape((l,l)),cmap = 'RdBu',vmin = ylo.tolist(),vmax = yup.tolist())
+            ax[1].pcolormesh(xt[:,-1].reshape((l2,l1)),xt[:,0].reshape((l2,l1)),upred[:,0].reshape((l2,l1)),cmap = 'RdBu',vmin = ylo.tolist(),vmax = yup.tolist())
             ax[1].set_title('Predicted')
 
             fig = plt.gcf()
