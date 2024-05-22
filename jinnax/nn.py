@@ -339,7 +339,7 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
     return df
 
 #Plot results for d = 1
-def plot_pinn1D(times,xt,u,upred,d2 = True,save = False,file_name = 'result_pinn'):
+def plot_pinn1D(times,xt,u,upred,d2 = True,show = True,save = False,file_name = 'result_pinn'):
     """
     Plot the prediction of a 1D PINN
     ----------
@@ -350,15 +350,15 @@ def plot_pinn1D(times,xt,u,upred,d2 = True,save = False,file_name = 'result_pinn
 
         Number of points along the time interval to plot. Default 5
 
-    xt: array
+    xt : array
 
         Test data xt array
 
-    u: array
+    u : array
 
         Test data u(x,t) array
 
-    upred: array
+    upred : array
 
         Predicted upred(x,t) array
 
@@ -369,6 +369,10 @@ def plot_pinn1D(times,xt,u,upred,d2 = True,save = False,file_name = 'result_pinn
     save : logical
 
         Whether to save the plots. Default False
+
+    show : logical
+
+        Whether to show the plots. Default True
 
     file_name : str
 
@@ -412,7 +416,7 @@ def plot_pinn1D(times,xt,u,upred,d2 = True,save = False,file_name = 'result_pinn
 
     #Show and save
     fig = plt.gcf()
-    if plot:
+    if show:
         plt.show()
     if save:
         fig.savefig(file_name + '_slices.png')
@@ -433,7 +437,7 @@ def plot_pinn1D(times,xt,u,upred,d2 = True,save = False,file_name = 'result_pinn
 
         #Show and save
         fig = plt.gcf()
-        if plot:
+        if show:
             plt.show()
         if save:
             fig.savefig(file_name + '_2d.png')
