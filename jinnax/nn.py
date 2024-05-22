@@ -320,7 +320,7 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
 
     #Plots
     if d == 1 and plot:
-        plot_pinn1D(times,xt,u,upred,d2,save,show,file_name)
+        plot_pinn1D(times,test_data['xt'],test_data['u'],upred_test,d2,save,show,file_name)
 
     return df
 
