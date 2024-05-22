@@ -236,9 +236,9 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
                 l = 'Time: ' + str(round(time.time() - t0)) + ' s Loss: ' + str(jnp.round(lf(params,data),6))
                 #If there is test data, compute current L2 error
                 if test_data is not None:
-                    #Compute L2 error and build plots
-                    res = process_result(test_data,{'u': lambda xt: forward(xt,params),'time': time.time() - t0},data,plot = plot,times = times,d2 = d2,save = save,file_name = file_name + '_epoch' + str(e).rjust(6, '0'),print_res = False)
-                    l = l + ' L2 error: ' + str(jnp.round(res['l2_error_test'][0],6))
+                    #Compute L2 error
+                    l2_test = L2error(forward(test_data['xt'],params),test_data['u']).tolist()
+                    l = l + ' L2 error: ' + str(jnp.round(l2_test,6))
                 #Print
                 print(l)
             if save:
@@ -346,61 +346,110 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
 
     #Plots
     if d == 1:
-        fig, ax = plt.subplots(int(times/5),5,figsize = (10*int(times/5),2*int(times/5)))
-        tlo = jnp.min(xt[:,-1])
-        tup = jnp.max(xt[:,-1])
-        ylo = jnp.min(jnp.append(u,upred,0))
-        yup = jnp.max(jnp.append(u,upred,0))
-        k = 0
-        t_values = np.linspace(tlo,tup,times)
-        for i in range(int(times/5)):
-            for j in range(5):
-                if k < len(t_values):
-                    t = t_values[k]
-                    t = xt[jnp.abs(xt[:,-1] - t) == jnp.min(jnp.abs(xt[:,-1] - t)),-1][0].tolist()
-                    x_plot = xt[xt[:,-1] == t,:-1]
-                    y_plot = upred[xt[:,-1] == t,:]
-                    u_plot = u[xt[:,-1] == t,:]
-                    if int(times/5) > 1:
-                        ax[i,j].plot(x_plot[:,0],u_plot[:,0],'b-',linewidth=2,label='Exact')
-                        ax[i,j].plot(x_plot[:,0],y_plot,'r--',linewidth=2,label='Prediction')
-                        ax[i,j].set_title('$t = %.2f$' % (t),fontsize=10)
-                        ax[i,j].set_xlabel(' ')
-                        ax[i,j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
-                    else:
-                        ax[j].plot(x_plot[:,0],u_plot[:,0],'b-',linewidth=2,label='Exact')
-                        ax[j].plot(x_plot[:,0],y_plot,'r--',linewidth=2,label='Prediction')
-                        ax[j].set_title('$t = %.2f$' % (t),fontsize=10)
-                        ax[j].set_xlabel(' ')
-                        ax[j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
-                    k = k + 1
+        plot_pinn1D(times,xt,u,upred,d2,save,file_name)
 
+    return df
 
+#Plot results for d = 1
+def plot_pinn1D(times,xt,u,upred,d2 = True,save = False,file_name = 'result_pinn'):
+    """
+    Plot the prediction of a 1D PINN
+    ----------
+
+    Parameters
+    ----------
+    times : int
+
+        Number of points along the time interval to plot. Default 5
+
+    xt: array
+
+        Test data xt array
+
+    u: array
+
+        Test data u(x,t) array
+
+    upred: array
+
+        Predicted upred(x,t) array
+
+    d2 : logical
+
+        Whether to plot 2D plot. Default True
+
+    save : logical
+
+        Whether to save the plots. Default False
+
+    file_name : str
+
+        File prefix to save the plots. Default 'result_pinn'
+
+    Returns
+    -------
+    pandas data frame with L2 error
+    """
+    #Initialize
+    fig, ax = plt.subplots(int(times/5),5,figsize = (10*int(times/5),2*int(times/5)))
+    tlo = jnp.min(xt[:,-1])
+    tup = jnp.max(xt[:,-1])
+    ylo = jnp.min(jnp.append(u,upred,0))
+    yup = jnp.max(jnp.append(u,upred,0))
+    k = 0
+    t_values = np.linspace(tlo,tup,times)
+
+    #Create
+    for i in range(int(times/5)):
+        for j in range(5):
+            if k < len(t_values):
+                t = t_values[k]
+                t = xt[jnp.abs(xt[:,-1] - t) == jnp.min(jnp.abs(xt[:,-1] - t)),-1][0].tolist()
+                x_plot = xt[xt[:,-1] == t,:-1]
+                y_plot = upred[xt[:,-1] == t,:]
+                u_plot = u[xt[:,-1] == t,:]
+                if int(times/5) > 1:
+                    ax[i,j].plot(x_plot[:,0],u_plot[:,0],'b-',linewidth=2,label='Exact')
+                    ax[i,j].plot(x_plot[:,0],y_plot,'r--',linewidth=2,label='Prediction')
+                    ax[i,j].set_title('$t = %.2f$' % (t),fontsize=10)
+                    ax[i,j].set_xlabel(' ')
+                    ax[i,j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
+                else:
+                    ax[j].plot(x_plot[:,0],u_plot[:,0],'b-',linewidth=2,label='Exact')
+                    ax[j].plot(x_plot[:,0],y_plot,'r--',linewidth=2,label='Prediction')
+                    ax[j].set_title('$t = %.2f$' % (t),fontsize=10)
+                    ax[j].set_xlabel(' ')
+                    ax[j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
+                k = k + 1
+
+    #Show and save
+    fig = plt.gcf()
+    if plot:
+        plt.show()
+    if save:
+        fig.savefig(file_name + '_slices.png')
+    plt.close()
+
+    #2d plot
+    if d2:
+        #Initialize
+        fig, ax = plt.subplots(1,2)
+        l1 = jnp.unique(xt[:,-1]).shape[0]
+        l2 = jnp.unique(xt[:,0]).shape[0]
+
+        #Create
+        ax[0].pcolormesh(xt[:,-1].reshape((l2,l1)),xt[:,0].reshape((l2,l1)),u[:,0].reshape((l2,l1)),cmap = 'RdBu',vmin = ylo.tolist(),vmax = yup.tolist())
+        ax[0].set_title('Exact')
+        ax[1].pcolormesh(xt[:,-1].reshape((l2,l1)),xt[:,0].reshape((l2,l1)),upred[:,0].reshape((l2,l1)),cmap = 'RdBu',vmin = ylo.tolist(),vmax = yup.tolist())
+        ax[1].set_title('Predicted')
+
+        #Show and save
         fig = plt.gcf()
         if plot:
             plt.show()
         if save:
-            fig.savefig(file_name + '_slices.png')
+            fig.savefig(file_name + '_2d.png')
         plt.close()
-
-        #2d plot
-        if d2:
-            fig, ax = plt.subplots(1,2)
-            l1 = jnp.unique(xt[:,-1]).shape[0]
-            l2 = jnp.unique(xt[:,0]).shape[0]
-            ax[0].pcolormesh(xt[:,-1].reshape((l2,l1)),xt[:,0].reshape((l2,l1)),u[:,0].reshape((l2,l1)),cmap = 'RdBu',vmin = ylo.tolist(),vmax = yup.tolist())
-            ax[0].set_title('Exact')
-            ax[1].pcolormesh(xt[:,-1].reshape((l2,l1)),xt[:,0].reshape((l2,l1)),upred[:,0].reshape((l2,l1)),cmap = 'RdBu',vmin = ylo.tolist(),vmax = yup.tolist())
-            ax[1].set_title('Predicted')
-
-            fig = plt.gcf()
-            if plot:
-                plt.show()
-            if save:
-                fig.savefig(file_name + '_2d.png')
-            plt.close()
-
-    return df
 
 #Process training
 def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_sample = 10000,save = False,file_name_save = 'result_pinn',key = 435,ec = 1e-6,lamb = 1):
@@ -555,8 +604,8 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
 
                 #Loss
                 loss = loss + [params['loss'].tolist()]
-        #Update alive_bar
-        bar()
+            #Update alive_bar
+            bar()
 
     #Create data frame
     df = pd.DataFrame(np.column_stack([ep,time,[sensor_sample] * len(ep),[boundary_sample] * len(ep),[initial_sample] * len(ep),[collocation_sample] * len(ep),loss,
