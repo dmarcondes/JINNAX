@@ -8,6 +8,7 @@ import time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import dill
 import pickle
 from genree import bolstering as gb
 from genree import kernel as gk
