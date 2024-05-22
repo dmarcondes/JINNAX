@@ -181,7 +181,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
 
     #Save config
     if save:
-        pickle.dump({'train_data': data,'forward': forward,'epochs': epochs,'activation': activation,'init_params': params,'width': width,'pde': pde,'lr': lr,'b1': b1,'b2': b2,'eps': eps,'eps_root': eps_root,'key': key},open(file_name + '_config.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+        pickle.dump({'train_data': data,'forward': nnet['forward'],'epochs': epochs,'activation': activation,'init_params': params,'width': width,'pde': pde,'lr': lr,'b1': b1,'b2': b2,'eps': eps,'eps_root': eps_root,'key': key},open(file_name + '_config.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
 
     #Define loss function
     @jax.jit
