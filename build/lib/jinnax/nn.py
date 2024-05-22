@@ -453,15 +453,15 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
     -------
     pandas data frame with training results
     """
-    #Generate keys
-    if bolstering:
-        keys = jax.random.randint(random.PRNGKey(key),(epochs,),0,1e9)
-
     #Config
     config = pd.read_pickle(file_name + '_config.pickle')
     epochs = config['epochs']
     train_data = config['train_data']
     forward = fconNN(config['width'],config['activation'],config['key'])['forward']
+    
+    #Generate keys
+    if bolstering:
+        keys = jax.random.randint(random.PRNGKey(key),(epochs,),0,1e9)
 
     #Data
     xdata = None
@@ -552,7 +552,7 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
 
             #Loss
             loss = loss + [params['loss'].tolist()]
-    
+
     #Create data frame
     df = pd.DataFrame(np.column_stack([ep,time,[sensor_sample] * len(ep),[boundary_sample] * len(ep),[initial_sample] * len(ep),[collocation_sample] * len(ep),loss,
     train_mse,test_mse,train_L2,test_L2,bolstX,bolstXY]),
