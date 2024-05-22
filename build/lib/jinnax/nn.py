@@ -106,8 +106,69 @@ def fconNN(width,activation = jax.nn.tanh,key = 0):
     #Return initial parameters and forward function
     return {'params': params,'forward': forward}
 
+#Get activation from string
+def get_activation(act):
+    """
+    Return activation function from string
+    ----------
+
+    Parameters
+    ----------
+    act : str
+
+        Name of the activation function. Default 'tanh'
+
+    Returns
+    -------
+    jax.nn activation function
+    """
+    if str == 'tanh':
+        return jax.nn.tanh
+    elif str == 'relu':
+        return jax.nn.relu
+    elif str == 'relu6':
+        return jax.nn.relu6
+    elif str == 'sigmoid':
+        return jax.nn.sigmoid
+    elif str == 'softplus':
+        return jax.nn.softplus
+    elif str == 'sparse_plus':
+        return jx.nn.sparse_plus
+    elif str == 'soft_sign':
+        return jax.nn.soft_sign
+    elif str == 'silu':
+        return jax.nn.silu
+    elif str == 'swish':
+        return jax.nn.swish
+    elif str == 'log_sigmoid':
+        return jax.nn.log_sigmoid
+    elif str == 'leaky_relu':
+        return jax.xx.leaky_relu
+    elif str == 'hard_sigmoid':
+        return jax.nn.hard_sigmoid
+    elif str == 'hard_silu':
+        return jax.nn.hard_silu
+    elif str == 'hard_swish':
+        return jax.nn.hard_swish
+    elif str == 'hard_tanh':
+        return jax.nn.hard_tanh
+    elif str == 'elu':
+        return jax.nn.elu
+    elif str == 'celu':
+        return jax.nn.celu
+    elif str == 'selu':
+        return jax.nn.selu
+    elif str == 'gelu':
+        return jax.nn.gelu
+    elif str == 'glu':
+        return jax.nn.glu
+    elif str == 'squareplus':
+        return  jax.nn.squareplus
+    elif str == 'mish':
+        return jax.nn.mish
+
 #Training PINN
-def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activation = jax.nn.tanh,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn'):
+def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activation = 'tanh',lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn'):
     """
     Train a Physics-informed Neural Network
     ----------
@@ -138,9 +199,9 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
 
         Save results for epochs multiple of at_each. Default 10
 
-    activation : jax.nn activation
+    activation : str
 
-        The activation function of the neural network. Default jax.nn.tanh
+        The name of the activation function of the neural network. Default 'tanh'
 
     lr,b1,b2,eps,eps_root: float
 
@@ -168,13 +229,13 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     """
 
     #Initialize architecture
-    nnet = fconNN(width,activation,key)
+    nnet = fconNN(width,get_activation(activation),key)
     forward = nnet['forward']
     params = nnet['params']
 
     #Save config
     if save:
-        pickle.dump({'train_data': data,'epochs': epochs,'activation': lambda x: activation(x),'init_params': params,'width': width,'pde': pde,'lr': lr,'b1': b1,'b2': b2,'eps': eps,'eps_root': eps_root,'key': key},open(file_name + '_config.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+        pickle.dump({'train_data': data,'epochs': epochs,'activation': activation,'init_params': params,'width': width,'pde': pde,'lr': lr,'b1': b1,'b2': b2,'eps': eps,'eps_root': eps_root,'key': key},open(file_name + '_config.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
 
     #Define loss function
     @jax.jit
@@ -561,11 +622,10 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
     pandas data frame with training results
     """
     #Config
-    with open(file_name + '_config.pickle', 'rb') as file:
-        config = pickle.load(file)
+    config = pickle.load(open(file_name + '_config.pickle', 'rb'))
     epochs = config['epochs']
     train_data = config['train_data']
-    forward = fconNN(config['width'],config['activation'],config['key'])['forward']
+    forward = fconNN(config['width'],get_activation(config['activation']),config['key'])['forward']
 
     #Generate keys
     if bolstering:
@@ -599,7 +659,7 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
                 ep = ep + [e]
 
                 #Read parameters
-                params = pd.read_pickle(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle')
+                params = pickle.load(open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','rb'))
 
                 #Time
                 time = time + [params['time']]
@@ -695,7 +755,7 @@ def demo_train_pinn1D(test_data,file_name,at_each = 100,times = 5,d2 = True,file
         config = pickle.load(file)
     epochs = config['epochs']
     train_data = config['train_data']
-    forward = fconNN(config['width'],config['activation'],config['key'])['forward']
+    forward = fconNN(config['width'],get_activation(config['activation']),config['key'])['forward']
 
     #Get train data
     td = get_train_data(train_data)
@@ -776,7 +836,7 @@ def demo_time_pinn1D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
     with open(file_name + '_config.pickle', 'rb') as file:
         config = pickle.load(file)
     train_data = config['train_data']
-    forward = fconNN(config['width'],config['activation'],config['key'])['forward']
+    forward = fconNN(config['width'],get_activation(config['activation']),config['key'])['forward']
 
     #Create folder to save plots
     os.system('mkdir ' + file_name_save)
