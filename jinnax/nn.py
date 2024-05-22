@@ -8,8 +8,7 @@ import time
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import dill
-import pickle
+import dill as pickle
 from genree import bolstering as gb
 from genree import kernel as gk
 from jax import random
@@ -457,11 +456,13 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
     #Generate keys
     if bolstering:
         keys = jax.random.randint(random.PRNGKey(key),(epochs,),0,1e9)
+
     #Config
     config = pd.read_pickle(file_name + '_config.pickle')
     epochs = config['epochs']
     train_data = config['train_data']
     forward = fconNN(config['width'],config['activation'],config['key'])['forward']
+
     #Data
     xdata = None
     ydata = None
@@ -502,7 +503,6 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
     else:
         collocation_sample = 0
 
-
     #Initialize loss
     train_mse = []
     test_mse = []
@@ -513,17 +513,22 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
     loss = []
     time = []
     ep = []
+
+    #Process training
     for e in range(epochs):
         if e % at_each == 0 or e == epochs - 1:
-            print(e)
             ep = ep + [e]
+
             #Read parameters
             params = pd.read_pickle(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle')
+
             #Time
             time = time + [params['time']]
+
             #Define learned function
             def psi(x):
                 return forward(x,params['params'])
+
             #Train MSE and L2
             if xdata is not None:
                 train_mse = train_mse + [MSE(psi(xdata),ydata).tolist()]
@@ -531,9 +536,11 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
             else:
                 train_mse = train_mse + [None]
                 train_L2 = train_L2 + [None]
+
             #Test MSE and L2
             test_mse = test_mse + [MSE(psi(test_data['xt']),test_data['u']).tolist()]
             test_L2 = test_L2 + [L2error(psi(test_data['xt']),test_data['u']).tolist()]
+
             #Bolstering
             if bolstering:
                 kx = gk.kernel_estimator(xdata,random.PRNGKey(keys[e]),method = "mpe",lamb = lamb,ec = ec)
@@ -542,11 +549,11 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
                 bolstXY = bolstXY + [gb.bolstering(psi,xdata,ydata,kxy,random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
             else:
                 bolst = bolst + [None]
+
             #Loss
-            loss = loss + [None]#[params['loss'].tolist()]
-
+            loss = loss + [params['loss'].tolist()]
+    
     #Create data frame
-
     df = pd.DataFrame(np.column_stack([ep,time,[sensor_sample] * len(ep),[boundary_sample] * len(ep),[initial_sample] * len(ep),[collocation_sample] * len(ep),loss,
     train_mse,test_mse,train_L2,test_L2,bolstX,bolstXY]),
         columns=['epoch','training_time','sensor_sample','boundary_sample','initial_sample','collocation_sample','loss','train_mse','test_mse','train_L2','test_L2','bolstX','bolstXY'])
