@@ -122,49 +122,49 @@ def get_activation(act):
     -------
     jax.nn activation function
     """
-    if str == 'tanh':
+    if act == 'tanh':
         return jax.nn.tanh
-    elif str == 'relu':
+    elif act == 'relu':
         return jax.nn.relu
-    elif str == 'relu6':
+    elif act == 'relu6':
         return jax.nn.relu6
-    elif str == 'sigmoid':
+    elif act == 'sigmoid':
         return jax.nn.sigmoid
-    elif str == 'softplus':
+    elif act == 'softplus':
         return jax.nn.softplus
-    elif str == 'sparse_plus':
+    elif act == 'sparse_plus':
         return jx.nn.sparse_plus
-    elif str == 'soft_sign':
+    elif act == 'soft_sign':
         return jax.nn.soft_sign
-    elif str == 'silu':
+    elif act == 'silu':
         return jax.nn.silu
-    elif str == 'swish':
+    elif act == 'swish':
         return jax.nn.swish
-    elif str == 'log_sigmoid':
+    elif act == 'log_sigmoid':
         return jax.nn.log_sigmoid
-    elif str == 'leaky_relu':
+    elif act == 'leaky_relu':
         return jax.xx.leaky_relu
-    elif str == 'hard_sigmoid':
+    elif act == 'hard_sigmoid':
         return jax.nn.hard_sigmoid
-    elif str == 'hard_silu':
+    elif act == 'hard_silu':
         return jax.nn.hard_silu
-    elif str == 'hard_swish':
+    elif act == 'hard_swish':
         return jax.nn.hard_swish
-    elif str == 'hard_tanh':
+    elif act == 'hard_tanh':
         return jax.nn.hard_tanh
-    elif str == 'elu':
+    elif act == 'elu':
         return jax.nn.elu
-    elif str == 'celu':
+    elif act == 'celu':
         return jax.nn.celu
-    elif str == 'selu':
+    elif act == 'selu':
         return jax.nn.selu
-    elif str == 'gelu':
+    elif act == 'gelu':
         return jax.nn.gelu
-    elif str == 'glu':
+    elif act == 'glu':
         return jax.nn.glu
-    elif str == 'squareplus':
+    elif act == 'squareplus':
         return  jax.nn.squareplus
-    elif str == 'mish':
+    elif act == 'mish':
         return jax.nn.mish
 
 #Training PINN
