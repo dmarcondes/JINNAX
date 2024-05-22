@@ -241,7 +241,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,activation = jax.nn.
     return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
 
 #Process result
-def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save = False,file_name = 'result_pinn',print_res = True):
+def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save = False,show = True,file_name = 'result_pinn',print_res = True):
     """
     Process the results of a Physics-informed Neural Network
     ----------
@@ -275,6 +275,10 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
     save : logical
 
         Whether to save the plots and the L2 error. Default False
+
+    show : logical
+
+        Whether to show the plots. Default True
 
     file_name : str
 
@@ -334,12 +338,12 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
 
     #Plots
     if d == 1:
-        plot_pinn1D(times,xt,u,upred,d2,save,file_name)
+        plot_pinn1D(times,xt,u,upred,d2,show,save,file_name)
 
     return df
 
 #Plot results for d = 1
-def plot_pinn1D(times,xt,u,upred,d2 = True,show = True,save = False,file_name = 'result_pinn'):
+def plot_pinn1D(times,xt,u,upred,d2 = True,save = False,show = True,file_name = 'result_pinn'):
     """
     Plot the prediction of a 1D PINN
     ----------
