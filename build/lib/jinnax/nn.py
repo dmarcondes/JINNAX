@@ -454,11 +454,12 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
     pandas data frame with training results
     """
     #Config
-    config = pd.read_pickle(file_name + '_config.pickle')
+    with open(file_name + '_config.pickle', 'rb') as file:
+        config = pickle.load(file)
     epochs = config['epochs']
     train_data = config['train_data']
     forward = fconNN(config['width'],config['activation'],config['key'])['forward']
-    
+
     #Generate keys
     if bolstering:
         keys = jax.random.randint(random.PRNGKey(key),(epochs,),0,1e9)
