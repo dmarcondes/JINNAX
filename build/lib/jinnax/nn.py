@@ -687,7 +687,8 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
                     bolstX = bolstX + [gb.bolstering(psi,xdata,ydata,kx,random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
                     bolstXY = bolstXY + [gb.bolstering(psi,xdata,ydata,kxy,random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
                 else:
-                    bolst = bolst + [None]
+                    bolstX = bolstX + [None]
+                    bolstXY = bolstXY + [None]
 
                 #Loss
                 loss = loss + [params['loss'].tolist()]
