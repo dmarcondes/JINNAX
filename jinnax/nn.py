@@ -570,7 +570,7 @@ def get_train_data(train_data):
     return {'xy': xydata,'x': xdata,'y': ydata,'sensor_sample': sensor_sample,'boundary_sample': boundary_sample,'initial_sample': initial_sample,'collocation_sample': collocation_sample}
 
 #Process training
-def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_sample = 10000,save = False,file_name_save = 'result_pinn',key = 0,ec = 1e-6,lamb = 1):
+def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = None,mc_sample = 10000,save = False,file_name_save = 'result_pinn',key = 0,ec = 1e-6,lamb = 1):
     """
     Process the training of a Physics-informed Neural Network
     ----------
@@ -592,6 +592,10 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
     bolstering : logical
 
         Whether to compute bolstering mean square error. Default True
+
+    bias: float
+
+        Bias for kernel estimation in bolstering via the Hessian method
 
     mc_sample : int
 
@@ -682,7 +686,7 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_samp
 
                 #Bolstering
                 if bolstering:
-                    kxy = gk.kernel_estimator(xydata,random.PRNGKey(keys[e]),method = "hessian",lamb = lamb,ec = ec)
+                    kxy = gk.kernel_estimator(xydata,random.PRNGKey(keys[e]),method = "hessian",lamb = lamb,ec = ec,psi = psi,bias = bias)
                     kx = kxy[:-1,:-1]
                     bolstX = bolstX + [gb.bolstering(psi,xdata,ydata,kx,random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
                     bolstXY = bolstXY + [gb.bolstering(psi,xdata,ydata,kxy,random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
