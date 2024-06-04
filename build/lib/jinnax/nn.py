@@ -645,6 +645,10 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
     initial_sample = td['initial_sample']
     collocation_sample = td['collocation_sample']
 
+    #Bias in bolstering
+    if bias is None and bolstering:
+        bias = 1/jnp.sqrt(xdata.shape[0])
+
     #Initialize loss
     train_mse = []
     test_mse = []
