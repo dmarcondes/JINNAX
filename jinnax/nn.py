@@ -691,7 +691,7 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
                 #Bolstering
                 if bolstering:
                     kxy = gk.kernel_estimator(xydata,random.PRNGKey(keys[e]),method = "hessian",lamb = lamb,ec = ec,psi = psi,bias = bias)
-                    kx = kxy[:-1,:-1]
+                    kx = kxy[:,:-1,:-1]
                     bolstX = bolstX + [gb.bolstering(psi,xdata,ydata,kx,random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
                     bolstXY = bolstXY + [gb.bolstering(psi,xdata,ydata,kxy,random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
                 else:
