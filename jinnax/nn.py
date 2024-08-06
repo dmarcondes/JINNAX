@@ -302,7 +302,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
         if data['initial'] is not None:
             params[-1].update({'w0': c * ((1.0 + jnp.zeros((data['initial'].shape[0],1))) ** q)})
         if data['collocation'] is not None:
-            params[-1].update({'wr': c * ((1.0 + jnp.zeros((data['initial'].shape[0],1))) ** q)})
+            params[-1].update({'wr': c * ((1.0 + jnp.zeros((data['collocation'].shape[0],1))) ** q)})
         #Define loss function
         @jax.jit
         def lf(params,x):
