@@ -39,6 +39,37 @@ def MSE(pred,true):
     """
     return jnp.mean((true - pred)**2)
 
+#MSE self-adaptative
+@jax.jit
+def MSE_SA(pred,true,wheight,c = 100,q = 2):
+    """
+    Selft-adaptative mean square error
+    ----------
+
+    Parameters
+    ----------
+    pred : jax.numpy.array
+
+        A JAX numpy array with the predicted values
+
+    true : jax.numpy.array
+
+        A JAX numpy array with the true values
+
+    wheight : jax.numpy.array
+
+        A JAX numpy array with the weights
+
+    c,q : float
+
+        Hyperparameters
+
+    Returns
+    -------
+    self-adaptative mean square error
+    """
+    return jnp.mean(c * (wheight ** q) * (true - pred)**2)
+
 #L2 error
 @jax.jit
 def L2error(pred,true):
@@ -168,7 +199,7 @@ def get_activation(act):
         return jax.nn.mish
 
 #Training PINN
-def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = False,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn'):
+def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = False,sa = False,c = 1,q = 2,inverse = False,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn'):
     """
     Train a Physics-informed Neural Network
     ----------
@@ -202,6 +233,26 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     activation : str
 
         The name of the activation function of the neural network. Default 'tanh'
+
+    neumann : logical
+
+        Whether to consider Neumann boundary conditions
+
+    oper_neumann : function
+
+        Penalization of Neumann boundary conditions
+
+    sa : logical
+
+        Whether to consider self-adaptative PINN. Do not work for inverse = True
+
+    c,q : float
+
+        Parameters of self-adaptative
+
+    inverse : logical
+
+        Wheter to estimate parameters of the PDE
 
     lr,b1,b2,eps,eps_root: float
 
@@ -238,30 +289,74 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
         pickle.dump({'train_data': data,'epochs': epochs,'activation': activation,'init_params': params,'width': width,'pde': pde,'lr': lr,'b1': b1,'b2': b2,'eps': eps,'eps_root': eps_root,'key': key},open(file_name + '_config.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
 
     #Define loss function
-    @jax.jit
-    def lf(params,x):
-        loss = 0
+    if sa:
+        #Initialie wheights
+        params.append({})
         if x['sensor'] is not None:
-            #Term that refers to sensor data
-            loss = loss + jnp.mean(jax.vmap(MSE,in_axes = (0,0))(forward(x['sensor'],params),x['usensor']))
+            params[-1].update({'ws': c * (1.0 + jnp.zeros((x['sensor'].shape[0],1)) ** q})
         if x['boundary'] is not None:
-            if neumann:
-                #Neumann coditions
-                xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
-                tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
-                loss = loss + jnp.mean(oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params),xb,tb))
-            else:
-                #Term that refers to boundary data
-                loss = loss + jnp.mean(jax.vmap(MSE,in_axes = (0,0))(forward(x['boundary'],params),x['uboundary']))
+            params[-1].update({'wb': c * (1.0 + jnp.zeros((x['boundary'].shape[0],1)) ** q})
         if x['initial'] is not None:
-            #Term that refers to initial data
-            loss = loss + jnp.mean(jax.vmap(MSE,in_axes = (0,0))(forward(x['initial'],params),x['uinitial']))
+            params[-1].update({'w0': c * (1.0 + jnp.zeros((x['initial'].shape[0],1)) ** q})
         if x['collocation'] is not None:
-            #Term that refers to collocation points
-            x_col = x['collocation'][:,:-1].reshape((x['collocation'].shape[0],x['collocation'].shape[1] - 1))
-            t_col = x['collocation'][:,-1].reshape((x['collocation'].shape[0],1))
-            loss = loss + MSE(pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col),0)
-        return loss
+            params[-1].update({'wr': c * (1.0 + jnp.zeros((x['initial'].shape[0],1)) ** q})
+
+        #Define loss function
+        @jax.jit
+        def lf(params,x):
+            loss = 0
+            if x['sensor'] is not None:
+                #Term that refers to sensor data
+                loss = loss + jnp.mean(params[-1]['ws'] * jax.vmap(MSE,in_axes = (0,0))(forward(x['sensor'],params),x['usensor']))
+            if x['boundary'] is not None:
+                if neumann:
+                    #Neumann coditions
+                    xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
+                    tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
+                    loss = loss + jnp.mean(params[-1]['wb'] * oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params),xb,tb))
+                else:
+                    #Term that refers to boundary data
+                    loss = loss + jnp.mean(params[-1]['wb'] * jax.vmap(MSE,in_axes = (0,0))(forward(x['boundary'],params),x['uboundary']))
+            if x['initial'] is not None:
+                #Term that refers to initial data
+                loss = loss + jnp.mean(params[-1]['w0'] * jax.vmap(MSE,in_axes = (0,0))(forward(x['initial'],params),x['uinitial']))
+            if x['collocation'] is not None:
+                #Term that refers to collocation points
+                x_col = x['collocation'][:,:-1].reshape((x['collocation'].shape[0],x['collocation'].shape[1] - 1))
+                t_col = x['collocation'][:,-1].reshape((x['collocation'].shape[0],1))
+                if inverse:
+                    loss = loss + MSE(params[-1]['wr'] * pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col,params[-2]),0)
+                else:
+                    loss = loss + MSE(params[-1]['ws'] * pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col),0)
+            return loss
+    else:
+        @jax.jit
+        def lf(params,x):
+            loss = 0
+            if x['sensor'] is not None:
+                #Term that refers to sensor data
+                loss = loss + jnp.mean(jax.vmap(MSE,in_axes = (0,0))(forward(x['sensor'],params),x['usensor']))
+            if x['boundary'] is not None:
+                if neumann:
+                    #Neumann coditions
+                    xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
+                    tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
+                    loss = loss + jnp.mean(oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params),xb,tb))
+                else:
+                    #Term that refers to boundary data
+                    loss = loss + jnp.mean(jax.vmap(MSE,in_axes = (0,0))(forward(x['boundary'],params),x['uboundary']))
+            if x['initial'] is not None:
+                #Term that refers to initial data
+                loss = loss + jnp.mean(jax.vmap(MSE,in_axes = (0,0))(forward(x['initial'],params),x['uinitial']))
+            if x['collocation'] is not None:
+                #Term that refers to collocation points
+                x_col = x['collocation'][:,:-1].reshape((x['collocation'].shape[0],x['collocation'].shape[1] - 1))
+                t_col = x['collocation'][:,-1].reshape((x['collocation'].shape[0],1))
+                if inverse:
+                    loss = loss + MSE(pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col,params[-1]),0)
+                else:
+                    loss = loss + MSE(pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col),0)
+            return loss
 
     #Initialize Adama oOptmizer
     optimizer = optax.adam(lr,b1,b2,eps,eps_root)
@@ -275,6 +370,10 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     def update(opt_state,params,x):
         #Compute gradient
         grads = grad_loss(params,x)
+        #Invert gradient of self-adaptative wheights
+        if sa:
+            for w in grads[-1]:
+                grads[-1][w] = - grads[-1][w]
         #Calculate parameters updates
         updates, opt_state = optimizer.update(grads, opt_state)
         #Update parameters
