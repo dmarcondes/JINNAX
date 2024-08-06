@@ -329,7 +329,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
                 if inverse:
                     loss = loss + MSE(params[-1]['wr'] * pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col,params[-2]),0)
                 else:
-                    loss = loss + MSE(params[-1]['ws'] * pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col),0)
+                    loss = loss + MSE(params[-1]['wr'] * pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col),0)
             return loss
     else:
         params.append({})
