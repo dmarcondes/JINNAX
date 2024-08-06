@@ -292,15 +292,14 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     if sa:
         #Initialie wheights
         params.append({})
-        if x['sensor'] is not None:
-            params[-1].update({'ws': c * ((1.0 + jnp.zeros((x['sensor'].shape[0],1))) ** q)})
-        if x['boundary'] is not None:
-            params[-1].update({'wb': c * ((1.0 + jnp.zeros((x['boundary'].shape[0],1))) ** q)})
-        if x['initial'] is not None:
-            params[-1].update({'w0': c * ((1.0 + jnp.zeros((x['initial'].shape[0],1))) ** q)})
-        if x['collocation'] is not None:
-            params[-1].update({'wr': c * ((1.0 + jnp.zeros((x['initial'].shape[0],1))) ** q)})
-
+        if data['sensor'] is not None:
+            params[-1].update({'ws': c * ((1.0 + jnp.zeros((data['sensor'].shape[0],1))) ** q)})
+        if data['boundary'] is not None:
+            params[-1].update({'wb': c * ((1.0 + jnp.zeros((data['boundary'].shape[0],1))) ** q)})
+        if data['initial'] is not None:
+            params[-1].update({'w0': c * ((1.0 + jnp.zeros((data['initial'].shape[0],1))) ** q)})
+        if data['collocation'] is not None:
+            params[-1].update({'wr': c * ((1.0 + jnp.zeros((data['initial'].shape[0],1))) ** q)})
         #Define loss function
         @jax.jit
         def lf(params,x):
