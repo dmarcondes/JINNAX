@@ -247,8 +247,8 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
         if x['boundary'] is not None:
             if neumann:
                 #Neumann coditions
-                xb = x['boundary'][:,0].reshape((x['boundary'].shape[0],1))
-                tb = x['boundary'][:,1].reshape((x['boundary'].shape[0],1))
+                xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
+                tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
                 loss = loss + jnp.mean(oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params),xb,tb))
             else:
                 #Term that refers to boundary data
