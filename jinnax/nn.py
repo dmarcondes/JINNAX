@@ -281,8 +281,12 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
 
     #Initialize architecture
     nnet = fconNN(width,get_activation(activation),key)
-    forward = nnet['forward']
+    if inverse:
+        forward = jax.jit(lambda x,params: nnet['forward'](x,params[:-2]))
+    else:
+        forward = jax.jit(lambda x,params: nnet['forward'](x,params[:-1]))
     params = nnet['params']
+    params.append({})
 
     #Save config
     if save:
@@ -291,7 +295,6 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     #Define loss function
     if sa:
         #Initialie wheights
-        params.append({})
         if data['sensor'] is not None:
             params[-1].update({'ws': c * ((1.0 + jnp.zeros((data['sensor'].shape[0],1))) ** q)})
         if data['boundary'] is not None:
@@ -329,6 +332,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
                     loss = loss + MSE(params[-1]['ws'] * pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col),0)
             return loss
     else:
+        params.append({})
         @jax.jit
         def lf(params,x):
             loss = 0
@@ -352,7 +356,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
                 x_col = x['collocation'][:,:-1].reshape((x['collocation'].shape[0],x['collocation'].shape[1] - 1))
                 t_col = x['collocation'][:,-1].reshape((x['collocation'].shape[0],1))
                 if inverse:
-                    loss = loss + MSE(pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col,params[-1]),0)
+                    loss = loss + MSE(pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col,params[-2]),0)
                 else:
                     loss = loss + MSE(pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col),0)
             return loss
