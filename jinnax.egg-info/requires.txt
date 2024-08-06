@@ -1,9 +1,9 @@
-IPython
-alive_progress
-jax
-matplotlib
-numpy
-openpyxl
-optax
 pandas
+openpyxl
+jax
 pillow
+optax
+alive_progress
+IPython
+numpy
+matplotlib
