@@ -300,13 +300,13 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     #Define loss function
     if sa:
         #Initialie wheights
-        ksa = jax.random.randint(key,(4,),1,1000000)
+        ksa = jax.random.randint(jax.random.PRNGKey(key),(4,),1,1000000)
         if data['sensor'] is not None:
-            params[-1].update({'ws': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[0]),minval = 0,maxval = 1,shape = (data['sensor'].shape[0],1)) ** q)})
+            params[-1].update({'ws': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[0]),minval = 0,maxval = 100,shape = (data['sensor'].shape[0],1)) ** q)})
         if data['boundary'] is not None:
-            params[-1].update({'wb': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[1]),minval = 0,maxval = 1,shape = (data['boundary'].shape[0],1)) ** q)})
+            params[-1].update({'wb': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[1]),minval = 0,maxval = 100,shape = (data['boundary'].shape[0],1)) ** q)})
         if data['initial'] is not None:
-            params[-1].update({'w0': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[2]),minval = 0,maxval = 1,shape = (data['initial'].shape[0],1)) ** q)})
+            params[-1].update({'w0': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[2]),minval = 0,maxval = 100,shape = (data['initial'].shape[0],1)) ** q)})
         if data['collocation'] is not None:
             params[-1].update({'wr': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[3]),minval = 0,maxval = 1,shape = (data['collocation'].shape[0],1)) ** q)})
         #Define loss function
