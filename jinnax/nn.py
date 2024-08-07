@@ -290,7 +290,8 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     else:
         forward = jax.jit(lambda x,params: nnet['forward'](x,params[:-1]))
     params = nnet['params']
-    params.append(initial_par)
+    if inverse:
+        params.append(initial_par)
     params.append({})
 
     #Save config
