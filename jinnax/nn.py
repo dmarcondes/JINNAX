@@ -199,7 +199,7 @@ def get_activation(act):
         return jax.nn.mish
 
 #Training PINN
-def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = False,sa = False,c = 100,q = 2,inverse = False,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn'):
+def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = False,sa = False,c = 100,q = 2,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn'):
     """
     Train a Physics-informed Neural Network
     ----------
@@ -252,7 +252,11 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
 
     inverse : logical
 
-        Wheter to estimate parameters of the PDE
+        Whether to estimate parameters of the PDE
+
+    initial_par : jax.numpy.array
+
+        Initial value of the parameter of the PDE in a inverse problem
 
     lr,b1,b2,eps,eps_root: float
 
@@ -286,6 +290,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     else:
         forward = jax.jit(lambda x,params: nnet['forward'](x,params[:-1]))
     params = nnet['params']
+    params.append(initial_par)
     params.append({})
 
     #Save config
@@ -295,14 +300,15 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     #Define loss function
     if sa:
         #Initialie wheights
+        ksa = jax.random.randint(key,(4,),1,1000000)
         if data['sensor'] is not None:
-            params[-1].update({'ws': c * ((1.0 + jnp.zeros((data['sensor'].shape[0],1))) ** q)})
+            params[-1].update({'ws': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[0]),minval = 0,maxval = 1,shape = (data['sensor'].shape[0],1)) ** q)})
         if data['boundary'] is not None:
-            params[-1].update({'wb': c * ((1.0 + jnp.zeros((data['boundary'].shape[0],1))) ** q)})
+            params[-1].update({'wb': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[1]),minval = 0,maxval = 1,shape = (data['boundary'].shape[0],1)) ** q)})
         if data['initial'] is not None:
-            params[-1].update({'w0': c * ((1.0 + jnp.zeros((data['initial'].shape[0],1))) ** q)})
+            params[-1].update({'w0': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[2]),minval = 0,maxval = 1,shape = (data['initial'].shape[0],1)) ** q)})
         if data['collocation'] is not None:
-            params[-1].update({'wr': c * ((1.0 + jnp.zeros((data['collocation'].shape[0],1))) ** q)})
+            params[-1].update({'wr': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[3]),minval = 0,maxval = 1,shape = (data['collocation'].shape[0],1)) ** q)})
         #Define loss function
         @jax.jit
         def lf(params,x):
