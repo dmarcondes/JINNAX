@@ -286,28 +286,22 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     #Initialize architecture
     nnet = fconNN(width,get_activation(activation),key)
     params = nnet['params']
-
-    #Initialize parameters in an inverse problem
-    if inverse:
-        params.append(initial_par)
+    forward = nnet['forward']
 
     #Initialize self adaptative weights
-    params.append({})
+    par_sa = {}
     if sa:
         #Initialize wheights close to zero
         ksa = jax.random.randint(jax.random.PRNGKey(key),(4,),1,1000000)
         if data['sensor'] is not None:
-            params[-1].update({'ws': (1/10)*jax.random.normal(key = jax.random.PRNGKey(ksa[0]),shape = (data['sensor'].shape[0],1))})
+            par_sa.update({'ws': (1/10)*jax.random.normal(key = jax.random.PRNGKey(ksa[0]),shape = (data['sensor'].shape[0],1))})
         if data['initial'] is not None:
-            params[-1].update({'w0': (1/10)*jax.random.normal(key = jax.random.PRNGKey(ksa[2]),shape = (data['initial'].shape[0],1))})
+            par_sa.update({'w0': (1/10)*jax.random.normal(key = jax.random.PRNGKey(ksa[2]),shape = (data['initial'].shape[0],1))})
         if data['collocation'] is not None:
-            params[-1].update({'wr': (1/10)*jax.random.normal(key = jax.random.PRNGKey(ksa[3]),shape = (data['collocation'].shape[0],1))})
+            par_sa.update({'wr': (1/10)*jax.random.normal(key = jax.random.PRNGKey(ksa[3]),shape = (data['collocation'].shape[0],1))})
 
-    #Define forward function
-    if inverse:
-        forward = jax.jit(lambda x,params: nnet['forward'](x,params[:-2]))
-    else:
-        forward = jax.jit(lambda x,params: nnet['forward'](x,params[:-1]))
+    #Store all parameters
+    params = {'params': params,'inverse': initial_par,'sa': par_sa}
 
     #Save config file
     if save:
@@ -321,27 +315,27 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
             loss = 0
             if x['sensor'] is not None:
                 #Term that refers to sensor data
-                loss = loss + jnp.mean(MSE_SA(forward(x['sensor'],params),x['usensor'],params[-1]['ws'],c['ws']))
+                loss = loss + jnp.mean(MSE_SA(forward(x['sensor'],params['net']),x['usensor'],params['sa']['ws'],c['ws']))
             if x['boundary'] is not None:
                 if neumann:
                     #Neumann coditions
                     xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
                     tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
-                    loss = loss + jnp.mean(oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params),xb,tb))
+                    loss = loss + jnp.mean(oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params['net']),xb,tb))
                 else:
                     #Term that refers to boundary data
-                    loss = loss + jnp.mean(MSE(forward(x['boundary'],params),x['uboundary']))
+                    loss = loss + jnp.mean(MSE(forward(x['boundary'],params['net']),x['uboundary']))
             if x['initial'] is not None:
                 #Term that refers to initial data
-                loss = loss + jnp.mean(MSE_SA(forward(x['initial'],params),x['uinitial'],params[-1]['w0'],c['w0']))
+                loss = loss + jnp.mean(MSE_SA(forward(x['initial'],params['net']),x['uinitial'],params['sa']['w0'],c['w0']))
             if x['collocation'] is not None:
                 #Term that refers to collocation points
                 x_col = x['collocation'][:,:-1].reshape((x['collocation'].shape[0],x['collocation'].shape[1] - 1))
                 t_col = x['collocation'][:,-1].reshape((x['collocation'].shape[0],1))
                 if inverse:
-                    loss = loss + jnp.mean(MSE_SA(pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col,params[-2]),0,params[-1]['wr'],c['wr']))
+                    loss = loss + jnp.mean(MSE_SA(pde(lambda x,t: forward(jnp.append(x,t,1),params['net']),x_col,t_col,params['inverse']),0,params['sa']['wr'],c['wr']))
                 else:
-                    loss = loss + jnp.mean(MSE_SA(pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col),0,params[-1]['wr'],c['wr']))
+                    loss = loss + jnp.mean(MSE_SA(pde(lambda x,t: forward(jnp.append(x,t,1),params['net']),x_col,t_col),0,params['sa']['wr'],c['wr']))
             return loss
     else:
         @jax.jit
@@ -349,27 +343,27 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
             loss = 0
             if x['sensor'] is not None:
                 #Term that refers to sensor data
-                loss = loss + jnp.mean(MSE(forward(x['sensor'],params),x['usensor']))
+                loss = loss + jnp.mean(MSE(forward(x['sensor'],params['net']),x['usensor']))
             if x['boundary'] is not None:
                 if neumann:
                     #Neumann coditions
                     xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
                     tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
-                    loss = loss + jnp.mean(oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params),xb,tb))
+                    loss = loss + jnp.mean(oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params['net']),xb,tb))
                 else:
                     #Term that refers to boundary data
-                    loss = loss + jnp.mean(MSE(forward(x['boundary'],params),x['uboundary']))
+                    loss = loss + jnp.mean(MSE(forward(x['boundary'],params['net']),x['uboundary']))
             if x['initial'] is not None:
                 #Term that refers to initial data
-                loss = loss + jnp.mean(MSE(forward(x['initial'],params),x['uinitial']))
+                loss = loss + jnp.mean(MSE(forward(x['initial'],params['net']),x['uinitial']))
             if x['collocation'] is not None:
                 #Term that refers to collocation points
                 x_col = x['collocation'][:,:-1].reshape((x['collocation'].shape[0],x['collocation'].shape[1] - 1))
                 t_col = x['collocation'][:,-1].reshape((x['collocation'].shape[0],1))
                 if inverse:
-                    loss = loss + jnp.mean(MSE(pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col,params[-2]),0))
+                    loss = loss + jnp.mean(MSE(pde(lambda x,t: forward(jnp.append(x,t,1),params['net']),x_col,t_col,params['inverse']),0))
                 else:
-                    loss = loss + jnp.mean(MSE(pde(lambda x,t: forward(jnp.append(x,t,1),params),x_col,t_col),0))
+                    loss = loss + jnp.mean(MSE(pde(lambda x,t: forward(jnp.append(x,t,1),params['net']),x_col,t_col),0))
             return loss
 
     #Initialize Adam Optmizer
@@ -386,8 +380,8 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
         grads = grad_loss(params,x)
         #Invert gradient of self-adaptative wheights
         if sa:
-            for w in grads[-1]:
-                grads[-1][w] = - grads[-1][w]
+            for w in grads['sa']:
+                gradss['sa'][w] = - grads['sa'][w]
         #Calculate parameters updates
         updates, opt_state = optimizer.update(grads, opt_state)
         #Update parameters
@@ -412,6 +406,8 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
                     #Compute L2 error
                     l2_test = L2error(forward(test_data['xt'],params),test_data['u']).tolist()
                     l = l + ' L2 error: ' + str(jnp.round(l2_test,6))
+                if inverse and len(initial_par.tolist()) == 1:
+                    l = l + ' Parameter: ' + str(jnp.round(params['inverse'].tolist(),6))
                 #Print
                 print(l)
             if (e % at_each == 0 or e == epochs - 1) and save:
@@ -421,7 +417,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
             bar()
     #Define estimated function
     def u(xt):
-        return forward(xt,params)
+        return forward(xt,params['net'])
 
     return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
 
@@ -793,7 +789,7 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
 
                 #Define learned function
                 def psi(x):
-                    return forward(x,params['params'])
+                    return forward(x,params['params']['net'])
 
                 #Train MSE and L2
                 if xdata is not None:
@@ -903,7 +899,7 @@ def demo_train_pinn1D(test_data,file_name,at_each = 100,times = 5,d2 = True,file
 
                 #Define learned function
                 def psi(x):
-                    return forward(x,params['params'])
+                    return forward(x,params['params']['net'])
 
                 #Compute L2 train, L2 test and loss
                 loss = params['loss']
