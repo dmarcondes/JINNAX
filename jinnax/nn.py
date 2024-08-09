@@ -41,7 +41,7 @@ def MSE(pred,true):
 
 #MSE self-adaptative
 @jax.jit
-def MSE_SA(pred,true,wheight,c = 100):
+def MSE_SA(pred,true,w,c = 100):
     """
     Selft-adaptative mean square error
     ----------
@@ -68,7 +68,7 @@ def MSE_SA(pred,true,wheight,c = 100):
     -------
     self-adaptative mean square error with sigmoid mask
     """
-    return c * jax.nn.sigmoid(wheight) * (true - pred) ** 2
+    return c * (w * w) * (true - pred) ** 2
 
 #L2 error
 @jax.jit
@@ -301,7 +301,6 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
 
     #Store all parameters
     params = {'net': nnet['params'],'inverse': initial_par,'sa': par_sa}
-    print(params['sa'])
 
     #Save config file
     if save:
