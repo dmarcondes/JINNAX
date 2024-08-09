@@ -493,9 +493,9 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
 
     #Results
     l2_error_test = L2error(upred_test,test_data['u']).tolist()
-    MSE_test = MSE(upred_test,test_data['u']).tolist()
+    MSE_test = jnp.mean(MSE(upred_test,test_data['u'])).tolist()
     l2_error_train = L2error(upred_train,u_train).tolist()
-    MSE_train = MSE(upred_train,u_train).tolist()
+    MSE_train = jnp.mean(MSE(upred_train,u_train)).tolist()
 
     df = pd.DataFrame(np.array([l2_error_test,MSE_test,l2_error_train,MSE_train]).reshape((1,4)),
         columns=['l2_error_test','MSE_test','l2_error_train','MSE_train'])
@@ -797,14 +797,14 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
 
                 #Train MSE and L2
                 if xdata is not None:
-                    train_mse = train_mse + [MSE(psi(xdata),ydata).tolist()]
+                    train_mse = train_mse + [jnp.mean(MSE(psi(xdata),ydata)).tolist()]
                     train_L2 = train_L2 + [L2error(psi(xdata),ydata).tolist()]
                 else:
                     train_mse = train_mse + [None]
                     train_L2 = train_L2 + [None]
 
                 #Test MSE and L2
-                test_mse = test_mse + [MSE(psi(test_data['xt']),test_data['u']).tolist()]
+                test_mse = test_mse + [jnp.mean(MSE(psi(test_data['xt']),test_data['u'])).tolist()]
                 test_L2 = test_L2 + [L2error(psi(test_data['xt']),test_data['u']).tolist()]
 
                 #Bolstering
