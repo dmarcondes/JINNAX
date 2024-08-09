@@ -1,9 +1,0 @@
-pandas
-openpyxl
-jax
-pillow
-optax
-alive_progress
-IPython
-numpy
-matplotlib
