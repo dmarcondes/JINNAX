@@ -41,7 +41,7 @@ def MSE(pred,true):
 
 #MSE self-adaptative
 @jax.jit
-def MSE_SA(pred,true,w,c = 100):
+def MSE_SA(pred,true,w):
     """
     Selft-adaptative mean square error
     ----------
@@ -68,7 +68,7 @@ def MSE_SA(pred,true,w,c = 100):
     -------
     self-adaptative mean square error with sigmoid mask
     """
-    return (w * w) * (true - pred) ** 2
+    return (w * (true - pred)) ** 2
 
 #L2 error
 @jax.jit
@@ -314,7 +314,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
             loss = 0
             if x['sensor'] is not None:
                 #Term that refers to sensor data
-                loss = loss + jnp.mean(MSE_SA(forward(x['sensor'],params['net']),x['usensor'],params['sa']['ws'],c['ws']))
+                loss = loss + jnp.mean(MSE_SA(forward(x['sensor'],params['net']),x['usensor'],params['sa']['ws']))
             if x['boundary'] is not None:
                 if neumann:
                     #Neumann coditions
@@ -326,15 +326,15 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
                     loss = loss + jnp.mean(MSE(forward(x['boundary'],params['net']),x['uboundary']))
             if x['initial'] is not None:
                 #Term that refers to initial data
-                loss = loss + jnp.mean(MSE_SA(forward(x['initial'],params['net']),x['uinitial'],params['sa']['w0'],c['w0']))
+                loss = loss + jnp.mean(MSE_SA(forward(x['initial'],params['net']),x['uinitial'],params['sa']['w0']))
             if x['collocation'] is not None:
                 #Term that refers to collocation points
                 x_col = x['collocation'][:,:-1].reshape((x['collocation'].shape[0],x['collocation'].shape[1] - 1))
                 t_col = x['collocation'][:,-1].reshape((x['collocation'].shape[0],1))
                 if inverse:
-                    loss = loss + jnp.mean(MSE_SA(pde(lambda x,t: forward(jnp.append(x,t,1),params['net']),x_col,t_col,params['inverse']),0,params['sa']['wr'],c['wr']))
+                    loss = loss + jnp.mean(MSE_SA(pde(lambda x,t: forward(jnp.append(x,t,1),params['net']),x_col,t_col,params['inverse']),0,params['sa']['wr']))
                 else:
-                    loss = loss + jnp.mean(MSE_SA(pde(lambda x,t: forward(jnp.append(x,t,1),params['net']),x_col,t_col),0,params['sa']['wr'],c['wr']))
+                    loss = loss + jnp.mean(MSE_SA(pde(lambda x,t: forward(jnp.append(x,t,1),params['net']),x_col,t_col),0,params['sa']['wr']))
             return loss
     else:
         @jax.jit
