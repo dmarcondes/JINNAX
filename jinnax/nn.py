@@ -68,7 +68,7 @@ def MSE_SA(pred,true,w,c = 100):
     -------
     self-adaptative mean square error with sigmoid mask
     """
-    return c * (w * w) * (true - pred) ** 2
+    return (w * w) * (true - pred) ** 2
 
 #L2 error
 @jax.jit
@@ -293,11 +293,11 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
         #Initialize wheights close to zero
         ksa = jax.random.randint(jax.random.PRNGKey(key),(4,),1,1000000)
         if data['sensor'] is not None:
-            par_sa.update({'ws': 1 + (1/20)*jax.random.normal(key = jax.random.PRNGKey(ksa[0]),shape = (data['sensor'].shape[0],1))})
+            par_sa.update({'ws': c['ws'] * jax.random.uniform(key = jax.random.PRNGKey(ksa[0]),shape = (data['sensor'].shape[0],1))})
         if data['initial'] is not None:
-            par_sa.update({'w0': 1 + (1/20)*jax.random.normal(key = jax.random.PRNGKey(ksa[1]),shape = (data['initial'].shape[0],1))})
+            par_sa.update({'w0': c['w0'] * jax.random.uniform(key = jax.random.PRNGKey(ksa[1]),shape = (data['initial'].shape[0],1))})
         if data['collocation'] is not None:
-            par_sa.update({'wr': 1 + (1/20)*jax.random.normal(key = jax.random.PRNGKey(ksa[2]),shape = (data['collocation'].shape[0],1))})
+            par_sa.update({'wr': c['wr'] * jax.random.uniform(key = jax.random.PRNGKey(ksa[2]),shape = (data['collocation'].shape[0],1))})
 
     #Store all parameters
     params = {'net': nnet['params'],'inverse': initial_par,'sa': par_sa}
