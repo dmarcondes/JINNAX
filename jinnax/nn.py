@@ -293,23 +293,24 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     if inverse:
         params.append(initial_par)
     params.append({})
+    if sa:
+        #Initialize wheights
+        ksa = jax.random.randint(jax.random.PRNGKey(key),(4,),1,1000000)
+        if data['sensor'] is not None:
+            params[-1].update({'ws': jax.random.uniform(key = jax.random.PRNGKey(ksa[0]),minval = 1,maxval = 2,shape = (data['sensor'].shape[0],1))})
+        if data['boundary'] is not None:
+            params[-1].update({'wb': jax.random.uniform(key = jax.random.PRNGKey(ksa[1]),minval = 1,maxval = 2,shape = (data['boundary'].shape[0],1))})
+        if data['initial'] is not None:
+            params[-1].update({'w0': jax.random.uniform(key = jax.random.PRNGKey(ksa[2]),minval = 1,maxval = 2,shape = (data['initial'].shape[0],1))})
+        if data['collocation'] is not None:
+            params[-1].update({'wr': jax.random.uniform(key = jax.random.PRNGKey(ksa[3]),minval = 1,maxval = 2,shape = (data['collocation'].shape[0],1))})
 
     #Save config
     if save:
-        pickle.dump({'train_data': data,'epochs': epochs,'activation': activation,'init_params': params,'width': width,'pde': pde,'lr': lr,'b1': b1,'b2': b2,'eps': eps,'eps_root': eps_root,'key': key},open(file_name + '_config.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+        pickle.dump({'train_data': data,'epochs': epochs,'activation': activation,'init_params': params,'forward': forward,'width': width,'pde': pde,'lr': lr,'b1': b1,'b2': b2,'eps': eps,'eps_root': eps_root,'key': key,'inverse': inverse,'sa': sa},open(file_name + '_config.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
 
     #Define loss function
     if sa:
-        #Initialie wheights
-        ksa = jax.random.randint(jax.random.PRNGKey(key),(4,),1,1000000)
-        if data['sensor'] is not None:
-            params[-1].update({'ws': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[0]),minval = 1,maxval = 2,shape = (data['sensor'].shape[0],1)) ** q)})
-        if data['boundary'] is not None:
-            params[-1].update({'wb': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[1]),minval = 1,maxval = 2,shape = (data['boundary'].shape[0],1)) ** q)})
-        if data['initial'] is not None:
-            params[-1].update({'w0': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[2]),minval = 1,maxval = 2,shape = (data['initial'].shape[0],1)) ** q)})
-        if data['collocation'] is not None:
-            params[-1].update({'wr': c * (jax.random.uniform(key = jax.random.PRNGKey(ksa[3]),minval = 1,maxval = 2,shape = (data['collocation'].shape[0],1)) ** q)})
         #Define loss function
         @jax.jit
         def lf(params,x):
@@ -322,7 +323,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
                     #Neumann coditions
                     xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
                     tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
-                    loss = loss + jnp.mean(params[-1]['wb'] * oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params),xb,tb))
+                    loss = loss + jnp.mean(c * (params[-1]['wb'] ** q) * oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params),xb,tb))
                 else:
                     #Term that refers to boundary data
                     loss = loss + jnp.mean(jax.vmap(lambda pred,true,w: MSE_SA(pred,true,w,c,q),in_axes = (0,0,0))(forward(x['boundary'],params),x['uboundary'],params[-1]['wb']))
@@ -743,7 +744,7 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
     config = pickle.load(open(file_name + '_config.pickle', 'rb'))
     epochs = config['epochs']
     train_data = config['train_data']
-    forward = fconNN(config['width'],get_activation(config['activation']),config['key'])['forward']
+    forward = config['forward']
 
     #Generate keys
     if bolstering:
@@ -878,7 +879,7 @@ def demo_train_pinn1D(test_data,file_name,at_each = 100,times = 5,d2 = True,file
         config = pickle.load(file)
     epochs = config['epochs']
     train_data = config['train_data']
-    forward = fconNN(config['width'],get_activation(config['activation']),config['key'])['forward']
+    forward = config['forward']
 
     #Get train data
     td = get_train_data(train_data)
@@ -959,7 +960,7 @@ def demo_time_pinn1D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
     with open(file_name + '_config.pickle', 'rb') as file:
         config = pickle.load(file)
     train_data = config['train_data']
-    forward = fconNN(config['width'],get_activation(config['activation']),config['key'])['forward']
+    forward = config['forward']
 
     #Create folder to save plots
     os.system('mkdir ' + file_name_save)
