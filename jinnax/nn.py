@@ -285,7 +285,6 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
 
     #Initialize architecture
     nnet = fconNN(width,get_activation(activation),key)
-    params = nnet['params']
     forward = nnet['forward']
 
     #Initialize self adaptative weights
@@ -301,7 +300,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
             par_sa.update({'wr': (1/10)*jax.random.normal(key = jax.random.PRNGKey(ksa[3]),shape = (data['collocation'].shape[0],1))})
 
     #Store all parameters
-    params = {'net': params,'inverse': initial_par,'sa': par_sa}
+    params = {'net': nnet['params'],'inverse': initial_par,'sa': par_sa}
 
     #Save config file
     if save:
@@ -381,7 +380,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
         #Invert gradient of self-adaptative wheights
         if sa:
             for w in grads['sa']:
-                gradss['sa'][w] = - grads['sa'][w]
+                grads['sa'][w] = - grads['sa'][w]
         #Calculate parameters updates
         updates, opt_state = optimizer.update(grads, opt_state)
         #Update parameters
