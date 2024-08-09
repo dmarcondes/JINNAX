@@ -301,7 +301,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
             par_sa.update({'wr': (1/10)*jax.random.normal(key = jax.random.PRNGKey(ksa[3]),shape = (data['collocation'].shape[0],1))})
 
     #Store all parameters
-    params = {'params': params,'inverse': initial_par,'sa': par_sa}
+    params = {'net': params,'inverse': initial_par,'sa': par_sa}
 
     #Save config file
     if save:
@@ -978,7 +978,7 @@ def demo_time_pinn1D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
     for e in epochs:
         tmp = pd.read_pickle(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle')
         results = results + [tmp]
-        upred = upred + [forward(test_data['xt'],tmp['params'])]
+        upred = upred + [forward(test_data['xt'],tmp['params']['net'])]
 
     #Create images
     k = 1
