@@ -404,9 +404,9 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
                 #If there is test data, compute current L2 error
                 if test_data is not None:
                     #Compute L2 error
-                    l2_test = L2error(forward(test_data['xt'],params),test_data['u']).tolist()
+                    l2_test = L2error(forward(test_data['xt'],params['net']),test_data['u']).tolist()
                     l = l + ' L2 error: ' + str(jnp.round(l2_test,6))
-                if inverse and len(initial_par.tolist()) == 1:
+                if inverse:
                     l = l + ' Parameter: ' + str(jnp.round(params['inverse'].tolist(),6))
                 #Print
                 print(l)
