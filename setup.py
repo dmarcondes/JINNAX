@@ -14,7 +14,7 @@ setup(
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         packages=find_packages(),
-        install_requires=['pandas','openpyxl','jax','pillow','optax','alive_progress','IPython','numpy','matplotlib'], 
+        install_requires=['pandas','openpyxl','jax','pillow','optax','alive_progress','IPython','numpy','matplotlib','dill'],
 
         keywords=['python', 'JAX', 'PINN'],
         classifiers= [
