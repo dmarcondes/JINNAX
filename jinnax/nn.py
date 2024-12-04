@@ -747,7 +747,7 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
 
     #Generate keys
     if bolstering:
-        keys = jax.random.randint(random.PRNGKey(key),(epochs,),0,1e9)
+        keys = jax.random.split(jax.random.PRNGKey(key),epochs)
 
     #Get train data
     td = get_train_data(train_data)
@@ -807,10 +807,10 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
                     bX = []
                     bXY = []
                     for method in ['chi','mm','mpe','hessian']:
-                        kxy = gk.kernel_estimator(data = xydata,key = random.PRNGKey(keys[e]),method = method,lamb = lamb,ec = ec,psi = psi,bias = bias)
-                        kx = gk.kernel_estimator(data = xdata,key = random.PRNGKey(keys[e]),method = method,lamb = lamb,ec = ec,psi = psi,bias = bias)
-                        bX = bX + [gb.bolstering(psi,xdata,ydata,kx,key = random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
-                        bXY = bXY + [gb.bolstering(psi,xdata,ydata,kxy,key = random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
+                        kxy = gk.kernel_estimator(data = xydata,key = keys[e,0],method = method,lamb = lamb,ec = ec,psi = psi,bias = bias)
+                        kx = gk.kernel_estimator(data = xdata,key = keys[e,0],method = method,lamb = lamb,ec = ec,psi = psi,bias = bias)
+                        bX = bX + [gb.bolstering(psi,xdata,ydata,kx,key = keys[e,0],mc_sample = mc_sample).tolist()]
+                        bXY = bXY + [gb.bolstering(psi,xdata,ydata,kxy,key = random.PRNGKey(keys[e,0]),mc_sample = mc_sample).tolist()]
                     bolstX = bolstX + [bX]
                     bolstXY = bolstXY + [bXY]
                 else:
