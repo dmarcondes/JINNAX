@@ -804,10 +804,15 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
 
                 #Bolstering
                 if bolstering:
-                    kxy = gk.kernel_estimator(xydata,random.PRNGKey(keys[e]),method = "hessian",lamb = lamb,ec = ec,psi = psi,bias = bias)
-                    kx = kxy[:,:-1,:-1]
-                    bolstX = bolstX + [gb.bolstering(psi,xdata,ydata,kx,random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
-                    bolstXY = bolstXY + [gb.bolstering(psi,xdata,ydata,kxy,random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
+                    bX = []
+                    bXY = []
+                    for method in ['chi','mm','mpe','hessian']:
+                        kxy = gk.kernel_estimator(data = xydata,key = random.PRNGKey(keys[e]),method = method,lamb = lamb,ec = ec,psi = psi,bias = bias)
+                        kx = gk.kernel_estimator(data = xdata,key = random.PRNGKey(keys[e]),method = method,lamb = lamb,ec = ec,psi = psi,bias = bias)
+                        bX = bX + [gb.bolstering(psi,xdata,ydata,kx,key = random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
+                        bXY = bXY + [gb.bolstering(psi,xdata,ydata,kxy,key = random.PRNGKey(keys[e]),mc_sample = mc_sample).tolist()]
+                    bolstX = bolstX + [bX]
+                    bolstXY = bolstXY + [bXY]
                 else:
                     bolstX = bolstX + [None]
                     bolstXY = bolstXY + [None]
@@ -820,10 +825,20 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
             #Update alive_bar
             bar()
 
+    #Bolstering results
+    if bolstering:
+        bolstX = jnp.array(bolstX)
+        bolstXY = jnp.array(bolstXY)
+
     #Create data frame
-    df = pd.DataFrame(np.column_stack([ep,time,[sensor_sample] * len(ep),[boundary_sample] * len(ep),[initial_sample] * len(ep),[collocation_sample] * len(ep),loss,
-    train_mse,test_mse,train_L2,test_L2,bolstX,bolstXY]),
-        columns=['epoch','training_time','sensor_sample','boundary_sample','initial_sample','collocation_sample','loss','train_mse','test_mse','train_L2','test_L2','bolstX','bolstXY'])
+    if bolstering:
+        df = pd.DataFrame(np.column_stack([ep,time,[sensor_sample] * len(ep),[boundary_sample] * len(ep),[initial_sample] * len(ep),[collocation_sample] * len(ep),loss,
+            train_mse,test_mse,train_L2,test_L2,bolstX[:,0],bolstXY[:,0],bolstX[:,1],bolstXY[:,1],bolstX[:,2],bolstXY[:,2],bolstX[:,3],bolstXY[:,3]]),
+            columns=['epoch','training_time','sensor_sample','boundary_sample','initial_sample','collocation_sample','loss','train_mse','test_mse','train_L2','test_L2','bolstX_chi','bolstXY_chi','bolstX_mm','bolstXY_mm','bolstX_mpe','bolstXY_mpe','bolstX_hessian','bolstXY_hessian'])
+    else:
+        f = pd.DataFrame(np.column_stack([ep,time,[sensor_sample] * len(ep),[boundary_sample] * len(ep),[initial_sample] * len(ep),[collocation_sample] * len(ep),loss,
+            train_mse,test_mse,train_L2,test_L2]),
+            columns=['epoch','training_time','sensor_sample','boundary_sample','initial_sample','collocation_sample','loss','train_mse','test_mse','train_L2','test_L2'])
     if save:
         df.to_csv(file_name_save + '.csv',index = False)
 
