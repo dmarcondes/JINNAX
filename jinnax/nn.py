@@ -684,7 +684,7 @@ def get_train_data(train_data):
     return {'xy': xydata,'x': xdata,'y': ydata,'sensor_sample': sensor_sample,'boundary_sample': boundary_sample,'initial_sample': initial_sample,'collocation_sample': collocation_sample}
 
 #Process training
-def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = None,mc_sample = 10000,save = False,file_name_save = 'result_pinn',key = 0,ec = 1e-6,lamb = 1):
+def process_training(test_data,file_name,at_each = 100,bolstering = True,mc_sample = 10000,save = False,file_name_save = 'result_pinn',key = 0,ec = 1e-6,lamb = 1):
     """
     Process the training of a Physics-informed Neural Network
     ----------
@@ -706,10 +706,6 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
     bolstering : logical
 
         Whether to compute bolstering mean square error. Default True
-
-    bias: float
-
-        Bias for kernel estimation in bolstering via the Hessian method
 
     mc_sample : int
 
@@ -745,10 +741,6 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
     train_data = config['train_data']
     forward = config['forward']
 
-    #Generate keys
-    if bolstering:
-        keys = jax.random.split(jax.random.PRNGKey(key),epochs)
-
     #Get train data
     td = get_train_data(train_data)
     xydata = td['xy']
@@ -759,9 +751,9 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
     initial_sample = td['initial_sample']
     collocation_sample = td['collocation_sample']
 
-    #Bias in bolstering
-    if bias is None and bolstering:
-        bias = 1/jnp.sqrt(xdata.shape[0])
+    #Generate keys
+    if bolstering:
+        keys = jax.random.split(jax.random.PRNGKey(key),epochs)
 
     #Initialize loss
     train_mse = []
@@ -777,7 +769,7 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
     #Process training
     with alive_bar(epochs) as bar:
         for e in range(epochs):
-            if e % at_each == 0 or e == epochs - 1:
+            if (e % at_each == 0 and at_each != epochs) or e == epochs - 1:
                 ep = ep + [e]
 
                 #Read parameters
@@ -807,14 +799,10 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
                     bX = []
                     bXY = []
                     for method in ['chi','mm','mpe']:
-                        kxy = gk.kernel_estimator(data = xydata,key = keys[e,0],method = method,lamb = lamb,ec = ec,psi = psi,bias = bias)
-                        kx = gk.kernel_estimator(data = xdata,key = keys[e,0],method = method,lamb = lamb,ec = ec,psi = psi,bias = bias)
+                        kxy = gk.kernel_estimator(data = xydata,key = keys[e,0],method = method,lamb = lamb,ec = ec,psi = psi)
+                        kx = gk.kernel_estimator(data = xdata,key = keys[e,0],method = method,lamb = lamb,ec = ec,psi = psi)
                         bX = bX + [gb.bolstering(psi,xdata,ydata,kx,key = keys[e,0],mc_sample = mc_sample).tolist()]
                         bXY = bXY + [gb.bolstering(psi,xdata,ydata,kxy,key = keys[e,0],mc_sample = mc_sample).tolist()]
-                    kxy = gk.kernel_estimator(data = xydata,key = keys[e,0],method = 'hessian',lamb = lamb,ec = ec,psi = psi,bias = bias)
-                    kx = kxy[:,:-1,:-1]
-                    bX = bX + [gb.bolstering(psi,xdata,ydata,kx,key = keys[e,0],mc_sample = mc_sample).tolist()]
-                    bXY = bXY + [gb.bolstering(psi,xdata,ydata,kxy,key = keys[e,0],mc_sample = mc_sample).tolist()]
                     bolstX = bolstX + [bX]
                     bolstXY = bolstXY + [bXY]
                 else:
@@ -837,8 +825,8 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
     #Create data frame
     if bolstering:
         df = pd.DataFrame(np.column_stack([ep,time,[sensor_sample] * len(ep),[boundary_sample] * len(ep),[initial_sample] * len(ep),[collocation_sample] * len(ep),loss,
-            train_mse,test_mse,train_L2,test_L2,bolstX[:,0],bolstXY[:,0],bolstX[:,1],bolstXY[:,1],bolstX[:,2],bolstXY[:,2],bolstX[:,3],bolstXY[:,3]]),
-            columns=['epoch','training_time','sensor_sample','boundary_sample','initial_sample','collocation_sample','loss','train_mse','test_mse','train_L2','test_L2','bolstX_chi','bolstXY_chi','bolstX_mm','bolstXY_mm','bolstX_mpe','bolstXY_mpe','bolstX_hessian','bolstXY_hessian'])
+            train_mse,test_mse,train_L2,test_L2,bolstX[:,0],bolstXY[:,0],bolstX[:,1],bolstXY[:,1],bolstX[:,2],bolstXY[:,2]]),
+            columns=['epoch','training_time','sensor_sample','boundary_sample','initial_sample','collocation_sample','loss','train_mse','test_mse','train_L2','test_L2','bolstX_chi','bolstXY_chi','bolstX_mm','bolstXY_mm','bolstX_mpe','bolstXY_mpe'])
     else:
         f = pd.DataFrame(np.column_stack([ep,time,[sensor_sample] * len(ep),[boundary_sample] * len(ep),[initial_sample] * len(ep),[collocation_sample] * len(ep),loss,
             train_mse,test_mse,train_L2,test_L2]),
