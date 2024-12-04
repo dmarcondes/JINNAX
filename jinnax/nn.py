@@ -806,11 +806,15 @@ def process_training(test_data,file_name,at_each = 100,bolstering = True,bias = 
                 if bolstering:
                     bX = []
                     bXY = []
-                    for method in ['chi','mm','mpe','hessian']:
+                    for method in ['chi','mm','mpe']:
                         kxy = gk.kernel_estimator(data = xydata,key = keys[e,0],method = method,lamb = lamb,ec = ec,psi = psi,bias = bias)
                         kx = gk.kernel_estimator(data = xdata,key = keys[e,0],method = method,lamb = lamb,ec = ec,psi = psi,bias = bias)
                         bX = bX + [gb.bolstering(psi,xdata,ydata,kx,key = keys[e,0],mc_sample = mc_sample).tolist()]
                         bXY = bXY + [gb.bolstering(psi,xdata,ydata,kxy,key = keys[e,0],mc_sample = mc_sample).tolist()]
+                    kxy = gk.kernel_estimator(data = xydata,key = keys[e,0],method = 'hessian',lamb = lamb,ec = ec,psi = psi,bias = bias)
+                    kx = kxy[:,:-1,:-1]
+                    bX = bX + [gb.bolstering(psi,xdata,ydata,kx,key = keys[e,0],mc_sample = mc_sample).tolist()]
+                    bXY = bXY + [gb.bolstering(psi,xdata,ydata,kxy,key = keys[e,0],mc_sample = mc_sample).tolist()]
                     bolstX = bolstX + [bX]
                     bolstXY = bolstXY + [bXY]
                 else:
