@@ -4,3 +4,4 @@ test_pinn.py
 .gitignore
 workspace/
 jinnax.egg-info/
+jinnax/__pycache__
