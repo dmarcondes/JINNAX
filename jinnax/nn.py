@@ -409,7 +409,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
                     l = l + ' Parameter: ' + str(jnp.round(params['inverse'].tolist(),6))
                 #Print
                 print(l)
-            if (e % at_each == 0 or e == epochs - 1) and save:
+            if ((e % at_each == 0 and at_each != epochs) or e == epochs - 1) and save:
                 #Save current parameters
                 pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': lf(params,data)},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
             #Update alive_bar
