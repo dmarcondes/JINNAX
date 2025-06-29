@@ -421,7 +421,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
 
 #Process result
-def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save = False,show = True,file_name = 'result_pinn',print_res = True):
+def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save = False,show = True,file_name = 'result_pinn',print_res = True,p = 1):
     """
     Process the results of a Physics-informed Neural Network
     ----------
@@ -467,6 +467,10 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
     print_res : logical
 
         Whether to print the L2 error. Default True
+
+    p : int
+
+        Output dimension. Default 1
 
     Returns
     -------
