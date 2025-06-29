@@ -715,7 +715,7 @@ def plot_pinn_out2D(times,xt,u,upred,save = False,show = True,file_name = 'resul
                 k = k + 1
 
     #Title
-    fig.suptitle(title_1d)
+    fig.suptitle(title)
     fig.tight_layout()
 
     #Show and save
