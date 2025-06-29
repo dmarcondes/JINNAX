@@ -677,6 +677,8 @@ def plot_pinn_out2D(times,xt,u,upred,save = False,show = True,file_name = 'resul
     """
     #Initialize
     fig, ax = plt.subplots(int(times/5),5,figsize = (10*int(times/5),3*int(times/5)))
+    tlo = jnp.min(xt[:,-1])
+    tup = jnp.max(xt[:,-1])
     xlo = jnp.min(u[:,0])
     xlo = xlo - 0.1*jnp.abs(xlo)
     xup = jnp.max(u[:,0])
