@@ -11,7 +11,7 @@ from IPython.display import display
 __docformat__ = "numpy"
 
 #Generate d-dimensional data for PINN training
-def generate_PINNdata(u,xl,xu,tl,tu,Ns = None,Nts = None,Nb = None,Ntb = None,N0 = None,Nc = None,Ntc = None,train = True,d = 1,poss = 'grid',posts = 'grid',pos0 = 'grid',posb = 'grid',postb = 'grid',posc = 'grid',postc = 'grid',sigmas = 0,sigmab = 0,sigma0 = 0):
+def generate_PINNdata(u,xl,xu,tl,tu,Ns = None,Nts = None,Nb = None,Ntb = None,N0 = None,Nc = None,Ntc = None,train = True,d = 1,p = 1,poss = 'grid',posts = 'grid',pos0 = 'grid',posb = 'grid',postb = 'grid',posc = 'grid',postc = 'grid',sigmas = 0,sigmab = 0,sigma0 = 0):
     """
     Generate spatio-temporal data in a d-dimensional cube for PINN simulation
     ----------
@@ -73,6 +73,10 @@ def generate_PINNdata(u,xl,xu,tl,tu,Ns = None,Nts = None,Nb = None,Ntb = None,N0
     d : int
 
         Domain dimension. Default 1
+
+    p : int
+
+        Output dimension. Default 1
 
     poss : str
 
@@ -154,7 +158,7 @@ def generate_PINNdata(u,xl,xu,tl,tu,Ns = None,Nts = None,Nb = None,Ntb = None,N0
             xt_sensor = jnp.array([x.tolist() + [t.tolist()] for x in x_sensor for t in t_sensor],dtype = jnp.float32)
             #Calculate u at each point
             u_sensor = jnp.array([u(x,t) + sigmas*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize))) for x in x_sensor for t in t_sensor],dtype = jnp.float32)
-            u_sensor = u_sensor.reshape((u_sensor.shape[0],1))
+            u_sensor = u_sensor.reshape((u_sensor.shape[0],p))
         else:
             #Return None if sensor data should not be generated
             xt_sensor = None
@@ -251,7 +255,7 @@ def generate_PINNdata(u,xl,xu,tl,tu,Ns = None,Nts = None,Nb = None,Ntb = None,N0
             xt_boundary = jnp.array([x.tolist() + [t.tolist()] for x in x_boundary for t in t_boundary],dtype = jnp.float32)
             #Calculate u at each point
             u_boundary = jnp.array([[u(x,t) + sigmab*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_boundary for t in t_boundary],dtype = jnp.float32)
-            u_boundary = u_boundary.reshape((u_boundary.shape[0],1))
+            u_boundary = u_boundary.reshape((u_boundary.shape[0],p))
         else:
             #Return None if boundary data should not be generated
             xt_boundary = None
@@ -277,7 +281,7 @@ def generate_PINNdata(u,xl,xu,tl,tu,Ns = None,Nts = None,Nb = None,Ntb = None,N0
             xt_initial = jnp.array([x.tolist() + [t] for x in x_initial for t in [0.0]],dtype = jnp.float32)
             #Calculate u at each point
             u_initial = jnp.array([[u(x,t) + sigma0*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_initial for t in jnp.array([0.0])],dtype = jnp.float32)
-            u_initial = u_initial.reshape((u_initial.shape[0],1))
+            u_initial = u_initial.reshape((u_initial.shape[0],p))
         else:
             #Return None if initial data should not be generated
             xt_initial = None
@@ -308,7 +312,7 @@ def generate_PINNdata(u,xl,xu,tl,tu,Ns = None,Nts = None,Nb = None,Ntb = None,N0
             xt_sensor = jnp.array([x.tolist() + [t.tolist()] for x in x_sensor for t in t_sensor],dtype = jnp.float32)
             #Calculate u at each point
             u_sensor = jnp.array([u(x,t) + sigmas*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize))) for x in x_sensor for t in t_sensor],dtype = jnp.float32)
-            u_sensor = u_sensor.reshape((u_sensor.shape[0],1))
+            u_sensor = u_sensor.reshape((u_sensor.shape[0],p))
         else:
             #Return None if sensor data should not be generated
             xt_sensor = None
