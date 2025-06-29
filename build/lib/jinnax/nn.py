@@ -498,8 +498,10 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
         print('L2 error test: ' + str(jnp.round(l2_error_test,6)) + ' L2 error train: ' + str(jnp.round(l2_error_train,6)) + ' MSE error test: ' + str(jnp.round(MSE_test,6)) + ' MSE error train: ' + str(jnp.round(MSE_train,6)) )
 
     #Plots
-    if d == 1 and plot:
+    if d == 1 and p ==1 and plot:
         plot_pinn1D(times,test_data['xt'],test_data['u'],upred_test,d2,save,show,file_name)
+    elif p == 2 and plot:
+        plot_pinn_out2D(times,test_data['xt'],test_data['u'],upred_test,save,show,file_name)
 
     return df
 
@@ -553,7 +555,7 @@ def plot_pinn1D(times,xt,u,upred,d2 = True,save = False,show = True,file_name = 
 
     Returns
     -------
-    pandas data frame with L2 error
+    None
     """
     #Initialize
     fig, ax = plt.subplots(int(times/5),5,figsize = (10*int(times/5),3*int(times/5)))
@@ -625,6 +627,98 @@ def plot_pinn1D(times,xt,u,upred,d2 = True,save = False,show = True,file_name = 
         if save:
             fig.savefig(file_name + '_2d.png')
         plt.close()
+
+#Plot results for d = 1
+def plot_pinn_out2D(times,xt,u,upred,save = False,show = True,file_name = 'result_pinn',title = ''):
+    """
+    Plot the prediction of a PINN with 2D output
+    ----------
+    Parameters
+    ----------
+    times : int
+
+        Number of points along the time interval to plot. Default 5
+
+    xt : jax.numpy.array
+
+        Test data xt array
+
+    u : jax.numpy.array
+
+        Test data u(x,t) array
+
+    upred : jax.numpy.array
+
+        Predicted upred(x,t) array on test data
+
+    save : logical
+
+        Whether to save the plots. Default False
+
+    show : logical
+
+        Whether to show the plots. Default True
+
+    file_name : str
+
+        File prefix to save the plots. Default 'result_pinn'
+
+    title : str
+
+        Title of plot
+
+    Returns
+    -------
+    None
+    """
+    #Initialize
+    fig, ax = plt.subplots(int(times/5),5,figsize = (10*int(times/5),3*int(times/5)))
+    xlo = jnp.min(u[:,0])
+    xlo = xlo - 0.1*jnp.abs(xlo)
+    xup = jnp.max(u[:,0])
+    xup = xup + 0.1*jnp.abs(xup)
+    ylo = jnp.min(u[:,1])
+    ylo = ylo - 0.1*jnp.abs(ylo)
+    yup = jnp.max(u[:,1])
+    yup = yup + 0.1*jnp.abs(yup)
+    k = 0
+    t_values = np.linspace(tlo,tup,times)
+
+    #Create
+    for i in range(int(times/5)):
+        for j in range(5):
+            if k < len(t_values):
+                t = t_values[k]
+                t = xt[jnp.abs(xt[:,-1] - t) == jnp.min(jnp.abs(xt[:,-1] - t)),-1][0].tolist()
+                xpred_plot = upred[xt[:,-1] == t,0]
+                ypred_plot = upred[xt[:,-1] == t,1]
+                x_plot = u[xt[:,-1] == t,0]
+                y_plot = u[xt[:,-1] == t,1]
+                if int(times/5) > 1:
+                    ax[i,j].plot(x_plot,y_plot,'b-',linewidth=2,label='Exact')
+                    ax[i,j].plot(xpred_plot,ypred_plot,'r--',linewidth=2,label='Prediction')
+                    ax[i,j].set_title('$t = %.2f$' % (t),fontsize=10)
+                    ax[i,j].set_xlabel(' ')
+                    ax[i,j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
+                else:
+                    ax[j].plot(x_plot,y_plot,'b-',linewidth=2,label='Exact')
+                    ax[j].plot(xpred_plot,ypred,'r--',linewidth=2,label='Prediction')
+                    ax[j].set_title('$t = %.2f$' % (t),fontsize=10)
+                    ax[j].set_xlabel(' ')
+                    ax[j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
+                k = k + 1
+
+    #Title
+    fig.suptitle(title_1d)
+    fig.tight_layout()
+
+    #Show and save
+    fig = plt.gcf()
+    if show:
+        plt.show()
+    if save:
+        fig.savefig(file_name + '_slices.png')
+    plt.close()
 
 #Get train data in one array
 def get_train_data(train_data):
