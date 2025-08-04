@@ -1250,8 +1250,8 @@ def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
                     for j in range(min(2,len(epochs))):
                         upredx_step = upred[index][test_data['xt'][:,-1] == t,0]
                         upredy_step = upred[index][test_data['xt'][:,-1] == t,1]
-                        ax[i,j].plot(ux_step[:,0],uy_step[:,0],'b-',linewidth=2,label='Exact')
-                        ax[i,j].plot(upredx_step[:,0],upredy_step[:,0],'r-',linewidth=2,label='Prediction')
+                        ax[i,j].plot(ux_step,uy_step,'b-',linewidth=2,label='Exact')
+                        ax[i,j].plot(upredx_step,upredy_step,'r-',linewidth=2,label='Prediction')
                         ax[i,j].set_title('Epoch = ' + str(epochs[index]),fontsize=10)
                         ax[i,j].set_xlabel(' ')
                         ax[i,j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
@@ -1260,8 +1260,8 @@ def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
                 for j in range(2):
                     upredx_step = upred[index][test_data['xt'][:,-1] == t,0]
                     upredy_step = upred[index][test_data['xt'][:,-1] == t,1]
-                    ax[j].plot(ux_step[:,0],uy_step[:,0],'b-',linewidth=2,label='Exact')
-                    ax[j].plot(upredx_step[:,0],upredy_step[:,0],'r-',linewidth=2,label='Prediction')
+                    ax[j].plot(ux_step,uy_step,'b-',linewidth=2,label='Exact')
+                    ax[j].plot(upredx_step,upredy_step,'r-',linewidth=2,label='Prediction')
                     ax[j].set_title('Epoch = ' + str(epochs[index]),fontsize=10)
                     ax[j].set_xlabel(' ')
                     ax[j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
@@ -1269,8 +1269,8 @@ def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
             else:
                 upredx_step = upred[index][test_data['xt'][:,-1] == t,0]
                 upredy_step = upred[index][test_data['xt'][:,-1] == t,1]
-                ax.plot(ux_step[:,0],uy_step[:,0],'b-',linewidth=2,label='Exact')
-                ax.plot(upredx_step[:,0],upredy_step[:,0],'r-',linewidth=2,label='Prediction')
+                ax.plot(ux_step,uy_step,'b-',linewidth=2,label='Exact')
+                ax.plot(upredx_step,upredy_step,'r-',linewidth=2,label='Prediction')
                 ax.set_title('Epoch = ' + str(epochs[index]),fontsize=10)
                 ax.set_xlabel(' ')
                 ax.set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
