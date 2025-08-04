@@ -726,14 +726,14 @@ def plot_pinn_out2D(times,xt,u,upred,save = False,show = True,file_name = 'resul
                 if int(times/5) > 1:
                     if plot_test:
                         ax[i,j].plot(x_plot,y_plot,'b-',linewidth=2,label='Exact')
-                    ax[i,j].plot(xpred_plot,ypred_plot,'r--',linewidth=2,label='Prediction')
+                    ax[i,j].plot(xpred_plot,ypred_plot,'r-',linewidth=2,label='Prediction')
                     ax[i,j].set_title('$t = %.2f$' % (t),fontsize=10)
                     ax[i,j].set_xlabel(' ')
                     ax[i,j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
                 else:
                     if plot_test:
                         ax[j].plot(x_plot,y_plot,'b-',linewidth=2,label='Exact')
-                    ax[j].plot(xpred_plot,ypred,'r--',linewidth=2,label='Prediction')
+                    ax[j].plot(xpred_plot,ypred,'r-',linewidth=2,label='Prediction')
                     ax[j].set_title('$t = %.2f$' % (t),fontsize=10)
                     ax[j].set_xlabel(' ')
                     ax[j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
