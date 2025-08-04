@@ -435,7 +435,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
 
 #Process result
-def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save = False,show = True,file_name = 'result_pinn',print_res = True,p = 1):
+def process_result(test_data,fit,train_data,plot = True,plot_test = True,times = 5,d2 = True,save = False,show = True,file_name = 'result_pinn',print_res = True,p = 1):
     """
     Process the results of a Physics-informed Neural Network
     ----------
@@ -457,6 +457,10 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
     plot : logical
 
         Whether to generate plots comparing the exact and estimated solutions when the spatial dimension is one. Default True
+
+    plot_test : logical
+
+        Whether to plot the test data. Default True
 
     times : int
 
@@ -519,7 +523,7 @@ def process_result(test_data,fit,train_data,plot = True,times = 5,d2 = True,save
     if d == 1 and p ==1 and plot:
         plot_pinn1D(times,test_data['xt'],test_data['u'],upred_test,d2,save,show,file_name)
     elif p == 2 and plot:
-        plot_pinn_out2D(times,test_data['xt'],test_data['u'],upred_test,save,show,file_name)
+        plot_pinn_out2D(times,test_data['xt'],test_data['u'],upred_test,save,show,file_name,plot_test)
 
     return df
 
@@ -647,7 +651,7 @@ def plot_pinn1D(times,xt,u,upred,d2 = True,save = False,show = True,file_name = 
         plt.close()
 
 #Plot results for d = 1
-def plot_pinn_out2D(times,xt,u,upred,save = False,show = True,file_name = 'result_pinn',title = ''):
+def plot_pinn_out2D(times,xt,u,upred,save = False,show = True,file_name = 'result_pinn',title = '',plot_test = True):
     """
     Plot the prediction of a PINN with 2D output
     ----------
@@ -685,6 +689,10 @@ def plot_pinn_out2D(times,xt,u,upred,save = False,show = True,file_name = 'resul
 
         Title of plot
 
+    plot_test : logical
+
+        Whether to plot the test data. Default True
+
     Returns
     -------
     None
@@ -712,16 +720,19 @@ def plot_pinn_out2D(times,xt,u,upred,save = False,show = True,file_name = 'resul
                 t = xt[jnp.abs(xt[:,-1] - t) == jnp.min(jnp.abs(xt[:,-1] - t)),-1][0].tolist()
                 xpred_plot = upred[xt[:,-1] == t,0]
                 ypred_plot = upred[xt[:,-1] == t,1]
-                x_plot = u[xt[:,-1] == t,0]
-                y_plot = u[xt[:,-1] == t,1]
+                if plot_test:
+                    x_plot = u[xt[:,-1] == t,0]
+                    y_plot = u[xt[:,-1] == t,1]
                 if int(times/5) > 1:
-                    ax[i,j].plot(x_plot,y_plot,'b-',linewidth=2,label='Exact')
+                    if plot_test:
+                        ax[i,j].plot(x_plot,y_plot,'b-',linewidth=2,label='Exact')
                     ax[i,j].plot(xpred_plot,ypred_plot,'r--',linewidth=2,label='Prediction')
                     ax[i,j].set_title('$t = %.2f$' % (t),fontsize=10)
                     ax[i,j].set_xlabel(' ')
                     ax[i,j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
                 else:
-                    ax[j].plot(x_plot,y_plot,'b-',linewidth=2,label='Exact')
+                    if plot_test:
+                        ax[j].plot(x_plot,y_plot,'b-',linewidth=2,label='Exact')
                     ax[j].plot(xpred_plot,ypred,'r--',linewidth=2,label='Prediction')
                     ax[j].set_title('$t = %.2f$' % (t),fontsize=10)
                     ax[j].set_xlabel(' ')
