@@ -1175,7 +1175,7 @@ def demo_time_pinn1D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
     os.system('ffmpeg -framerate ' + str(framerate) + ' -i ' + file_name_save + '/' + '%00d.png -c:v libx264 -profile:v high -crf 20 -pix_fmt yuv420p ' + file_name_save + '/' + file_name_save + '_time_demo.mp4')
 
 #Demo in time for 1D PINN
-def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_time_demo',title = '',framerate = 10):
+def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_time_demo',title = '',framerate = 10,ffmpeg = 'ffmpeg'):
     """
     Demo video with the time evolution of a 2D PINN
     ----------
@@ -1204,6 +1204,10 @@ def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
     framerate : int
 
         Framerate for video. Default 10
+
+    ffmpeg : str
+
+        Path to ffmpeg
 
     Returns
     -------
@@ -1292,9 +1296,9 @@ def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
             bar()
 
     #Create demo video
-    os.system('ffmpeg -framerate ' + str(framerate) + ' -i ' + file_name_save + '/' + '%00d.png -c:v libx264 -profile:v high -crf 20 -pix_fmt yuv420p ' + file_name_save + '/' + file_name_save + '_time_demo.mp4')
+    os.system(ffmpeg + ' -framerate ' + str(framerate) + ' -i ' + file_name_save + '/' + '%00d.png -c:v libx264 -profile:v high -crf 20 -pix_fmt yuv420p ' + file_name_save + '/' + file_name_save + '_time_demo.mp4')
 
-def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,Ntc = 50,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',sa = True,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2):
+def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,Ntc = 50,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',sa = True,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2,ffmpeg = 'ffmpeg'):
     #If demo, then save
     if demo:
         save = True
@@ -1385,6 +1389,6 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
           y = 2*jnp.pi*(x - xl)/(xu - xl)
           return jnp.append(radius*jnp.sin(y),radius*jnp.cos(y),0)
         test_data = jd.generate_PINNdata(u = ucircle,xl = xl,xu = xu,tl = tl,tu = tu,Ns = Ns,Nts = Nts,Nb = 0,Ntb = 0,N0 = 0,Nc = 0,Ntc = 0,p = 2,train = False)
-        demo_time_pinn2D(test_data,file_name,[epochs-1],file_name_save = file_name + '_demo',title = '',framerate = framerate)
+        demo_time_pinn2D(test_data,file_name,[epochs-1],file_name_save = file_name + '_demo',title = '',framerate = framerate,ffmpeg = ffmpeg)
 
     return fit,res_data
