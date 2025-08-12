@@ -5,3 +5,4 @@ test_pinn.py
 workspace/
 jinnax.egg-info/
 jinnax/__pycache__
+test_CSF
