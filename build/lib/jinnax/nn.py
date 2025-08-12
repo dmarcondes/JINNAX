@@ -1294,65 +1294,97 @@ def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
     #Create demo video
     os.system('ffmpeg -framerate ' + str(framerate) + ' -i ' + file_name_save + '/' + '%00d.png -c:v libx264 -profile:v high -crf 20 -pix_fmt yuv420p ' + file_name_save + '/' + file_name_save + '_time_demo.mp4')
 
-def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,Ntc = 50,epochs = 100,at_each = 10,activation = 'tanh',sa = True,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9):
-#Constant to avoid divind by zero
-c = 1e-6
+def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,Ntc = 50,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',sa = True,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2):
+    #If demo, then save
+    if demo:
+        save = True
 
-#Define initial function and function to evaluate at boundary
-def uinit(x,t):
-    u = uinitial(x,t)
-    return jnp.append(u['u1'],u['u2'])
+    #Constant to avoid divind by zero
+    c = 1e-6
 
-def ubound(x,t):
-    u = uinitial(x,t)
-    return jnp.append(u['u1'],u['u2'],1)
+    #Define initial function and function to evaluate at boundary
+    def uinit(x,t):
+        u = uinitial(x,t)
+        return jnp.append(u['u1'],u['u2'])
+
+    def ubound(x,t):
+        u = uinitial(x,t)
+        return jnp.append(u['u1'],u['u2'],1)
 
 
-#PDE operator
-def pde(u,x,t):
-    #One function for each coordinate (assuming that x and t has dimension 1 x 1 and u(x,t) has dimension 1 x 2)
-    u1 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,0][0]
-    u2 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,1][0]
-    #First derivatives of each coordinate
-    ux1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u1(x,t),0)(x,t))
-    ux2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u2(x,t),0)(x,t))
-    ut1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u1(x,t),1)(x,t))
-    ut2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u2(x,t),1)(x,t))
-    #Second derivative of each coordinate
-    ux1_tmp = lambda x,t : jax.grad(lambda x,t : u1(x,t),0)(x,t)
-    ux2_tmp = lambda x,t : jax.grad(lambda x,t : u2(x,t),0)(x,t)
-    uxx1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : ux1_tmp(x,t)[0],0)(x,t))
-    uxx2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : ux2_tmp(x,t)[0],0)(x,t))
-    #Return
-    return jnp.sqrt((ut1(x,t) - uxx1(x,t)/(ux1(x,t) ** 2 + ux2(x,t) ** 2 + c)) ** 2 + (ut2(x,t) - uxx2(x,t)/(ux1(x,t) ** 2 + ux2(x,t) ** 2 + c)) ** 2)
+    #PDE operator
+    def pde(u,x,t):
+        #One function for each coordinate (assuming that x and t has dimension 1 x 1 and u(x,t) has dimension 1 x 2)
+        u1 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,0][0]
+        u2 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,1][0]
+        #First derivatives of each coordinate
+        ux1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u1(x,t),0)(x,t))
+        ux2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u2(x,t),0)(x,t))
+        ut1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u1(x,t),1)(x,t))
+        ut2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u2(x,t),1)(x,t))
+        #Second derivative of each coordinate
+        ux1_tmp = lambda x,t : jax.grad(lambda x,t : u1(x,t),0)(x,t)
+        ux2_tmp = lambda x,t : jax.grad(lambda x,t : u2(x,t),0)(x,t)
+        uxx1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : ux1_tmp(x,t)[0],0)(x,t))
+        uxx2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : ux2_tmp(x,t)[0],0)(x,t))
+        #Return
+        return jnp.sqrt((ut1(x,t) - uxx1(x,t)/(ux1(x,t) ** 2 + ux2(x,t) ** 2 + c)) ** 2 + (ut2(x,t) - uxx2(x,t)/(ux1(x,t) ** 2 + ux2(x,t) ** 2 + c)) ** 2)
 
-#Operator to evaluate boundary conditions
-def oper_boundary(u,x,t,w = 1):
-  #Enforce Dirichlet at the right boundary (fixed at point a, as the initial condition)
-  res_right_dir = jnp.sum(jnp.where(x == xu,(u(x,t) - ubound(x,t)) ** 2,0),1).reshape(x.shape[0],1)
-  #Enforce Dirichlet at the left boundary (is in the circle of radius fixed)
-  res_left_dir = jnp.sum(jnp.where(x == xl,((jnp.sum(u(x,t) ** 2,1) - radius ** 2) ** 2).reshape(x.shape),0),1).reshape(x.shape[0],1)
-  #One function for each coordinate (assuming that x and t has dimension 1 x 1 and u(x,t) has dimension 1 x 2)
-  u1 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,0][0]
-  u2 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,1][0]
-  #Take the derivatives in x
-  ux1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u1(x,t),0)(x,t))(x,t)
-  ux2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u2(x,t),0)(x,t))(x,t)
-  #Enforce Neumann at the left boundary
-  nS = u(x,t)/jnp.sqrt(jnp.sum(u(x,t) ** 2,0)) #Assuming that u(x,y) \in S, compute the vector normal to S at u(x,t)
-  nu = jnp.append(ux2,(-1)*ux1,1)/jnp.sqrt(ux1 ** 2 + ux2 ** 2)
-  ip = jnp.sum(nS * nu,1).reshape(x.shape[0],1) ** 2
-  res_left_neu = jnp.where(x == xl,ip,0)
-  #Rearrange
-  res = jnp.append(jnp.append(res_right_dir[:Ntb,:],res_left_dir[Ntb:2*Ntb,:],0),res_left_neu[2*Ntb:,:],0)
-  return w*res
+    #Operator to evaluate boundary conditions
+    def oper_boundary(u,x,t,w = 1):
+      #Enforce Dirichlet at the right boundary (fixed at point a, as the initial condition)
+      res_right_dir = jnp.sum(jnp.where(x == xu,(u(x,t) - ubound(x,t)) ** 2,0),1).reshape(x.shape[0],1)
+      #Enforce Dirichlet at the left boundary (is in the circle of radius fixed)
+      res_left_dir = jnp.sum(jnp.where(x == xl,((jnp.sum(u(x,t) ** 2,1) - radius ** 2) ** 2).reshape(x.shape),0),1).reshape(x.shape[0],1)
+      #One function for each coordinate (assuming that x and t has dimension 1 x 1 and u(x,t) has dimension 1 x 2)
+      u1 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,0][0]
+      u2 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,1][0]
+      #Take the derivatives in x
+      ux1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u1(x,t),0)(x,t))(x,t)
+      ux2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u2(x,t),0)(x,t))(x,t)
+      #Enforce Neumann at the left boundary
+      nS = u(x,t)/jnp.sqrt(jnp.sum(u(x,t) ** 2,0)) #Assuming that u(x,y) \in S, compute the vector normal to S at u(x,t)
+      nu = jnp.append(ux2,(-1)*ux1,1)/jnp.sqrt(ux1 ** 2 + ux2 ** 2)
+      ip = jnp.sum(nS * nu,1).reshape(x.shape[0],1) ** 2
+      res_left_neu = jnp.where(x == xl,ip,0)
+      #Rearrange
+      res = jnp.append(jnp.append(res_right_dir[:Ntb,:],res_left_dir[Ntb:2*Ntb,:],0),res_left_neu[2*Ntb:,:],0)
+      return w*res
 
-#Generate Data
-train_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = Ntb,N0 = N0,Nc = Nc,Ntc = Ntc,p = 2)
+    #Generate Data
+    train_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = Ntb,N0 = N0,Nc = Nc,Ntc = Ntc,p = 2)
 
-#Rearange boundary data
-train_data['boundary'] = jnp.append(jnp.append(train_data['boundary'][Ntb:,:],train_data['boundary'][:Ntb,:],0),train_data['boundary'][:Ntb,:],0)
-train_data['uboundary'] = jnp.append(jnp.append(train_data['uboundary'][Ntb:,:],train_data['uboundary'][:Ntb,:],0),train_data['uboundary'][:Ntb,:],0)
+    #Rearange boundary data
+    train_data['boundary'] = jnp.append(jnp.append(train_data['boundary'][Ntb:,:],train_data['boundary'][:Ntb,:],0),train_data['boundary'][:Ntb,:],0)
+    train_data['uboundary'] = jnp.append(jnp.append(train_data['uboundary'][Ntb:,:],train_data['uboundary'][:Ntb,:],0),train_data['uboundary'][:Ntb,:],0)
 
-#Train PINN
-fit = nn.train_PINN(train_data,width,pde,test_data = None,epochs = epochs,at_each = at_each,activation = activation,neumann = True,oper_neumann = oper_boundary,sa = sa,lr = lr,b1 = b1,b2 = b2,eps = eps,eps_root = eps_root,key = key,epoch_print = epoch_print,save = save,file_name = file_name,exp_decay = exp_decay,transition_steps = transition_steps,decay_rate = decay_rate)
+    #Train PINN
+    fit = train_PINN(train_data,width,pde,test_data = None,epochs = epochs,at_each = at_each,activation = activation,neumann = True,oper_neumann = oper_boundary,sa = sa,lr = lr,b1 = b1,b2 = b2,eps = eps,eps_root = eps_root,key = key,epoch_print = epoch_print,save = save,file_name = file_name,exp_decay = exp_decay,transition_steps = transition_steps,decay_rate = decay_rate)
+
+    #Evaluate residuals
+    def u(x,t):
+        return fit['u'](jnp.append(x,t,1))
+
+    res_pde = jnp.mean(pde(u,train_data['collocation'][:,0].reshape((train_data['collocation'].shape[0],1)),train_data['collocation'][:,1].reshape((train_data['collocation'].shape[0],1))) ** 2)
+    res_DN = oper_boundary(u,train_data['boundary'][:,0].reshape((train_data['boundary'].shape[0],1)),train_data['boundary'][:,1].reshape((train_data['boundary'].shape[0],1)))
+    res_dir_right = jnp.mean(res_DN[:Ntb,:] ** 2)
+    res_neu = jnp.mean(res_DN[2*Ntb:,:] ** 2)
+    res_dir_left = jnp.mean(res_DN[Ntb:2*Ntb,:] ** 2)
+
+    #Save file
+    res_data = pd.DataFrame({'PDE': [res_pde.tolist()],
+                             'Dirichlet_Right': [res_dir_right.tolist()],
+                             'Dirichlet_Left': [res_dir_left.tolist()],
+                             'Neumann': [res_neu.tolist()],
+                             'time': fit['time'],
+                             'epochs': epochs})
+    res_data.to_csv(file_name + '_residuals.csv')
+
+    if demo:
+        def ucircle(x,t):
+          y = 2*jnp.pi*(x - xl)/(xu - xl)
+          return jnp.append(radius*jnp.sin(y),radius*jnp.cos(y),0)
+        test_data = jd.generate_PINNdata(u = ucircle,xl = xl,xu = xu,tl = tl,tu = tu,Ns = Ns,Nts = Nts,Nb = 0,Ntb = 0,N0 = 0,Nc = 0,Ntc = 0,p = 2,train = False)
+        demo_time_pinn2D(test_data,file_name,[epochs-1],file_name_save = file_name + '_demo',title = '',framerate = framerate)
+
+    return fit,res_data
