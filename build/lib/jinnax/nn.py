@@ -1335,7 +1335,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
         return jnp.sqrt((ut1(x,t) - uxx1(x,t)/(ux1(x,t) ** 2 + ux2(x,t) ** 2 + c)) ** 2 + (ut2(x,t) - uxx2(x,t)/(ux1(x,t) ** 2 + ux2(x,t) ** 2 + c)) ** 2)
 
     #Operator to evaluate boundary conditions
-    def oper_boundary(u,x,t,w = 1):
+    def oper_boundary(u,x,t,w = 1,Ntb = Ntb):
       #Enforce Dirichlet at the right boundary (fixed at point a, as the initial condition)
       res_right_dir = jnp.sum(jnp.where(x == xu,(u(x,t) - ubound(x,t)) ** 2,0),1).reshape(x.shape[0],1)
       #Enforce Dirichlet at the left boundary (is in the circle of radius fixed)
@@ -1365,12 +1365,18 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     #Train PINN
     fit = train_PINN(train_data,width,pde,test_data = None,epochs = epochs,at_each = at_each,activation = activation,neumann = True,oper_neumann = oper_boundary,sa = sa,lr = lr,b1 = b1,b2 = b2,eps = eps,eps_root = eps_root,key = key,epoch_print = epoch_print,save = save,file_name = file_name,exp_decay = exp_decay,transition_steps = transition_steps,decay_rate = decay_rate)
 
+    #Test data
+    test_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = 2*Ntb,N0 = 2*N0,Nc = 2*Nc,Ntc = 2*Ntc,p = 2)
+    Ntb = 2*Ntb
+    test_data['boundary'] = jnp.append(jnp.append(test_data['boundary'][Ntb:,:],test_data['boundary'][:Ntb,:],0),test_data['boundary'][:Ntb,:],0)
+    test_data['uboundary'] = jnp.append(jnp.append(test_data['uboundary'][Ntb:,:],test_data['uboundary'][:Ntb,:],0),test_data['uboundary'][:Ntb,:],0)
+
     #Evaluate residuals
     def u(x,t):
         return fit['u'](jnp.append(x,t,1))
 
-    res_pde = jnp.mean(pde(u,train_data['collocation'][:,0].reshape((train_data['collocation'].shape[0],1)),train_data['collocation'][:,1].reshape((train_data['collocation'].shape[0],1))) ** 2)
-    res_DN = oper_boundary(u,train_data['boundary'][:,0].reshape((train_data['boundary'].shape[0],1)),train_data['boundary'][:,1].reshape((train_data['boundary'].shape[0],1)))
+    res_pde = jnp.mean(pde(u,test_data['collocation'][:,0].reshape((test_data['collocation'].shape[0],1)),test_data['collocation'][:,1].reshape((test_data['collocation'].shape[0],1))) ** 2)
+    res_DN = oper_boundary(u,test_data['boundary'][:,0].reshape((test_data['boundary'].shape[0],1)),test_data['boundary'][:,1].reshape((test_data['boundary'].shape[0],1)),Ntb = Ntb)
     res_dir_right = jnp.mean(res_DN[:Ntb,:] ** 2)
     res_neu = jnp.mean(res_DN[2*Ntb:,:] ** 2)
     res_dir_left = jnp.mean(res_DN[Ntb:2*Ntb,:] ** 2)
