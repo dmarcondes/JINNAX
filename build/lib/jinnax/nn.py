@@ -303,13 +303,15 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     par_sa = {}
     if sa:
         #Initialize wheights close to zero
-        ksa = jax.random.randint(jax.random.PRNGKey(key),(4,),1,1000000)
+        ksa = jax.random.randint(jax.random.PRNGKey(key),(5,),1,1000000)
         if data['sensor'] is not None:
             par_sa.update({'ws': c['ws'] * jax.random.uniform(key = jax.random.PRNGKey(ksa[0]),shape = (data['sensor'].shape[0],1))})
         if data['initial'] is not None:
             par_sa.update({'w0': c['w0'] * jax.random.uniform(key = jax.random.PRNGKey(ksa[1]),shape = (data['initial'].shape[0],1))})
         if data['collocation'] is not None:
             par_sa.update({'wr': c['wr'] * jax.random.uniform(key = jax.random.PRNGKey(ksa[2]),shape = (data['collocation'].shape[0],1))})
+        if data['boundary'] is not None:
+            par_sa.update({'wb': c['wr'] * jax.random.uniform(key = jax.random.PRNGKey(ksa[3]),shape = (data['boundary'].shape[0],1))})
 
     #Store all parameters
     params = {'net': nnet['params'],'inverse': initial_par,'sa': par_sa}
@@ -332,10 +334,10 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
                     #Neumann coditions
                     xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
                     tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
-                    loss = loss + jnp.mean(oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params['net']),xb,tb))
+                    loss = loss + jnp.mean(oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params['net']),xb,tb,params['sa']['wb']))
                 else:
                     #Term that refers to boundary data
-                    loss = loss + jnp.mean(MSE(forward(x['boundary'],params['net']),x['uboundary']))
+                    loss = loss + jnp.mean(MSE_SA(forward(x['boundary'],params['net']),x['uboundary'],params['sa']['wb']))
             if x['initial'] is not None:
                 #Term that refers to initial data
                 loss = loss + jnp.mean(MSE_SA(forward(x['initial'],params['net']),x['uinitial'],params['sa']['w0']))
