@@ -1360,7 +1360,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     train_data['uboundary'] = jnp.append(jnp.append(train_data['uboundary'][Ntb:,:],train_data['uboundary'][:Ntb,:],0),train_data['uboundary'][:Ntb,:],0)
 
     #Train PINN
-    fit = train_PINN(train_data,width,pde,test_data = None,epochs = epochs,at_each = at_each,activation = activation,neumann = True,oper_neumann = oper_boundary,sa = sa,lr = lr,b1 = b1,b2 = b2,eps = eps,eps_root = eps_root,key = key,epoch_print = epoch_print,save = save,file_name = file_name,exp_decay = exp_decay,transition_steps = transition_steps,decay_rate = decay_rate)
+    fit = train_PINN(train_data,width,pde,c = {'ws': 1,'wr': 1,'w0': 1,'wb': 1},test_data = None,epochs = epochs,at_each = at_each,activation = activation,neumann = True,oper_neumann = oper_boundary,sa = sa,lr = lr,b1 = b1,b2 = b2,eps = eps,eps_root = eps_root,key = key,epoch_print = epoch_print,save = save,file_name = file_name,exp_decay = exp_decay,transition_steps = transition_steps,decay_rate = decay_rate)
 
     #Test data
     test_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = 2*Ntb,N0 = 2*N0,Nc = 2*Nc,Ntc = 2*Ntc,p = 2)
@@ -1377,12 +1377,14 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     res_dir_right = jnp.mean(res_DN[:Ntb,:] ** 2)
     res_neu = jnp.mean(res_DN[2*Ntb:,:] ** 2)
     res_dir_left = jnp.mean(res_DN[Ntb:2*Ntb,:] ** 2)
+    res_initial = jnp.mean((u(test_data['initial'][:,0].reshape((test_data['initial'].shape[0],1)),test_data['initial'][:,1].reshape((test_data['initial'].shape[0],1))) - test_data['uinitial']) ** 2)
 
     #Save file
     res_data = pd.DataFrame({'PDE': [res_pde.tolist()],
                              'Dirichlet_Right': [res_dir_right.tolist()],
                              'Dirichlet_Left': [res_dir_left.tolist()],
                              'Neumann': [res_neu.tolist()],
+                             'initial': res_initial,
                              'time': fit['time'],
                              'epochs': epochs})
     res_data.to_csv(file_name + '_residuals.csv')
