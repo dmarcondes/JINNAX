@@ -1353,7 +1353,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
       return w*res
 
     #Generate Data
-    train_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = Ntb,N0 = N0,Nc = Nc,Ntc = Ntc,p = 2)
+    train_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = Ntb,N0 = N0,Nc = Nc,Ntc = Ntc,p = 2,poss = 'random',posts = 'random',pos0 = 'random',postb = 'random',posc = 'random',postc = 'random')
 
     #Rearange boundary data
     train_data['boundary'] = jnp.append(jnp.append(train_data['boundary'][Ntb:,:],train_data['boundary'][:Ntb,:],0),train_data['boundary'][:Ntb,:],0)
@@ -1363,7 +1363,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     fit = train_PINN(train_data,width,pde,c = {'ws': 1,'wr': 1,'w0': 1,'wb': 1},test_data = None,epochs = epochs,at_each = at_each,activation = activation,neumann = True,oper_neumann = oper_boundary,sa = sa,lr = lr,b1 = b1,b2 = b2,eps = eps,eps_root = eps_root,key = key,epoch_print = epoch_print,save = save,file_name = file_name,exp_decay = exp_decay,transition_steps = transition_steps,decay_rate = decay_rate)
 
     #Test data
-    test_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = 2*Ntb,N0 = 2*N0,Nc = 2*Nc,Ntc = 2*Ntc,p = 2)
+    test_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = 2*Ntb,N0 = 2*N0,Nc = 2*Nc,Ntc = 2*Ntc,p = 2,poss = 'random',posts = 'random',pos0 = 'random',postb = 'random',posc = 'random',postc = 'random')
     Ntb = 2*Ntb
     test_data['boundary'] = jnp.append(jnp.append(test_data['boundary'][Ntb:,:],test_data['boundary'][:Ntb,:],0),test_data['boundary'][:Ntb,:],0)
     test_data['uboundary'] = jnp.append(jnp.append(test_data['uboundary'][Ntb:,:],test_data['uboundary'][:Ntb,:],0),test_data['uboundary'][:Ntb,:],0)
