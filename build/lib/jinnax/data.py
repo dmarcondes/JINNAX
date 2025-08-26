@@ -180,7 +180,7 @@ def generate_PINNdata(u,xl,xu,tl,tu,Ns = None,Nts = None,Nb = None,Ntb = None,N0
                     #Product with the grid of the i-th coordinate
                     x_collocation =  [x1 + [x2.tolist()] for x1 in x_collocation for x2 in jnp.linspace(xl[i+1],xu[i+1],Nc + 2)[1:-1]]
                 #Product of x and t
-                xt_collocation = jnp.array([x + [t.tolist()] for x in x_collocation for t in t_collocation],dtype = jnp.float32)
+                xt_collocation = jnp.array([x + [t.tolist()] for t in t_collocation for x in x_collocation],dtype = jnp.float32)
             else:
                 #Sample Nc^d points for the first coordinate
                 x_collocation = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xl[0],maxval = xu[0],shape = (Nc ** d,1))
