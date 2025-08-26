@@ -95,7 +95,7 @@ def L2error(pred,true):
     return jnp.sqrt(jnp.sum((true - pred)**2))/jnp.sqrt(jnp.sum(true ** 2))
 
 #Simple fully connected architecture. Return the initial parameters and the function for the forward pass
-def fconNN(width,activation = jax.nn.tanh,key = 0):
+def fconNN(width,activation = jax.nn.tanh,key = 0,ff = False):
     """
     Initialize fully connected neural network
     ----------
@@ -114,6 +114,10 @@ def fconNN(width,activation = jax.nn.tanh,key = 0):
 
         Seed for parameters initialization. Default 0
 
+    ff : logical
+
+        Whether to consider Fourrier features
+
     Returns
     -------
     dict with initial parameters and the function for the forward pass
@@ -130,10 +134,15 @@ def fconNN(width,activation = jax.nn.tanh,key = 0):
     #Define function for forward pass
     @jax.jit
     def forward(x,params):
-      *hidden,output = params
-      for layer in hidden:
-        x = activation(x @ layer['W'] + layer['B'])
-      return x @ output['W'] + output['B']
+        *hidden,output = params
+        if ff:
+            x = jnp.append(jnp.sin(x @ hidden[0]['W'][:,:int(width[1]/2)] + hidden[0]['B'][:,:int(width[1]/2)]),jnp.cos(x @ hidden[0]['W'][:,:int(width[1]/2)] + hidden[0]['B'][:,:int(width[1]/2)]),0)
+            for layer in hidden[1:]:
+                x = activation(x @ layer['W'] + layer['B'])
+        else:
+            for layer in hidden:
+                x = activation(x @ layer['W'] + layer['B'])
+        return x @ output['W'] + output['B']
 
     #Return initial parameters and forward function
     return {'params': params,'forward': forward}
@@ -200,7 +209,7 @@ def get_activation(act):
         return jax.nn.mish
 
 #Training PINN
-def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = False,sa = False,c = {'ws': 1,'wr': 1,'w0': 100,'wb': 1},inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9):
+def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = False,sa = False,c = {'ws': 1,'wr': 1,'w0': 100,'wb': 1},inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,ff = False):
     """
     Train a Physics-informed Neural Network
     ----------
@@ -291,13 +300,17 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
 
         Rate of exponential decay. Default 0.9
 
+    ff : logical
+
+        Whether to consider Fourrier features
+
     Returns
     -------
     dict-like object with the estimated function, the estimated parameters, the neural network function for the forward pass and the training time
     """
 
     #Initialize architecture
-    nnet = fconNN(width,get_activation(activation),key)
+    nnet = fconNN(width,get_activation(activation),key,ff)
     forward = nnet['forward']
 
     #Initialize self adaptative weights
@@ -1359,7 +1372,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     train_data['uboundary'] = jnp.append(jnp.append(train_data['uboundary'][Ntb:,:],train_data['uboundary'][:Ntb,:],0),train_data['uboundary'][:Ntb,:],0)
 
     #Train PINN
-    fit = train_PINN(train_data,width,pde,c = w,test_data = None,epochs = epochs,at_each = at_each,activation = activation,neumann = True,oper_neumann = oper_boundary,sa = sa,lr = lr,b1 = b1,b2 = b2,eps = eps,eps_root = eps_root,key = key,epoch_print = epoch_print,save = save,file_name = file_name,exp_decay = exp_decay,transition_steps = transition_steps,decay_rate = decay_rate)
+    fit = train_PINN(train_data,width,pde,c = w,test_data = None,epochs = epochs,at_each = at_each,activation = activation,neumann = True,oper_neumann = oper_boundary,sa = sa,lr = lr,b1 = b1,b2 = b2,eps = eps,eps_root = eps_root,key = key,epoch_print = epoch_print,save = save,file_name = file_name,exp_decay = exp_decay,transition_steps = transition_steps,decay_rate = decay_rate,ff = True)
 
     #Test data
     test_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = 2*Ntb,N0 = 2*N0,Nc = 2*Nc,Ntc = 2*Ntc,p = 2,poss = 'random',posts = 'random',pos0 = 'random',postb = 'random',posc = 'random',postc = 'random')
