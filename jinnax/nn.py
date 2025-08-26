@@ -1249,7 +1249,7 @@ def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
             if len(epochs) > 1:
                 fig, ax = plt.subplots(int(len(epochs)/2),2,figsize = (10,5*len(epochs)/2))
             else:
-                fig, ax = plt.subplots(1,1,figsize = (10,5))
+                fig, ax = plt.subplots(1,1,figsize = (10,10))
             #Create
             index = 0
             if int(len(epochs)/2) > 1:
@@ -1298,7 +1298,7 @@ def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
     #Create demo video
     os.system(ffmpeg + ' -framerate ' + str(framerate) + ' -i ' + file_name_save + '/' + '%00d.png -c:v libx264 -profile:v high -crf 20 -pix_fmt yuv420p ' + file_name_save + '/' + file_name_save + '_time_demo.mp4')
 
-def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,Ntc = 50,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',sa = True,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2,ffmpeg = 'ffmpeg',c = 1e-6):
+def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,Ntc = 50,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',sa = True,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2,ffmpeg = 'ffmpeg',c = 1e-6,w = {'ws': 1,'wr': 1,'w0': 100,'wb': 1000}):
     #If demo, then save
     if demo:
         save = True
@@ -1311,7 +1311,6 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     def ubound(x,t):
         u = uinitial(x,t)
         return jnp.append(u['u1'],u['u2'],1)
-
 
     #PDE operator
     def pde(u,x,t):
@@ -1360,7 +1359,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     train_data['uboundary'] = jnp.append(jnp.append(train_data['uboundary'][Ntb:,:],train_data['uboundary'][:Ntb,:],0),train_data['uboundary'][:Ntb,:],0)
 
     #Train PINN
-    fit = train_PINN(train_data,width,pde,c = {'ws': 1,'wr': 1,'w0': 1,'wb': 1},test_data = None,epochs = epochs,at_each = at_each,activation = activation,neumann = True,oper_neumann = oper_boundary,sa = sa,lr = lr,b1 = b1,b2 = b2,eps = eps,eps_root = eps_root,key = key,epoch_print = epoch_print,save = save,file_name = file_name,exp_decay = exp_decay,transition_steps = transition_steps,decay_rate = decay_rate)
+    fit = train_PINN(train_data,width,pde,c = w,test_data = None,epochs = epochs,at_each = at_each,activation = activation,neumann = True,oper_neumann = oper_boundary,sa = sa,lr = lr,b1 = b1,b2 = b2,eps = eps,eps_root = eps_root,key = key,epoch_print = epoch_print,save = save,file_name = file_name,exp_decay = exp_decay,transition_steps = transition_steps,decay_rate = decay_rate)
 
     #Test data
     test_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = 2*Ntb,N0 = 2*N0,Nc = 2*Nc,Ntc = 2*Ntc,p = 2,poss = 'random',posts = 'random',pos0 = 'random',postb = 'random',posc = 'random',postc = 'random')
