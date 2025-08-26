@@ -95,7 +95,7 @@ def L2error(pred,true):
     return jnp.sqrt(jnp.sum((true - pred)**2))/jnp.sqrt(jnp.sum(true ** 2))
 
 #Simple fully connected architecture. Return the initial parameters and the function for the forward pass
-def fconNN(width,activation = jax.nn.tanh,key = 0,ff = False):
+def fconNN(width,activation = jax.nn.tanh,key = 0):
     """
     Initialize fully connected neural network
     ----------
@@ -114,10 +114,6 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,ff = False):
 
         Seed for parameters initialization. Default 0
 
-    ff : logical
-
-        Whether to consider Fourrier features
-
     Returns
     -------
     dict with initial parameters and the function for the forward pass
@@ -135,13 +131,8 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,ff = False):
     @jax.jit
     def forward(x,params):
         *hidden,output = params
-        if ff:
-            x = jnp.append(jnp.cos(x @ hidden[0]['W'][:,:int(width[1]/2)] + hidden[0]['B'][:,:int(width[1]/2)]),jnp.sin(x @ hidden[0]['W'][:,:int(width[1]/2)] + hidden[0]['B'][:,:int(width[1]/2)]),1)
-            for layer in hidden[1:]:
-                x = activation(x @ layer['W'] + layer['B'])
-        else:
-            for layer in hidden:
-                x = activation(x @ layer['W'] + layer['B'])
+        for layer in hidden:
+            x = activation(x @ layer['W'] + layer['B'])
         return x @ output['W'] + output['B']
 
     #Return initial parameters and forward function
@@ -1325,6 +1316,12 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
         u = uinitial(x,t)
         return jnp.append(u['u1'],u['u2'],1)
 
+    #Generate Data
+    train_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = Ntb,N0 = N0,Nc = Nc,Ntc = Ntc,p = 2)
+    train_data['collocation'] = jnp.sort(train_data['collocation'],0)
+    x = train_data['collocation'][:,0].reshape((train_data['collocation'].shape[0],1))
+    t = train_data['collocation'][:,1].reshape((train_data['collocation'].shape[0],1))
+
     #PDE operator
     def pde(u,x,t):
         #One function for each coordinate (assuming that x and t has dimension 1 x 1 and u(x,t) has dimension 1 x 2)
@@ -1340,36 +1337,185 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
         ux2_tmp = lambda x,t : jax.grad(lambda x,t : u2(x,t),0)(x,t)
         uxx1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : ux1_tmp(x,t)[0],0)(x,t))
         uxx2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : ux2_tmp(x,t)[0],0)(x,t))
+        #Residuals
+        res = jnp.sqrt((ut1(x,t) - uxx1(x,t)/(ux1(x,t) ** 2 + ux2(x,t) ** 2 + c)) ** 2 + (ut2(x,t) - uxx2(x,t)/(ux1(x,t) ** 2 + ux2(x,t) ** 2 + c)) ** 2)
+        #Cumulative sum
+        res_cs = jnp.cumsum(res)
+        #Cummulative sum until each change of time
+        x[:Ntc]
+        x[0]
         #Return
-        return jnp.sqrt((ut1(x,t) - uxx1(x,t)/(ux1(x,t) ** 2 + ux2(x,t) ** 2 + c)) ** 2 + (ut2(x,t) - uxx2(x,t)/(ux1(x,t) ** 2 + ux2(x,t) ** 2 + c)) ** 2)
+        return
 
-    #Operator to evaluate boundary conditions
-    def oper_boundary(u,x,t,w = 1,Ntb = Ntb):
-      #Enforce Dirichlet at the right boundary (fixed at point a, as the initial condition)
-      res_right_dir = jnp.sum(jnp.where(x == xu,(u(x,t) - ubound(x,t)) ** 2,0),1).reshape(x.shape[0],1)
-      #Enforce Dirichlet at the left boundary (is in the circle of radius fixed)
-      res_left_dir = jnp.sum(jnp.where(x == xl,((jnp.sum(u(x,t) ** 2,1) - radius ** 2) ** 2).reshape(x.shape),0),1).reshape(x.shape[0],1)
-      #One function for each coordinate (assuming that x and t has dimension 1 x 1 and u(x,t) has dimension 1 x 2)
-      u1 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,0][0]
-      u2 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,1][0]
-      #Take the derivatives in x
-      ux1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u1(x,t),0)(x,t))(x,t)
-      ux2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u2(x,t),0)(x,t))(x,t)
-      #Enforce Neumann at the left boundary
-      nS = u(x,t)/jnp.sqrt(jnp.sum(u(x,t) ** 2,1).reshape((x.shape[0],1))) #Assuming that u(x,t) \in S, compute the vector normal to S at u(x,t)
-      nu = jnp.append(ux2,(-1)*ux1,1)/jnp.sqrt(ux1 ** 2 + ux2 ** 2) #Normal at u(x,y)
-      ip = jnp.sum(nS * nu,1).reshape(x.shape[0],1) ** 2 #Inner product
-      res_left_neu = jnp.where(x == xl,ip,0)
-      #Rearrange
-      res = jnp.append(jnp.append(res_right_dir[:Ntb,:],res_left_dir[Ntb:2*Ntb,:],0),res_left_neu[2*Ntb:,:],0)
-      return w*res
+    #Operators to evaluate boundary conditions
+    def oper_right_dir(u,x,t):
+        #Enforce Dirichlet at the right boundary (fixed at point a, as the initial condition)
+        res_right_dir = jnp.sum(jnp.where(x == xu,(u(x,t) - ubound(x,t)) ** 2,0),1).reshape(x.shape[0],1)
+        return res_right_dir
 
-    #Generate Data
-    train_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = Ntb,N0 = N0,Nc = Nc,Ntc = Ntc,p = 2,poss = 'random',posts = 'random',pos0 = 'random',postb = 'random',posc = 'random',postc = 'random')
+    def oper_left_dir(u,x,t):
+        #Enforce Dirichlet at the left boundary (is in the circle of radius fixed)
+        res_left_dir = jnp.sum(jnp.where(x == xl,((jnp.sum(u(x,t) ** 2,1) - radius ** 2) ** 2).reshape(x.shape),0),1).reshape(x.shape[0],1)
+        return res_left_dir
 
-    #Rearange boundary data
-    train_data['boundary'] = jnp.append(jnp.append(train_data['boundary'][Ntb:,:],train_data['boundary'][:Ntb,:],0),train_data['boundary'][:Ntb,:],0)
-    train_data['uboundary'] = jnp.append(jnp.append(train_data['uboundary'][Ntb:,:],train_data['uboundary'][:Ntb,:],0),train_data['uboundary'][:Ntb,:],0)
+    def oper_neumann(u,x,t):
+        #One function for each coordinate (assuming that x and t has dimension 1 x 1 and u(x,t) has dimension 1 x 2)
+        u1 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,0][0]
+        u2 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,1][0]
+        #Take the derivatives in x
+        ux1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u1(x,t),0)(x,t))(x,t)
+        ux2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u2(x,t),0)(x,t))(x,t)
+        #Enforce Neumann at the left boundary
+        nS = u(x,t)/jnp.sqrt(jnp.sum(u(x,t) ** 2,1).reshape((x.shape[0],1))) #Assuming that u(x,t) \in S, compute the vector normal to S at u(x,t)
+        nu = jnp.append(ux2,(-1)*ux1,1)/jnp.sqrt(ux1 ** 2 + ux2 ** 2) #Normal at u(x,y)
+        ip = jnp.sum(nS * nu,1).reshape(x.shape[0],1) ** 2 #Inner product
+        res_neu = jnp.where(x == xl,ip,0)
+        return res_neu
+
+    def oper_boundary(u,x,t,ll,lr,ln):
+        ldir = jnp.mean(oper_left_dir(u,x,t))
+        rdir = jnp.mean(oper_right_dir(u,x,t))
+        neu = jnp.mean(oper_neumann(u,x,t))
+        return ll*ldir + lr*rdir + ln*neu
+
+    #Loss PDE
+
+
+    #Initialize architecture
+    nnet = fconNN(width,get_activation(activation),key)
+    forward = nnet['forward']
+    params = {'net': nnet['params']}
+
+    #Initialize weights
+    ll = 1
+    lr = 1
+    ln = 1
+    u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
+
+    x = train_data['boundary'][:,0].reshape((train_data['boundary'].shape[0],1))
+    t = train_data['boundary'][:,1].reshape((train_data['boundary'].shape[0],1))
+
+    #Save config file
+    if save:
+        pickle.dump({'train_data': data,'epochs': epochs,'activation': activation,'init_params': params,'forward': forward,'width': width,'pde': pde,'lr': lr,'b1': b1,'b2': b2,'eps': eps,'eps_root': eps_root,'key': key,'inverse': inverse,'sa': sa},open(file_name + '_config.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+
+    #Define loss function
+    if sa:
+        #Define loss function
+        @jax.jit
+        def lf(params,x):
+            loss = 0
+            if x['sensor'] is not None:
+                #Term that refers to sensor data
+                loss = loss + jnp.mean(MSE_SA(forward(x['sensor'],params['net']),x['usensor'],params['sa']['ws']))
+            if x['boundary'] is not None:
+                if neumann:
+                    #Neumann coditions
+                    xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
+                    tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
+                    loss = loss + jnp.mean(oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params['net']),xb,tb,params['sa']['wb']))
+                else:
+                    #Term that refers to boundary data
+                    loss = loss + jnp.mean(MSE_SA(forward(x['boundary'],params['net']),x['uboundary'],params['sa']['wb']))
+            if x['initial'] is not None:
+                #Term that refers to initial data
+                loss = loss + jnp.mean(MSE_SA(forward(x['initial'],params['net']),x['uinitial'],params['sa']['w0']))
+            if x['collocation'] is not None:
+                #Term that refers to collocation points
+                x_col = x['collocation'][:,:-1].reshape((x['collocation'].shape[0],x['collocation'].shape[1] - 1))
+                t_col = x['collocation'][:,-1].reshape((x['collocation'].shape[0],1))
+                if inverse:
+                    loss = loss + jnp.mean(MSE_SA(pde(lambda x,t: forward(jnp.append(x,t,1),params['net']),x_col,t_col,params['inverse']),0,params['sa']['wr']))
+                else:
+                    loss = loss + jnp.mean(MSE_SA(pde(lambda x,t: forward(jnp.append(x,t,1),params['net']),x_col,t_col),0,params['sa']['wr']))
+            return loss
+    else:
+        @jax.jit
+        def lf(params,x):
+            loss = 0
+            if x['sensor'] is not None:
+                #Term that refers to sensor data
+                loss = loss + jnp.mean(MSE(forward(x['sensor'],params['net']),x['usensor']))
+            if x['boundary'] is not None:
+                if neumann:
+                    #Neumann coditions
+                    xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
+                    tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
+                    loss = loss + jnp.mean(oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params['net']),xb,tb))
+                else:
+                    #Term that refers to boundary data
+                    loss = loss + jnp.mean(MSE(forward(x['boundary'],params['net']),x['uboundary']))
+            if x['initial'] is not None:
+                #Term that refers to initial data
+                loss = loss + jnp.mean(MSE(forward(x['initial'],params['net']),x['uinitial']))
+            if x['collocation'] is not None:
+                #Term that refers to collocation points
+                x_col = x['collocation'][:,:-1].reshape((x['collocation'].shape[0],x['collocation'].shape[1] - 1))
+                t_col = x['collocation'][:,-1].reshape((x['collocation'].shape[0],1))
+                if inverse:
+                    loss = loss + jnp.mean(MSE(pde(lambda x,t: forward(jnp.append(x,t,1),params['net']),x_col,t_col,params['inverse']),0))
+                else:
+                    loss = loss + jnp.mean(MSE(pde(lambda x,t: forward(jnp.append(x,t,1),params['net']),x_col,t_col),0))
+            return loss
+
+    #Initialize Adam Optmizer
+    if exp_decay:
+        lr = optax.exponential_decay(lr,transition_steps,decay_rate)
+    optimizer = optax.adam(lr,b1,b2,eps,eps_root)
+    opt_state = optimizer.init(params)
+
+    #Define the gradient function
+    grad_loss = jax.jit(jax.grad(lf,0))
+
+    #Define update function
+    @jax.jit
+    def update(opt_state,params,x):
+        #Compute gradient
+        grads = grad_loss(params,x)
+        #Invert gradient of self-adaptative wheights
+        if sa:
+            for w in grads['sa']:
+                grads['sa'][w] = - grads['sa'][w]
+        #Calculate parameters updates
+        updates, opt_state = optimizer.update(grads, opt_state)
+        #Update parameters
+        params = optax.apply_updates(params, updates)
+        #Return state of optmizer and updated parameters
+        return opt_state,params
+
+    ###Training###
+    t0 = time.time()
+    #Initialize alive_bar for tracing in terminal
+    with alive_bar(epochs) as bar:
+        #For each epoch
+        for e in range(epochs):
+            #Update optimizer state and parameters
+            opt_state,params = update(opt_state,params,data)
+            #After epoch_print epochs
+            if e % epoch_print == 0:
+                #Compute elapsed time and current error
+                l = 'Time: ' + str(round(time.time() - t0)) + ' s Loss: ' + str(jnp.round(lf(params,data),6))
+                #If there is test data, compute current L2 error
+                if test_data is not None:
+                    #Compute L2 error
+                    l2_test = L2error(forward(test_data['xt'],params['net']),test_data['u']).tolist()
+                    l = l + ' L2 error: ' + str(jnp.round(l2_test,6))
+                if inverse:
+                    l = l + ' Parameter: ' + str(jnp.round(params['inverse'].tolist(),6))
+                #Print
+                print(l)
+            if ((e % at_each == 0 and at_each != epochs) or e == epochs - 1) and save:
+                #Save current parameters
+                pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': lf(params,data)},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+            #Update alive_bar
+            bar()
+    #Define estimated function
+    def u(xt):
+        return forward(xt,params['net'])
+
+    return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
+
+
 
     #Train PINN
     fit = train_PINN(train_data,width,pde,c = w,test_data = None,epochs = epochs,at_each = at_each,activation = activation,neumann = True,oper_neumann = oper_boundary,sa = sa,lr = lr,b1 = b1,b2 = b2,eps = eps,eps_root = eps_root,key = key,epoch_print = epoch_print,save = save,file_name = file_name,exp_decay = exp_decay,transition_steps = transition_steps,decay_rate = decay_rate,ff = True)
@@ -1408,4 +1554,4 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
         test_data = jd.generate_PINNdata(u = ucircle,xl = xl,xu = xu,tl = tl,tu = tu,Ns = Ns,Nts = Nts,Nb = 0,Ntb = 0,N0 = 0,Nc = 0,Ntc = 0,p = 2,train = False)
         demo_time_pinn2D(test_data,file_name,[epochs-1],file_name_save = file_name + '_demo',title = '',framerate = framerate,ffmpeg = ffmpeg)
 
-    return fit,res_data
+        return fit,res_data

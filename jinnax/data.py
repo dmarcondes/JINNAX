@@ -188,7 +188,7 @@ def generate_PINNdata(u,xl,xu,tl,tu,Ns = None,Nts = None,Nb = None,Ntb = None,N0
                     #Sample Nc^d points for the i-th coordinate and append collumn-wise
                     x_collocation =  jnp.append(x_collocation,jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xl[i+1],maxval = xu[i+1],shape = (Nc ** d,1)),1)
                 #Product of x and t
-                xt_collocation = jnp.array([x.tolist() + [t.tolist()] for x in x_collocation for t in t_collocation],dtype = jnp.float32)
+                xt_collocation = jnp.array([x.tolist() + [t.tolist()] for t in t_collocation for x in x_collocation],dtype = jnp.float32)
         else:
             #Return None if collocation data should not be generated
             xt_collocation = None
