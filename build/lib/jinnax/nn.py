@@ -1258,7 +1258,7 @@ def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
                         upredx_step = upred[index][test_data['xt'][:,-1] == t,0]
                         upredy_step = upred[index][test_data['xt'][:,-1] == t,1]
                         ax[i,j].plot(ux_step,uy_step,'b-',linewidth=2,label='Exact')
-                        ax[i,j].plot(upredx_step,upredy_step,'r-',linewidth=2,label='Prediction',marker='.')
+                        ax[i,j].plot(upredx_step,upredy_step,'r-',linewidth=2,label='Prediction')
                         ax[i,j].set_title('Epoch = ' + str(epochs[index]),fontsize=10)
                         ax[i,j].set_xlabel(' ')
                         ax[i,j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
@@ -1268,7 +1268,7 @@ def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
                     upredx_step = upred[index][test_data['xt'][:,-1] == t,0]
                     upredy_step = upred[index][test_data['xt'][:,-1] == t,1]
                     ax[j].plot(ux_step,uy_step,'b-',linewidth=2,label='Exact')
-                    ax[j].plot(upredx_step,upredy_step,'r-',linewidth=2,label='Prediction',marker='.')
+                    ax[j].plot(upredx_step,upredy_step,'r-',linewidth=2,label='Prediction')
                     ax[j].set_title('Epoch = ' + str(epochs[index]),fontsize=10)
                     ax[j].set_xlabel(' ')
                     ax[j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
@@ -1277,7 +1277,7 @@ def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
                 upredx_step = upred[index][test_data['xt'][:,-1] == t,0]
                 upredy_step = upred[index][test_data['xt'][:,-1] == t,1]
                 ax.plot(ux_step,uy_step,'b-',linewidth=2,label='Exact')
-                ax.plot(upredx_step,upredy_step,'r-',linewidth=2,label='Prediction',marker='.')
+                ax.plot(upredx_step,upredy_step,'r-',linewidth=2,label='Prediction')
                 ax.set_title('Epoch = ' + str(epochs[index]),fontsize=10)
                 ax.set_xlabel(' ')
                 ax.set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
@@ -1344,7 +1344,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
       ux1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u1(x,t),0)(x,t))(x,t)
       ux2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u2(x,t),0)(x,t))(x,t)
       #Enforce Neumann at the left boundary
-      nS = u(x,t)/jnp.sqrt(jnp.sum(u(x,t) ** 2,0)) #Assuming that u(x,t) \in S, compute the vector normal to S at u(x,t)
+      nS = u(x,t)/jnp.sqrt(jnp.sum(u(x,t) ** 2,1).reshape((x.shape[0],1))) #Assuming that u(x,t) \in S, compute the vector normal to S at u(x,t)
       nu = jnp.append(ux2,(-1)*ux1,1)/jnp.sqrt(ux1 ** 2 + ux2 ** 2) #Normal at u(x,y)
       ip = jnp.sum(nS * nu,1).reshape(x.shape[0],1) ** 2 #Inner product
       res_left_neu = jnp.where(x == xl,ip,0)
