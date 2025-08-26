@@ -137,6 +137,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,ff = False):
         *hidden,output = params
         if ff:
             x = jnp.append(jnp.sin(x @ hidden[0]['W'][:,:int(width[1]/2)] + hidden[0]['B'][:,:int(width[1]/2)]),jnp.cos(x @ hidden[0]['W'][:,:int(width[1]/2)] + hidden[0]['B'][:,:int(width[1]/2)]),0)
+            print x
             for layer in hidden[1:]:
                 x = activation(x @ layer['W'] + layer['B'])
         else:
