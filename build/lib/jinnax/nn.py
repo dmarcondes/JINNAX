@@ -1309,7 +1309,7 @@ def norm_par(params):
         n = n + jnp.sum(p['B'] ** 2) + jnp.sum(p['W'] ** 2)
     return jnp.sqrt(n)
 
-def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,Ntc = 50,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',lrate = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2,ffmpeg = 'ffmpeg',c = 1e-6,ecasual = 1):
+def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,Ntc = 50,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',lrate = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2,ffmpeg = 'ffmpeg',c = 1e-6,ecasual = 1,w = None):
     #If demo, then save
     if demo:
         save = True
@@ -1327,7 +1327,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     train_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = Ntb,N0 = N0,Nc = Nc,Ntc = Ntc,p = 2)
 
     #PDE operator
-    def pde(u,x,t,w = None):
+    def pde(u,x,t,w = w):
         #One function for each coordinate (assuming that x and t has dimension 1 x 1 and u(x,t) has dimension 1 x 2)
         u1 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,0][0]
         u2 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,1][0]
