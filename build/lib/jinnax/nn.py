@@ -1309,6 +1309,10 @@ def norm_par(params):
         n = n + jnp.sum(p['B'] ** 2) + jnp.sum(p['W'] ** 2)
     return jnp.sqrt(n)
 
+#Truncate
+def truncate(x,m = 1e6):
+    return jnp.where(x < m,x,m)
+
 def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,Ntc = 50,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',lrate = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2,ffmpeg = 'ffmpeg',c = 1e-6,ecasual = 1,w = None,grid = True):
     #If demo, then save
     if demo:
@@ -1418,11 +1422,11 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     linit = norm_par(dinit(params)['net'])
 
     total = lpde + ll + lr + ln + linit
-    lpde = total/lpde
-    ll = total/ll
-    lr = total/lr
-    ln = total/ln
-    linit = total/linit
+    lpde = truncate(total/lpde,m = 1e6)
+    ll = truncate(total/ll,m = 1e6)
+    lr = truncate(total/lr,m = 1e6)
+    ln = truncate(total/ln,m = 1e6)
+    linit = truncate(total/linit,m = 1e6)
 
     #Save config file
     if save:
@@ -1476,11 +1480,11 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
                 norm_ln = norm_par(dn(params)['net'])
                 norm_linit = norm_par(dinit(params)['net'])
                 total = norm_lpde + norm_ll + norm_lr + norm_ln
-                lpde = 0.1*total/norm_lpde + 0.9*lpde
-                ll = 0.1*total/norm_ll + 0.9*ll
-                lr = 0.1*total/norm_lr + 0.9*lr
-                ln = 0.1*total/norm_ln + 0.9*ln
-                linit = 0.1*total/norm_linit + 0.9*linit
+                lpde = truncate(0.1*total/norm_lpde + 0.9*lpde,m = 1e6)
+                ll = truncate(0.1*total/norm_ll + 0.9*ll,m = 1e6)
+                lr = truncate(0.1*total/norm_lr + 0.9*lr,m = 1e6)
+                ln = truncate(0.1*total/norm_ln + 0.9*ln,m = 1e6)
+                linit = truncate(0.1*total/norm_linit + 0.9*linit,m = 1e6)
                 if save:
                     #Save current parameters
                     u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
