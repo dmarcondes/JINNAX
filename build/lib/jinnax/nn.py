@@ -1480,8 +1480,8 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
                 if save:
                     #Save current parameters
                     u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
-                    pickle.dump({'params': params,'time': time.time() - t0,'loss': lf(params,lpde,ll,lr,ln,linit),'lpde': lpde,'ll': ll,'lr': lr,'ln': ln,'linit': linit,
-                    'loss_pde': pde(u,xc,tc),'loss_initial': jnp.mean(initial_loss(u,x0,t0)),'loss_dl': jnp.mean(oper_left_dir(u,xb,tb)),
+                    pickle.dump({'params': params,'time': time.time() - time0,'loss': lf(params,lpde,ll,lr,ln,linit),'lpde': lpde,'ll': ll,'lr': lr,'ln': ln,'linit': linit,
+                    'loss_pde': pde(u,xc,tc,w = 1),'loss_initial': jnp.mean(initial_loss(u,x0,t0)),'loss_dl': jnp.mean(oper_left_dir(u,xb,tb)),
                     'loss_dr': jnp.mean(oper_right_dir(u,xb,tb)),'loss_neumann': jnp.mean(oper_neumann(u,xb,tb))},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
             #Update alive_bar
             bar()
