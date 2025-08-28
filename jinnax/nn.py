@@ -1400,6 +1400,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     #Initialize architecture
     nnet = fconNN(width,get_activation(activation),key)
     forward = nnet['forward']
+    params = {'net': nnet['params']}
 
     #Initialize weights
     xc = train_data['collocation'][:,0].reshape((train_data['collocation'].shape[0],1))
