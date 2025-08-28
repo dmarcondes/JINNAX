@@ -1313,7 +1313,7 @@ def norm_par(params):
 def truncate(x,m = 1e6):
     return jnp.where(x < m,x,m)
 
-def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,Ntc = 50,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',lrate = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2,ffmpeg = 'ffmpeg',c = 1e-6,ecasual = 1,w = None,grid = True,m = 1e6):
+def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,Ntc = 50,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',lrate = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2,ffmpeg = 'ffmpeg',c = 1e-6,ecasual = 1,w = None,grid = True,m = 1e6,update_w = True):
     #If demo, then save
     if demo:
         save = True
@@ -1480,17 +1480,18 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
                 #Print
                 print(l)
             if ((e % at_each == 0 and at_each != epochs) or e == epochs - 1):
-                norm_lpde = norm_par(dpde(params)['net'])
-                norm_ll = norm_par(dl(params)['net'])
-                norm_lr = norm_par(dr(params)['net'])
-                norm_ln = norm_par(dn(params)['net'])
-                norm_linit = norm_par(dinit(params)['net'])
-                total = norm_lpde + norm_ll + norm_lr + norm_ln
-                params['lpde'] = 0.1*jnp.sqrt(truncate(total/norm_lpde,m = m)) + 0.9*params['lpde']
-                params['ll'] = 0.1*jnp.sqrt(truncate(total/norm_ll,m = m)) + 0.9*params['ll']
-                params['lr'] = 0.1*jnp.sqrt(truncate(total/norm_lr,m = m)) + 0.9*params['lr']
-                params['ln'] = 0.1*jnp.sqrt(truncate(total/norm_ln,m = m)) + 0.9*params['ln']
-                params['linit'] = 0.1*jnp.sqrt(truncate(total/norm_linit,m = m)) + 0.9*params['linit']
+                if update_w:
+                    norm_lpde = norm_par(dpde(params)['net'])
+                    norm_ll = norm_par(dl(params)['net'])
+                    norm_lr = norm_par(dr(params)['net'])
+                    norm_ln = norm_par(dn(params)['net'])
+                    norm_linit = norm_par(dinit(params)['net'])
+                    total = norm_lpde + norm_ll + norm_lr + norm_ln
+                    params['lpde'] = 0.1*jnp.sqrt(truncate(total/norm_lpde,m = m)) + 0.9*params['lpde']
+                    params['ll'] = 0.1*jnp.sqrt(truncate(total/norm_ll,m = m)) + 0.9*params['ll']
+                    params['lr'] = 0.1*jnp.sqrt(truncate(total/norm_lr,m = m)) + 0.9*params['lr']
+                    params['ln'] = 0.1*jnp.sqrt(truncate(total/norm_ln,m = m)) + 0.9*params['ln']
+                    params['linit'] = 0.1*jnp.sqrt(truncate(total/norm_linit,m = m)) + 0.9*params['linit']
                 if save:
                     #Save current parameters
                     u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
