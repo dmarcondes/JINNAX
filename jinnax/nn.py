@@ -1452,7 +1452,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     @jax.jit
     def update(opt_state,params):
         #Compute gradient
-        grads = grad_loss(params,lpde)
+        grads = grad_loss(params)
         grads['lpde'] = -grads['lpde']
         grads['ll'] = -grads['ll']
         grads['lr'] = -grads['lr']
