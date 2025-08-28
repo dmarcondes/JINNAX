@@ -1422,11 +1422,11 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     linit = norm_par(dinit(params)['net'])
 
     total = lpde + ll + lr + ln + linit
-    lpde = truncate(total/lpde,m = m)
-    ll = truncate(total/ll,m = m)
-    lr = truncate(total/lr,m = m)
-    ln = truncate(total/ln,m = m)
-    linit = truncate(total/linit,m = m)
+    lpde = jnp.sqrt(truncate(total/lpde,m = m))
+    ll = jnp.sqrt(truncate(total/ll,m = m))
+    lr = jnp.sqrt(truncate(total/lr,m = m))
+    ln = jnp.sqrt(truncate(total/ln,m = m))
+    linit = jnp.sqrt(truncate(total/linit,m = m))
     params = {'net': nnet['params'],'lpde': lpde,'ll': ll,'lr': lr,'ln': ln,'linit': linit}
 
     #Save config file
@@ -1437,7 +1437,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     @jax.jit
     def lf(params):
         u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
-        return params['lpde']*jnp.sum(pde(u,xc,tc)) + oper_boundary(u,xb,tb,params['ll'],params['lr'],params['ln']) + params['linit']*jnp.mean(initial_loss(u,x0,t0))
+        return (params['lpde'] ** 2)*jnp.sum(pde(u,xc,tc)) + oper_boundary(u,xb,tb,params['ll'] ** 2,params['lr'] ** 2,params['ln'] ** 2) + (params['linit'] ** 2)*jnp.mean(initial_loss(u,x0,t0))
 
     #Initialize Adam Optmizer
     if exp_decay:
@@ -1486,11 +1486,11 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
                 norm_ln = norm_par(dn(params)['net'])
                 norm_linit = norm_par(dinit(params)['net'])
                 total = norm_lpde + norm_ll + norm_lr + norm_ln
-                params['lpde'] = 0.1*truncate(total/norm_lpde,m = m) + 0.9*params['lpde']
-                params['ll'] = 0.1*truncate(total/norm_ll,m = m) + 0.9*params['ll']
-                params['lr'] = 0.1*truncate(total/norm_lr,m = m) + 0.9*params['lr']
-                params['ln'] = 0.1*truncate(total/norm_ln,m = m) + 0.9*params['ln']
-                params['linit'] = 0.1*truncate(total/norm_linit,m = m) + 0.9*params['linit']
+                params['lpde'] = 0.1*jnp.sqrt(truncate(total/norm_lpde,m = m)) + 0.9*params['lpde']
+                params['ll'] = 0.1*jnp.sqrt(truncate(total/norm_ll,m = m)) + 0.9*params['ll']
+                params['lr'] = 0.1*jnp.sqrt(truncate(total/norm_lr,m = m)) + 0.9*params['lr']
+                params['ln'] = 0.1*jnp.sqrt(truncate(total/norm_ln,m = m)) + 0.9*params['ln']
+                params['linit'] = 0.1*jnp.sqrt(truncate(total/norm_linit,m = m)) + 0.9*params['linit']
                 if save:
                     #Save current parameters
                     u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
