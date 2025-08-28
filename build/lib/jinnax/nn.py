@@ -1495,7 +1495,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
                 if save:
                     #Save current parameters
                     u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
-                    pickle.dump({'params': params,'time': time.time() - time0,'loss': lf(params),'lpde': params['lpde'],'ll': params['ll'],'lr': params['lr'],'ln': params['ln'],'linit': params['linit'],
+                    pickle.dump({'params': params,'time': time.time() - time0,'loss': lf(params),'lpde': params['lpde'] ** 2,'ll': params['ll'] ** 2,'lr': params['lr'] ** 2,'ln': params['ln'] ** 2,'linit': params['linit'] ** 2,
                     'loss_pde': pde(u,xc,tc,w = 1),'loss_initial': jnp.mean(initial_loss(u,x0,t0)),'loss_dl': jnp.mean(oper_left_dir(u,xb,tb)),
                     'loss_dr': jnp.mean(oper_right_dir(u,xb,tb)),'loss_neumann': jnp.mean(oper_neumann(u,xb,tb))},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
             #Update alive_bar
@@ -1538,6 +1538,6 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
         test_data = jd.generate_PINNdata(u = ucircle,xl = xl,xu = xu,tl = tl,tu = tu,Ns = Ns,Nts = Nts,Nb = 0,Ntb = 0,N0 = 0,Nc = 0,Ntc = 0,p = 2,train = False)
         demo_time_pinn2D(test_data,file_name,[epochs-1],file_name_save = file_name + '_demo',title = '',framerate = framerate,ffmpeg = ffmpeg)
 
-    return {'params': params,'time': total_time,'loss': lf(params),'lpde': params['lpde'],'ll': params['ll'],'lr': params['lr'],'ln': params['ln'],'linit': params['linit'],
+    return {'params': params,'time': total_time,'loss': lf(params),'lpde': params['lpde'] ** 2,'ll': params['ll'] ** 2,'lr': params['lr'] ** 2,'ln': params['ln'] ** 2,'linit': params['linit'] ** 2,
     'loss_pde': pde(u,xc,tc),'loss_initial': jnp.mean(initial_loss(u,x0,t0)),'loss_dl': jnp.mean(oper_left_dir(u,xb,tb)),
     'loss_dr': jnp.mean(oper_right_dir(u,xb,tb)),'loss_neumann': jnp.mean(oper_neumann(u,xb,tb))}
