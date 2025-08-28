@@ -1400,7 +1400,6 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     #Initialize architecture
     nnet = fconNN(width,get_activation(activation),key)
     forward = nnet['forward']
-    params = {'net': nnet['params']}
 
     #Initialize weights
     xc = train_data['collocation'][:,0].reshape((train_data['collocation'].shape[0],1))
@@ -1427,6 +1426,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     lr = truncate(total/lr,m = m)
     ln = truncate(total/ln,m = m)
     linit = truncate(total/linit,m = m)
+    params = {'net': nnet['params'],'lpde': lpde,'ll': ll,'lr': lr,'ln': ln,'linit': linit}
 
     #Save config file
     if save:
@@ -1434,9 +1434,9 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
 
     #Define loss function
     @jax.jit
-    def lf(params,lpde,ll,lr,ln,linit):
+    def lf(params):
         u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
-        return lpde*jnp.sum(pde(u,xc,tc)) + oper_boundary(u,xb,tb,ll,lr,ln) + linit*jnp.mean(initial_loss(u,x0,t0))
+        return params['lpde']*jnp.sum(pde(u,xc,tc)) + oper_boundary(u,xb,tb,params['ll'],params['lr'],params['ln']) + params['linit']*jnp.mean(initial_loss(u,x0,t0))
 
     #Initialize Adam Optmizer
     if exp_decay:
@@ -1449,9 +1449,14 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
 
     #Define update function
     @jax.jit
-    def update(opt_state,params,lpde,ll,lr,ln,init):
+    def update(opt_state,params):
         #Compute gradient
-        grads = grad_loss(params,lpde,ll,lr,ln,init)
+        grads = grad_loss(params,lpde)
+        grads['lpde'] = -grads['lpde']
+        grads['ll'] = -grads['ll']
+        grads['lr'] = -grads['lr']
+        grads['ln'] = -grads['ln']
+        grads['linit'] = -grads['linit']
         #Calculate parameters updates
         updates, opt_state = optimizer.update(grads, opt_state)
         #Update parameters
@@ -1466,11 +1471,11 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
         #For each epoch
         for e in range(epochs):
             #Update optimizer state and parameters
-            opt_state,params = update(opt_state,params,lpde,ll,lr,ln,linit)
+            opt_state,params = update(opt_state,params)
             #After epoch_print epochs
             if e % epoch_print == 0:
                 #Compute elapsed time and current error
-                l = 'Time: ' + str(round(time.time() - time0)) + ' s Loss: ' + str(jnp.round(lf(params,lpde,ll,lr,ln,linit),6))
+                l = 'Time: ' + str(round(time.time() - time0)) + ' s Loss: ' + str(jnp.round(lf(params),6))
                 #Print
                 print(l)
             if ((e % at_each == 0 and at_each != epochs) or e == epochs - 1):
@@ -1480,15 +1485,15 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
                 norm_ln = norm_par(dn(params)['net'])
                 norm_linit = norm_par(dinit(params)['net'])
                 total = norm_lpde + norm_ll + norm_lr + norm_ln
-                lpde = truncate(0.1*total/norm_lpde + 0.9*lpde,m = m)
-                ll = truncate(0.1*total/norm_ll + 0.9*ll,m = m)
-                lr = truncate(0.1*total/norm_lr + 0.9*lr,m = m)
-                ln = truncate(0.1*total/norm_ln + 0.9*ln,m = m)
-                linit = truncate(0.1*total/norm_linit + 0.9*linit,m = m)
+                params['lpde'] = 0.1*truncate(total/norm_lpde,m = m) + 0.9*params['lpde']
+                params['ll'] = 0.1*truncate(total/norm_ll,m = m) + 0.9*params['ll']
+                params['lr'] = 0.1*truncate(total/norm_lr,m = m) + 0.9*params['lr']
+                params['ln'] = 0.1*truncate(total/norm_ln,m = m) + 0.9*params['ln']
+                params['linit'] = 0.1*truncate(total/norm_linit,m = m) + 0.9*params['linit']
                 if save:
                     #Save current parameters
                     u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
-                    pickle.dump({'params': params,'time': time.time() - time0,'loss': lf(params,lpde,ll,lr,ln,linit),'lpde': lpde,'ll': ll,'lr': lr,'ln': ln,'linit': linit,
+                    pickle.dump({'params': params,'time': time.time() - time0,'loss': lf(params),'lpde': params['lpde'],'ll': params['ll'],'lr': params['lr'],'ln': params['ln'],'linit': params['linit'],
                     'loss_pde': pde(u,xc,tc,w = 1),'loss_initial': jnp.mean(initial_loss(u,x0,t0)),'loss_dl': jnp.mean(oper_left_dir(u,xb,tb)),
                     'loss_dr': jnp.mean(oper_right_dir(u,xb,tb)),'loss_neumann': jnp.mean(oper_neumann(u,xb,tb))},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
             #Update alive_bar
@@ -1531,6 +1536,6 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
         test_data = jd.generate_PINNdata(u = ucircle,xl = xl,xu = xu,tl = tl,tu = tu,Ns = Ns,Nts = Nts,Nb = 0,Ntb = 0,N0 = 0,Nc = 0,Ntc = 0,p = 2,train = False)
         demo_time_pinn2D(test_data,file_name,[epochs-1],file_name_save = file_name + '_demo',title = '',framerate = framerate,ffmpeg = ffmpeg)
 
-    return {'params': params,'time': total_time,'loss': lf(params,lpde,ll,lr,ln,linit),'lpde': lpde,'ll': ll,'lr': lr,'ln': ln,'linit': linit,
+    return {'params': params,'time': total_time,'loss': lf(params),'lpde': params['lpde'],'ll': params['ll'],'lr': params['lr'],'ln': params['ln'],'linit': params['linit'],
     'loss_pde': pde(u,xc,tc),'loss_initial': jnp.mean(initial_loss(u,x0,t0)),'loss_dl': jnp.mean(oper_left_dir(u,xb,tb)),
     'loss_dr': jnp.mean(oper_right_dir(u,xb,tb)),'loss_neumann': jnp.mean(oper_neumann(u,xb,tb))}
