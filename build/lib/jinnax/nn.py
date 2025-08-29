@@ -1363,17 +1363,17 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,bsize = 4096,Ntb = 100,N0 = 
         u1 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,0][0]
         u2 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,1][0]
         #First derivatives of each coordinate
-        ux1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u1(x,t),0)(x,t))
-        ux2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u2(x,t),0)(x,t))
-        ut1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u1(x,t),1)(x,t))
-        ut2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u2(x,t),1)(x,t))
+        ux1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u1(x,t),0)(x,t))(x,t)
+        ux2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u2(x,t),0)(x,t))(x,t)
+        ut1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u1(x,t),1)(x,t))(x,t)
+        ut2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : u2(x,t),1)(x,t))(x,t)
         #Second derivative of each coordinate
         ux1_tmp = lambda x,t : jax.grad(lambda x,t : u1(x,t),0)(x,t)
         ux2_tmp = lambda x,t : jax.grad(lambda x,t : u2(x,t),0)(x,t)
-        uxx1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : ux1_tmp(x,t)[0],0)(x,t))
-        uxx2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : ux2_tmp(x,t)[0],0)(x,t))
+        uxx1 = jax.vmap(lambda x,t : jax.grad(lambda x,t : ux1_tmp(x,t)[0],0)(x,t))(x,t)
+        uxx2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : ux2_tmp(x,t)[0],0)(x,t))(x,t)
         #Residuals
-        res = (ut1(x,t) - uxx1(x,t)/(ux1(x,t) ** 2 + ux2(x,t) ** 2 + c)) ** 2 + (ut2(x,t) - uxx2(x,t)/(ux1(x,t) ** 2 + ux2(x,t) ** 2 + c)) ** 2
+        res = (ut1 - uxx1/(ux1 ** 2 + ux2 ** 2 + c)) ** 2 + (ut2 - uxx2/(ux1 ** 2 + ux2 ** 2 + c)) ** 2
         return res
 
     #Operators to evaluate boundary conditions
