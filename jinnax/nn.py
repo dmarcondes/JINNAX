@@ -95,7 +95,7 @@ def L2error(pred,true):
     return jnp.sqrt(jnp.sum((true - pred)**2))/jnp.sqrt(jnp.sum(true ** 2))
 
 #Simple fully connected architecture. Return the initial parameters and the function for the forward pass
-def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False):
+def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,rwf = False):
     """
     Initialize fully connected neural network
     ----------
@@ -136,7 +136,11 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False):
     for key,lin,lout in zip(key,width[:-1],width[1:]):
         W = initializer(key,(lin,lout),jnp.float32)
         B = initializer(key,(1,lout),jnp.float32)
-        params.append({'W':W,'B':B})
+        if rwf and lin == lout:
+            s = 1 + 0.1*jnp.diag(jax.random.normal(jax.random.PRNGKey(key[0]), shape=(lin,)))
+            params.append({'W':W,'B':B,'s': s})
+        else:
+            params.append({'W':W,'B':B})
 
     #Define function for forward pass
     if mlp:
@@ -146,7 +150,10 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False):
             U = activation(x @ encode['WU'] + encode['BU'])
             V = activation(x @ encode['WV'] + encode['BV'])
             for layer in hidden:
-                x = activation(x @ layer['W'] + layer['B'])
+                if rwf and layer['W'].shape[0] == layer['W'].shape[1]:
+                    x = activation(x @ (layer['s'] @ layer['W']) + layer['B'])
+                else:
+                    x = activation(x @ layer['W'] + layer['B'])
                 x = x * U + (1 - x) * V
             return x @ output['W'] + output['B']
     else:
@@ -154,7 +161,10 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False):
         def forward(x,params):
             *hidden,output = params
             for layer in hidden:
-                x = activation(x @ layer['W'] + layer['B'])
+                if rwf and layer['W'].shape[0] == layer['W'].shape[1]:
+                    x = activation(x @ (layer['s'] @ layer['W']) + layer['B'])
+                else:
+                    x = activation(x @ layer['W'] + layer['B'])
             return x @ output['W'] + output['B']
 
     #Return initial parameters and forward function
@@ -1420,7 +1430,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
         return jnp.sum((u(x,t) - ubound(x,t)) ** 2,1)
 
     #Initialize architecture
-    nnet = fconNN(width,get_activation(activation),key,mlp = True)
+    nnet = fconNN(width,get_activation(activation),key,mlp = True,rwf = True)
     forward = nnet['forward']
     params = {'net': nnet['params']}
 
