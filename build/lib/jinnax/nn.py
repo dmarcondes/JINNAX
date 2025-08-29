@@ -1421,7 +1421,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,bsize = 4096,Ntb = 100,N0 = 
         return jnp.sum((u(x,t) - ubound(x,t)) ** 2,1)
 
     #Initialize architecture
-    nnet = fconNN(width,get_activation(activation),key,mlp = True,rwf = True)
+    nnet = fconNN(width,get_activation(activation),key,mlp = True,rwf = False)
     forward = nnet['forward']
     params = {'net': nnet['params']}
 
