@@ -1493,7 +1493,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,bsize = 4096,Ntb = 100,N0 = 
         col_keys = jax.random.split(jax.random.PRNGKey(key),epochs)
         for e in range(epochs):
             xc = jax.random.uniform(jax.random.PRNGKey(col_keys[e,0]),shape = (bsize,1),minval = xl,maxval = xu)
-            tx = jax.random.uniform(jax.random.PRNGKey(col_keys[e,1]),shape = (bsize,1),minval = tl,maxval = tu)
+            tc = jax.random.uniform(jax.random.PRNGKey(col_keys[e,1]),shape = (bsize,1),minval = tl,maxval = tu)
             #Update optimizer state and parameters
             opt_state,params = update(opt_state,params,xc,tc)
             #After epoch_print epochs
