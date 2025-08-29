@@ -95,7 +95,7 @@ def L2error(pred,true):
     return jnp.sqrt(jnp.sum((true - pred)**2))/jnp.sqrt(jnp.sum(true ** 2))
 
 #Simple fully connected architecture. Return the initial parameters and the function for the forward pass
-def fconNN(width,activation = jax.nn.tanh,key = 0):
+def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False):
     """
     Initialize fully connected neural network
     ----------
@@ -114,26 +114,48 @@ def fconNN(width,activation = jax.nn.tanh,key = 0):
 
         Seed for parameters initialization. Default 0
 
+    mlp : logical
+
+        Whether to consider a modified multilayer perceptron. Assumes all hidden layers have the same dimension.
+
     Returns
     -------
     dict with initial parameters and the function for the forward pass
     """
     #Initialize parameters with Glorot initialization
     initializer = jax.nn.initializers.glorot_normal()
-    key = jax.random.split(jax.random.PRNGKey(key),len(width)-1) #Seed for initialization
     params = list()
+    if mlp:
+        k = jax.random.split(jax.random.PRNGKey(key),4)
+        WU = initializer(k[0],(width[0],width[1]),jnp.float32)
+        BU = initializer(k[1],(1,width[1]),jnp.float32)
+        WV = initializer(k[2],(width[0],width[1]),jnp.float32)
+        BV = initializer(k[3],(1,width[1]),jnp.float32)
+        params.append({'WU':WU,'BU':BU,'WV':WV,'BV':BV})
+    key = jax.random.split(jax.random.PRNGKey(key),len(width)-1) #Seed for initialization
     for key,lin,lout in zip(key,width[:-1],width[1:]):
         W = initializer(key,(lin,lout),jnp.float32)
         B = initializer(key,(1,lout),jnp.float32)
         params.append({'W':W,'B':B})
 
     #Define function for forward pass
-    @jax.jit
-    def forward(x,params):
-        *hidden,output = params
-        for layer in hidden:
-            x = activation(x @ layer['W'] + layer['B'])
-        return x @ output['W'] + output['B']
+    if mlp:
+        @jax.jit
+        def forward(x,params):
+            encode,*hidden,output = params
+            U = activation(x @ encode['WU'] + encode['BU'])
+            V = activation(x @ encode['WV'] + encode['BV'])
+            for layer in hidden:
+                x = activation(x @ layer['W'] + layer['B'])
+                x = x * U + (1 - x) * V
+            return x @ output['W'] + output['B']
+    else:
+        @jax.jit
+        def forward(x,params):
+            *hidden,output = params
+            for layer in hidden:
+                x = activation(x @ layer['W'] + layer['B'])
+            return x @ output['W'] + output['B']
 
     #Return initial parameters and forward function
     return {'params': params,'forward': forward}
@@ -1306,14 +1328,14 @@ def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
 def norm_par(params):
     n = 0
     for p in params:
-        n = n + jnp.sum(p['B'] ** 2) + jnp.sum(p['W'] ** 2)
+        n = n + jnp.sum(p[list(p.keys())[0]] ** 2) + jnp.sum(p[list(p.keys())[1]] ** 2)
     return jnp.sqrt(n)
 
 #Truncate
 def truncate(x,m = 1e6):
     return jnp.where(x < m,x,m)
 
-def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,Ntc = 50,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',lrate = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2,ffmpeg = 'ffmpeg',c = 1e-6,ecasual = 1,w = None,grid = True,m = 1e6,update_w = True):
+def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,Ntc = 50,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',lrate = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2,ffmpeg = 'ffmpeg',c = 1e-6,ecasual = 1,w = None,grid = True,m = 1e6,update_w = True,sa = False):
     #If demo, then save
     if demo:
         save = True
@@ -1398,7 +1420,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
         return jnp.sum((u(x,t) - ubound(x,t)) ** 2,1)
 
     #Initialize architecture
-    nnet = fconNN(width,get_activation(activation),key)
+    nnet = fconNN(width,get_activation(activation),key,mlp = True)
     forward = nnet['forward']
     params = {'net': nnet['params']}
 
@@ -1453,11 +1475,18 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     def update(opt_state,params):
         #Compute gradient
         grads = grad_loss(params)
-        grads['lpde'] = -grads['lpde']
-        grads['ll'] = -grads['ll']
-        grads['lr'] = -grads['lr']
-        grads['ln'] = -grads['ln']
-        grads['linit'] = -grads['linit']
+        if sa:
+            grads['lpde'] = -grads['lpde']
+            grads['ll'] = -grads['ll']
+            grads['lr'] = -grads['lr']
+            grads['ln'] = -grads['ln']
+            grads['linit'] = -grads['linit']
+        else:
+            grads['lpde'] = 0
+            grads['ll'] = 0
+            grads['lr'] = 0
+            grads['ln'] = 0
+            grads['linit'] = 0
         #Calculate parameters updates
         updates, opt_state = optimizer.update(grads, opt_state)
         #Update parameters
