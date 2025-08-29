@@ -1338,14 +1338,15 @@ def demo_time_pinn2D(test_data,file_name,epochs,file_name_save = 'result_pinn_ti
 def norm_par(params):
     n = 0
     for p in params:
-        n = n + jnp.sum(p[list(p.keys())[0]] ** 2) + jnp.sum(p[list(p.keys())[1]] ** 2)
+        for i in list(p.keys()):
+            n = n + jnp.sum(p[i] ** 2)
     return jnp.sqrt(n)
 
 #Truncate
 def truncate(x,m = 1e6):
     return jnp.where(x < m,x,m)
 
-def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,Ntc = 50,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',lrate = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2,ffmpeg = 'ffmpeg',c = 1e-6,ecasual = 1,w = None,grid = True,m = 1e6,update_w = True,sa = False):
+def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,bsize = 4096,Ntb = 100,N0 = 100,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',lrate = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2,ffmpeg = 'ffmpeg',c = 1e-6,grid = True,m = 1e6,update_w = True,sa = False):
     #If demo, then save
     if demo:
         save = True
@@ -1361,13 +1362,13 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
 
     #Generate Data
     if grid:
-        train_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = Ntb,N0 = N0,Nc = Nc,Ntc = Ntc,p = 2)
+        train_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = Ntb,N0 = N0,Nc = int(jnp.round(jnp.sqrt(bsize))),Ntc = int(jnp.round(jnp.sqrt(bsize))),p = 2)
     else:
-        train_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = Ntb,N0 = N0,Nc = Nc,Ntc = Ntc,p = 2,poss = 'random',posts = 'random',pos0 = 'random',postb = 'random',posc = 'random',postc = 'random')
+        train_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = Ntb,N0 = N0,Nc = int(jnp.round(jnp.sqrt(bsize))),Ntc = int(jnp.round(jnp.sqrt(bsize))),p = 2,poss = 'random',posts = 'random',pos0 = 'random',postb = 'random',posc = 'random',postc = 'random')
 
 
     #PDE operator
-    def pde(u,x,t,w = w):
+    def pde(u,x,t):
         #One function for each coordinate (assuming that x and t has dimension 1 x 1 and u(x,t) has dimension 1 x 2)
         u1 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,0][0]
         u2 = lambda x,t: u(x.reshape((x.shape[0],1)),t.reshape((t.shape[0],1)))[:,1][0]
@@ -1383,17 +1384,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
         uxx2 = jax.vmap(lambda x,t : jax.grad(lambda x,t : ux2_tmp(x,t)[0],0)(x,t))
         #Residuals
         res = (ut1(x,t) - uxx1(x,t)/(ux1(x,t) ** 2 + ux2(x,t) ** 2 + c)) ** 2 + (ut2(x,t) - uxx2(x,t)/(ux1(x,t) ** 2 + ux2(x,t) ** 2 + c)) ** 2
-        #Cumulative sum
-        res_cs = jnp.cumsum(res)
-        #Cummulative sum until each change of time
-        res_cs = jnp.append(jnp.array([0]),res_cs[(jnp.linspace(Ntc,Ntc*Nc,Ntc) - 1).astype(jnp.int32)])
-        #True residual
-        res = jnp.diff(res_cs)
-        #Weights
-        if w is None:
-            w = jnp.exp(-ecasual * res_cs[:-1]/Ntc)
-        #Return
-        return w * res/Ntc
+        return res
 
     #Operators to evaluate boundary conditions
     def oper_right_dir(u,x,t):
@@ -1441,7 +1432,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     tb = train_data['boundary'][:,1].reshape((train_data['boundary'].shape[0],1))
     x0 = train_data['initial'][:,0].reshape((train_data['initial'].shape[0],1))
     t0 = train_data['initial'][:,1].reshape((train_data['initial'].shape[0],1))
-    dpde = jax.jit(jax.grad(lambda params: jnp.sum(pde(lambda x,t: forward(jnp.append(x,t,1),params['net']),xc,tc)),0))
+    dpde = jax.jit(jax.grad(lambda params: jnp.mean(pde(lambda x,t: forward(jnp.append(x,t,1),params['net']),xc,tc)),0))
     dl = jax.jit(jax.grad(lambda params: jnp.mean(oper_left_dir(lambda x,t: forward(jnp.append(x,t,1),params['net']),xb,tb)),0))
     dr = jax.jit(jax.grad(lambda params: jnp.mean(oper_right_dir(lambda x,t: forward(jnp.append(x,t,1),params['net']),xb,tb)),0))
     dn = jax.jit(jax.grad(lambda params: jnp.mean(oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params['net']),xb,tb)),0))
@@ -1467,9 +1458,9 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
 
     #Define loss function
     @jax.jit
-    def lf(params):
+    def lf(params,xc,tc):
         u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
-        return (params['lpde'] ** 2)*jnp.sum(pde(u,xc,tc)) + oper_boundary(u,xb,tb,params['ll'] ** 2,params['lr'] ** 2,params['ln'] ** 2) + (params['linit'] ** 2)*jnp.mean(initial_loss(u,x0,t0))
+        return (params['lpde'] ** 2)*jnp.mean(pde(u,xc,tc)) + oper_boundary(u,xb,tb,params['ll'] ** 2,params['lr'] ** 2,params['ln'] ** 2) + (params['linit'] ** 2)*jnp.mean(initial_loss(u,x0,t0))
 
     #Initialize Adam Optmizer
     if exp_decay:
@@ -1482,9 +1473,9 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
 
     #Define update function
     @jax.jit
-    def update(opt_state,params):
+    def update(opt_state,params,xc,tc):
         #Compute gradient
-        grads = grad_loss(params)
+        grads = grad_loss(params,xc,tc)
         if sa:
             grads['lpde'] = -grads['lpde']
             grads['ll'] = -grads['ll']
@@ -1509,13 +1500,16 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     #Initialize alive_bar for tracing in terminal
     with alive_bar(epochs) as bar:
         #For each epoch
+        col_keys = jax.random.split(jax.random.PRNGKey(key),epochs)
         for e in range(epochs):
+            xc = jax.random.uniform(jax.random.PRNGKey(col_keys[e,0]),shape = (bsize,1),minval = xl,maxval = xu)
+            tx = jax.random.uniform(jax.random.PRNGKey(col_keys[e,1]),shape = (bsize,1),minval = xl,maxval = xu)
             #Update optimizer state and parameters
-            opt_state,params = update(opt_state,params)
+            opt_state,params = update(opt_state,params,xc,tc)
             #After epoch_print epochs
             if e % epoch_print == 0:
                 #Compute elapsed time and current error
-                l = 'Time: ' + str(round(time.time() - time0)) + ' s Loss: ' + str(jnp.round(lf(params),6))
+                l = 'Time: ' + str(round(time.time() - time0)) + ' s Loss: ' + str(jnp.round(lf(params,xc,tc),6))
                 #Print
                 print(l)
             if ((e % at_each == 0 and at_each != epochs) or e == epochs - 1):
@@ -1534,8 +1528,8 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
                 if save:
                     #Save current parameters
                     u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
-                    pickle.dump({'params': params,'time': time.time() - time0,'loss': lf(params),'lpde': params['lpde'] ** 2,'ll': params['ll'] ** 2,'lr': params['lr'] ** 2,'ln': params['ln'] ** 2,'linit': params['linit'] ** 2,
-                    'loss_pde': pde(u,xc,tc,w = 1),'loss_initial': jnp.mean(initial_loss(u,x0,t0)),'loss_dl': jnp.mean(oper_left_dir(u,xb,tb)),
+                    pickle.dump({'params': params,'time': time.time() - time0,'loss': lf(params,xc,tc),'lpde': params['lpde'] ** 2,'ll': params['ll'] ** 2,'lr': params['lr'] ** 2,'ln': params['ln'] ** 2,'linit': params['linit'] ** 2,
+                    'loss_pde': pde(u,xc,tc),'loss_initial': jnp.mean(initial_loss(u,x0,t0)),'loss_dl': jnp.mean(oper_left_dir(u,xb,tb)),
                     'loss_dr': jnp.mean(oper_right_dir(u,xb,tb)),'loss_neumann': jnp.mean(oper_neumann(u,xb,tb))},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
             #Update alive_bar
             bar()
@@ -1543,7 +1537,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     total_time = time.time() - time0
 
     #Test data
-    test_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = 2*Ntb,N0 = 2*N0,Nc = 2*Nc,Ntc = 2*Ntc,p = 2,poss = 'random',posts = 'random',pos0 = 'random',postb = 'random',posc = 'random',postc = 'random')
+    test_data = jd.generate_PINNdata(u = uinit,xl = xl,xu = xu,tl = tl,tu = tu,Ns = None,Nts = None,Nb = 2,Ntb = 2*Ntb,N0 = 2*N0,Nc = Ns,Ntc = Nts,p = 2,poss = 'random',posts = 'random',pos0 = 'random',postb = 'random',posc = 'random',postc = 'random')
     xc = test_data['collocation'][:,0].reshape((test_data['collocation'].shape[0],1))
     tc = test_data['collocation'][:,1].reshape((test_data['collocation'].shape[0],1))
     xb = test_data['boundary'][:,0].reshape((test_data['boundary'].shape[0],1))
@@ -1554,7 +1548,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
     #Evaluate residuals
     u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
 
-    res_pde = jnp.sum(pde(u,xc,tc,w = 1))/(2*Nc)
+    res_pde = jnp.mean(pde(u,xc,tc))
     res_dir_right = jnp.mean(oper_right_dir(u,xb,tb))
     res_neu = jnp.mean(oper_neumann(u,xb,tb))
     res_dir_left = jnp.mean(oper_left_dir(u,xb,tb))
@@ -1577,6 +1571,6 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,Ntb = 100,N0 = 100,Nc = 50,N
         test_data = jd.generate_PINNdata(u = ucircle,xl = xl,xu = xu,tl = tl,tu = tu,Ns = Ns,Nts = Nts,Nb = 0,Ntb = 0,N0 = 0,Nc = 0,Ntc = 0,p = 2,train = False)
         demo_time_pinn2D(test_data,file_name,[epochs-1],file_name_save = file_name + '_demo',title = '',framerate = framerate,ffmpeg = ffmpeg)
 
-    return {'params': params,'time': total_time,'loss': lf(params),'lpde': params['lpde'] ** 2,'ll': params['ll'] ** 2,'lr': params['lr'] ** 2,'ln': params['ln'] ** 2,'linit': params['linit'] ** 2,
+    return {'params': params,'time': total_time,'loss': lf(params,xc,tc),'lpde': params['lpde'] ** 2,'ll': params['ll'] ** 2,'lr': params['lr'] ** 2,'ln': params['ln'] ** 2,'linit': params['linit'] ** 2,
     'loss_pde': pde(u,xc,tc),'loss_initial': jnp.mean(initial_loss(u,x0,t0)),'loss_dl': jnp.mean(oper_left_dir(u,xb,tb)),
     'loss_dr': jnp.mean(oper_right_dir(u,xb,tb)),'loss_neumann': jnp.mean(oper_neumann(u,xb,tb))}
