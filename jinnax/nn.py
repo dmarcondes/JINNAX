@@ -1336,7 +1336,7 @@ def norm_par(params):
 def truncate(x,m = 1e6):
     return jnp.where(x < m,x,m)
 
-def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,bsize = 4096,Ntb = 100,N0 = 100,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',lrate = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2,ffmpeg = 'ffmpeg',c = 1e-6,grid = True,m = 1e6,update_w = True,sa = False):
+def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,bsize = 4096,Ntb = 100,N0 = 100,Ns = 100,Nts = 100,epochs = 100,at_each = 10,activation = 'tanh',lrate = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,demo = True,framerate = 2,ffmpeg = 'ffmpeg',c = 1e-6,grid = True,m = 1e6,update_w = True,sa = False,steps_cur = 1,tolerance_cur = 0):
     #If demo, then save
     if demo:
         save = True
@@ -1488,41 +1488,48 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,bsize = 4096,Ntb = 100,N0 = 
     ###Training###
     time0 = time.time()
     #Initialize alive_bar for tracing in terminal
-    with alive_bar(epochs) as bar:
+    with alive_bar(steps_cur*epochs) as bar:
         #For each epoch
-        col_keys = jax.random.split(jax.random.PRNGKey(key),epochs)
-        for e in range(epochs):
-            xc = jax.random.uniform(jax.random.PRNGKey(col_keys[e,0]),shape = (bsize,1),minval = xl,maxval = xu)
-            tc = jax.random.uniform(jax.random.PRNGKey(col_keys[e,1]),shape = (bsize,1),minval = tl,maxval = tu)
-            #Update optimizer state and parameters
-            opt_state,params = update(opt_state,params,xc,tc)
-            #After epoch_print epochs
-            if e % epoch_print == 0:
-                #Compute elapsed time and current error
-                l = 'Time: ' + str(round(time.time() - time0)) + ' s Loss: ' + str(jnp.round(lf(params,xc,tc),6))
-                #Print
-                print(l)
-            if ((e % at_each == 0 and at_each != epochs) or e == epochs - 1):
-                if update_w:
-                    norm_lpde = norm_par(dpde(params)['net'])
-                    norm_ll = norm_par(dl(params)['net'])
-                    norm_lr = norm_par(dr(params)['net'])
-                    norm_ln = norm_par(dn(params)['net'])
-                    norm_linit = norm_par(dinit(params)['net'])
-                    total = norm_lpde + norm_ll + norm_lr + norm_ln
-                    params['lpde'] = 0.1*jnp.sqrt(truncate(total/norm_lpde,m = m)) + 0.9*params['lpde']
-                    params['ll'] = 0.1*jnp.sqrt(truncate(total/norm_ll,m = m)) + 0.9*params['ll']
-                    params['lr'] = 0.1*jnp.sqrt(truncate(total/norm_lr,m = m)) + 0.9*params['lr']
-                    params['ln'] = 0.1*jnp.sqrt(truncate(total/norm_ln,m = m)) + 0.9*params['ln']
-                    params['linit'] = 0.1*jnp.sqrt(truncate(total/norm_linit,m = m)) + 0.9*params['linit']
-                if save:
-                    #Save current parameters
-                    u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
-                    pickle.dump({'params': params,'time': time.time() - time0,'loss': lf(params,xc,tc),'lpde': params['lpde'] ** 2,'ll': params['ll'] ** 2,'lr': params['lr'] ** 2,'ln': params['ln'] ** 2,'linit': params['linit'] ** 2,
-                    'loss_pde': pde(u,xc,tc),'loss_initial': jnp.mean(initial_loss(u,x0,t0)),'loss_dl': jnp.mean(oper_left_dir(u,xb,tb)),
-                    'loss_dr': jnp.mean(oper_right_dir(u,xb,tb)),'loss_neumann': jnp.mean(oper_neumann(u,xb,tb))},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
-            #Update alive_bar
-            bar()
+        col_keys = jax.random.split(jax.random.PRNGKey(key),steps_cur*epochs)
+        for sc in range(steps_cur):
+            lpde_epochs = [1e6,1e6]
+            for se in range(epochs):
+                e = sc*epochs + se
+                xc = jax.random.uniform(jax.random.PRNGKey(col_keys[e,0]),shape = (bsize,1),minval = xl,maxval = xu)
+                tc = jax.random.uniform(jax.random.PRNGKey(col_keys[e,1]),shape = (bsize,1),minval = tl,maxval = (sc + 1)*tu/steps_cur)
+                #Update optimizer state and parameters
+                opt_state,params = update(opt_state,params,xc,tc)
+                #After epoch_print epochs
+                if e % epoch_print == 0:
+                    #Compute elapsed time and current error
+                    l = 'Time: ' + str(round(time.time() - time0)) + ' s Loss: ' + str(jnp.round(lf(params,xc,tc),6))
+                    #Print
+                    print(l)
+                if ((e % at_each == 0 and at_each != epochs) or e == epochs - 1):
+                    if update_w:
+                        norm_lpde = norm_par(dpde(params)['net'])
+                        norm_ll = norm_par(dl(params)['net'])
+                        norm_lr = norm_par(dr(params)['net'])
+                        norm_ln = norm_par(dn(params)['net'])
+                        norm_linit = norm_par(dinit(params)['net'])
+                        total = norm_lpde + norm_ll + norm_lr + norm_ln
+                        params['lpde'] = 0.1*jnp.sqrt(truncate(total/norm_lpde,m = m)) + 0.9*params['lpde']
+                        params['ll'] = 0.1*jnp.sqrt(truncate(total/norm_ll,m = m)) + 0.9*params['ll']
+                        params['lr'] = 0.1*jnp.sqrt(truncate(total/norm_lr,m = m)) + 0.9*params['lr']
+                        params['ln'] = 0.1*jnp.sqrt(truncate(total/norm_ln,m = m)) + 0.9*params['ln']
+                        params['linit'] = 0.1*jnp.sqrt(truncate(total/norm_linit,m = m)) + 0.9*params['linit']
+                    if save:
+                        #Save current parameters
+                        u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
+                        lpde_now = params['lpde'] ** 2
+                        lpde_epochs = lpde_epochs + [lpde_now.tolist()]
+                        if (lpde_epochs[-1] + lpde_epochs[-2] + lpde_epochs[-3])/3 < tolerance_cur:
+                            break
+                        pickle.dump({'params': params,'time': time.time() - time0,'loss': lf(params,xc,tc),'lpde': lpde_now,'ll': params['ll'] ** 2,'lr': params['lr'] ** 2,'ln': params['ln'] ** 2,'linit': params['linit'] ** 2,
+                        'loss_pde': pde(u,xc,tc),'loss_initial': jnp.mean(initial_loss(u,x0,t0)),'loss_dl': jnp.mean(oper_left_dir(u,xb,tb)),
+                        'loss_dr': jnp.mean(oper_right_dir(u,xb,tb)),'loss_neumann': jnp.mean(oper_neumann(u,xb,tb))},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+                #Update alive_bar
+                bar()
 
     total_time = time.time() - time0
 
