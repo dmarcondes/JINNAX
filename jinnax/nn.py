@@ -1516,7 +1516,7 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,bsize = 4096,Ntb = 100,N0 = 
                 if save:
                     #Save current parameters
                     u = lambda x,t: forward(jnp.append(x,t,1),params['net'])
-                    pickle.dump({'params': params,'time': time.time() - time0,'loss': lf(params,xc,tc),'lpde': lpde_now,'ll': params['ll'] ** 2,'lr': params['lr'] ** 2,'ln': params['ln'] ** 2,'linit': params['linit'] ** 2,
+                    pickle.dump({'params': params,'time': time.time() - time0,'loss': lf(params,xc,tc),'lpde': params['lpde'],'ll': params['ll'] ** 2,'lr': params['lr'] ** 2,'ln': params['ln'] ** 2,'linit': params['linit'] ** 2,
                     'loss_pde': pde(u,xc,tc),'loss_initial': initial_loss(u,x0,t0),'loss_dl': oper_left_dir(u,xb,tb),
                     'loss_dr': oper_right_dir(u,xb,tb),'loss_neumann': oper_neumann(u,xb,tb)},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
             #Update alive_bar
