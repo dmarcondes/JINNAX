@@ -1342,6 +1342,10 @@ def DN_CSF_circle(uinitial,xl,xu,tl,tu,width,radius,bsize = 4096,Ntb = 100,N0 = 
         save = True
 
     #Define initial function and function to evaluate at boundary
+    def uinit(x,t):
+        u = uinitial(x,t)
+        return jnp.append(u['u1'],u['u2'])
+
     def ubound(x,t):
         u = uinitial(x,t)
         return jnp.append(u['u1'],u['u2'],1)
