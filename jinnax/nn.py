@@ -1235,43 +1235,43 @@ def demo_time_CSF(data,radius,file_name_save = 'result_pinn_CSF_demo',title = ''
     -------
     None
     """
-#Create folder to save plots
-os.system('mkdir ' + file_name_save)
+    #Create folder to save plots
+    os.system('mkdir ' + file_name_save)
 
-#Plot parameters
-tdom = jnp.unique(data[:,0])
-ylo = jnp.min(data[:,-2:])
-ylo = ylo - 0.1*jnp.abs(ylo)
-yup = jnp.max(data[:,-2:])
-yup = yup + 0.1*jnp.abs(yup)
+    #Plot parameters
+    tdom = jnp.unique(data[:,0])
+    ylo = jnp.min(data[:,-2:])
+    ylo = ylo - 0.1*jnp.abs(ylo)
+    yup = jnp.max(data[:,-2:])
+    yup = yup + 0.1*jnp.abs(yup)
 
-#Circle data
-circle = jnp.array([[radius*jnp.sin(t),radius*jnp.cos(t)] for t in jnp.linspace(0,2*jnp.pi,1000)])
+    #Circle data
+    circle = jnp.array([[radius*jnp.sin(t),radius*jnp.cos(t)] for t in jnp.linspace(0,2*jnp.pi,1000)])
 
-#Create images
-k = 1
-with alive_bar(len(tdom)) as bar:
-    for t in tdom:
-        #Test data
-        x_step = data[data[:,0] == t,1]
-        ux_step = data[data[:,0] == t,2]
-        uy_step = data[data[:,0] == t,3]
-        #Initialize plot
-        fig, ax = plt.subplots(1,1,figsize = (10,10))
-        #Create
-        ax.plot(ux_step,uy_step,'b-',linewidth=2,label='Exact')
-        ax.plot(circle[:,0],circle[:,1],'r-',linewidth=2,label='Prediction')
-        ax.set_xlabel(' ')
-        #Title
-        fig.suptitle(title + 't = ' + str(round(t,4)))
-        fig.tight_layout()
+    #Create images
+    k = 1
+    with alive_bar(len(tdom)) as bar:
+        for t in tdom:
+            #Test data
+            x_step = data[data[:,0] == t,1]
+            ux_step = data[data[:,0] == t,2]
+            uy_step = data[data[:,0] == t,3]
+            #Initialize plot
+            fig, ax = plt.subplots(1,1,figsize = (10,10))
+            #Create
+            ax.plot(ux_step,uy_step,'b-',linewidth=2,label='Exact')
+            ax.plot(circle[:,0],circle[:,1],'r-',linewidth=2,label='Prediction')
+            ax.set_xlabel(' ')
+            #Title
+            fig.suptitle(title + 't = ' + str(round(t,4)))
+            fig.tight_layout()
 
-        #Show and save
-        fig = plt.gcf()
-        fig.savefig(file_name_save + '/' + str(k) + '.png')
-        k = k + 1
-        plt.close()
-        bar()
+            #Show and save
+            fig = plt.gcf()
+            fig.savefig(file_name_save + '/' + str(k) + '.png')
+            k = k + 1
+            plt.close()
+            bar()
 
-#Create demo video
-os.system(ffmpeg + ' -framerate ' + str(framerate) + ' -i ' + file_name_save + '/' + '%00d.png -c:v libx264 -profile:v high -crf 20 -pix_fmt yuv420p ' + file_name_save + '/' + file_name_save + '_time_demo.mp4')
+    #Create demo video
+    os.system(ffmpeg + ' -framerate ' + str(framerate) + ' -i ' + file_name_save + '/' + '%00d.png -c:v libx264 -profile:v high -crf 20 -pix_fmt yuv420p ' + file_name_save + '/' + file_name_save + '_time_demo.mp4')
