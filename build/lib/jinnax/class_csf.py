@@ -22,6 +22,7 @@ class DN_csf(ForwardIVP):
         #Boundary points
         self.xl = config.xl
         self.xu = config.xu
+        self.tu = config.tu
 
         #Radius left dirichlet condition
         self.radius = config.radius
@@ -351,6 +352,7 @@ class NN_csf(ForwardIVP):
         #Boundary points
         self.xl = config.xl
         self.xu = config.xu
+        self.tu = config.tu
 
         #Radius left dirichlet condition
         self.radius = config.radius
@@ -670,6 +672,7 @@ class DD_csf(ForwardIVP):
         #Boundary points
         self.xl = config.xl
         self.xu = config.xu
+        self.tu = config.tu
 
         #Right dirichlet point
         self.ld = config.ld
@@ -951,6 +954,7 @@ class closed_csf(ForwardIVP):
         #Boundary points
         self.xl = config.xl
         self.xu = config.xu
+        self.tu = config.tu
 
         # Predictions over array of x fot t fixed
         self.u1_0_pred_fn = vmap(
