@@ -495,7 +495,7 @@ def csf(uinitial,xl,xu,tl,tu,type = 'DN',radius = None,file_name = 'test',Nt = 4
 
     #Generate demo
     if demo:
-        demo_time_CSF(pred,radius,file_name_save = file_name,framerate = 10,ffmpeg = 'ffmpeg')
+        demo_time_CSF(pred,radius,file_name_save = file_name,framerate = 10,ffmpeg = ffmpeg)
 
     #Print results
     pd_results = pd.DataFrame(list(results.items()))
