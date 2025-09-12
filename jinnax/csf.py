@@ -491,7 +491,7 @@ def csf(uinitial,xl,xu,tl,tu,type = 'DN',radius = None,file_name = 'test',Nt = 5
             }
         )
         config.arch.periodicity = ml_collections.ConfigDict(
-        {"period": (xu - xl,), "axis": (1,), "trainable": (True,)}
+        {"period": (xu - xl,), "axis": (1,), "trainable": (False,)}
         )
 
     #Train model
