@@ -144,7 +144,7 @@ def demo_time_CSF(data,type = 'DN',radius = None,file_name_save = 'result_pinn_C
 
     #Plot parameters
     tdom = jnp.unique(data[:,0])
-    ylo = jnp.min(data[data[:,0] == jnp.min(tdom),2])
+    ylo = jnp.min(data[data[:,0] == jnp.min(tdom),3])
     ylo = ylo - 0.1*jnp.abs(ylo)
     yup = jnp.max(data[data[:,0] == jnp.min(tdom),3])
     yup = yup + 0.1*jnp.abs(yup)
