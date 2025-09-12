@@ -1,27 +1,29 @@
 #Funtions to train PINNs for csf
-import jax
-import jax.numpy as jnp
-import time
-import os
 from absl import logging
-from jax.tree_util import tree_map
-import numpy as np
-import scipy.io
-import ml_collections
-import wandb
-from jaxpi.samplers import UniformSampler
-from jaxpi.logging import Logger
-from jaxpi.utils import save_checkpoint
-import ml_collections
+from alive_progress import alive_bar
 from functools import partial
-from jax import lax, jit, grad, vmap, jacrev, hessian
+import jax
+from jax import grad, hessian, jit, lax, vmap, jacrev
+import jax.numpy as jnp
 from jax.tree_util import tree_map
-import optax
 from jaxpi import archs
-from jaxpi.models import ForwardIVP
 from jaxpi.evaluator import BaseEvaluator
-from jaxpi.utils import ntk_fn
+from jaxpi.logging import Logger
+from jaxpi.models import ForwardIVP
+from jaxpi.samplers import UniformSampler
+from jaxpi.utils import ntk_fn, restore_checkpoint, save_checkpoint
 from jinnax import class_csf
+import matplotlib.pyplot as plt
+import ml_collections
+import numpy as np
+import optax
+import os
+import pandas as pd
+import random
+import scipy.io
+import sys
+import time
+import wandb
 
 def get_base_config():
     """Get the default hyperparameter configuration."""
@@ -59,7 +61,6 @@ def get_base_config():
 
     # Training
     config.training = training = ml_collections.ConfigDict()
-    training.max_steps = 150000
     training.batch_size_per_device = 4096
 
     # Weighting
@@ -177,10 +178,10 @@ def demo_time_CSF(data,radius,file_name_save = 'result_pinn_CSF_demo',title = ''
             bar()
 
     #Create demo video
-    os.system(ffmpeg + ' -framerate ' + str(framerate) + ' -i ' + file_name_save + '/' + '%00d.png -c:v libx264 -profile:v high -crf 20 -pix_fmt yuv420p ' + file_name_save + '/' + file_name_save + '_time_demo.mp4')
+    os.system(ffmpeg + ' -framerate ' + str(framerate) + ' -i ' + file_name_save + '/' + '%00d.png -c:v libx264 -profile:v high -crf 20 -pix_fmt yuv420p ' + file_name_save + '_time_demo.mp4')
 
 
-def train_csf(config: ml_collections.ConfigDict, workdir: str):
+def train_csf(config: ml_collections.ConfigDict, uinitial):
     if config.save_wandb:
         wandb_config = config.wandb
         wandb.init(project = wandb_config.project, name = wandb_config.name)
@@ -202,55 +203,94 @@ def train_csf(config: ml_collections.ConfigDict, workdir: str):
     logger = Logger()
 
     # Initialize evaluator
-    evaluator = CSF_DN_Evaluator(config, model,x0_test, tb_test, xc_test, tc_test, u1_0_test, u2_0_test)
+    x0_test = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = config.xl,maxval = config.xu,shape = (config.N0,1))
+    u1_0_test,u2_0_test = uinitial(x0_test)
+    tb_test = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = config.tl,maxval = config.tu,shape = (config.Nb,1))
+    xc_test = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = config.xl,maxval = config.xu,shape = (config.Nc ** 2,1))
+    tc_test = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = config.tl,maxval = config.tu,shape = (config.Nc ** 2,1))
+    evaluator = class_csf.DN_csf_Evaluator(config, model, x0_test, tb_test, xc_test, tc_test, u1_0_test, u2_0_test)
 
     # jit warm up
-    print("Waiting for JIT...")
+    print("Training CSF...")
     start_time = time.time()
-    for step in range(config.training.max_steps):
-        batch = next(res_sampler)
-        model.state = model.step(model.state, batch)
+    t0 = start_time
+    with alive_bar(config.training.max_steps) as bar:
+        for step in range(config.training.max_steps):
+            batch = next(res_sampler)
+            model.state = model.step(model.state, batch)
 
-        # Update weights if necessary
-        if config.weighting.scheme in ["grad_norm", "ntk"]:
-            if step % config.weighting.update_every_steps == 0:
-                model.state = model.update_weights(model.state, batch)
+            # Update weights if necessary
+            if config.weighting.scheme in ["grad_norm", "ntk"]:
+                if step % config.weighting.update_every_steps == 0:
+                    model.state = model.update_weights(model.state, batch)
 
-        # Log training metrics, only use host 0 to record results
-        if jax.process_index() == 0:
-            if step % config.logging.log_every_steps == 0:
-                # Get the first replica of the state and batch
-                state = jax.device_get(tree_map(lambda x: x[0], model.state))
-                batch = jax.device_get(tree_map(lambda x: x[0], batch))
-                log_dict = evaluator(state, batch)
-                wandb.log(log_dict, step)
-                end_time = time.time()
-                logger.log_iter(step, start_time, end_time, log_dict)
-                start_time = end_time
+            # Log training metrics, only use host 0 to record results
+            if jax.process_index() == 0:
+                if step % config.logging.log_every_steps == 0:
+                    # Get the first replica of the state and batch
+                    state = jax.device_get(tree_map(lambda x: x[0], model.state))
+                    batch = jax.device_get(tree_map(lambda x: x[0], batch))
+                    log_dict = evaluator(state, batch)
+                    if config.save_wandb:
+                        wandb.log(log_dict, step)
+                    end_time = time.time()
+                    logger.log_iter(step, start_time, end_time, log_dict)
+                    start_time = end_time
 
-        # Saving
-        if config.saving.save_every_steps is not None:
-            if (step + 1) % config.saving.save_every_steps == 0 or (
-                step + 1
-            ) == config.training.max_steps:
-                ckpt_path = os.path.join(os.getcwd(),"ckpt",config.wandb.name)
-                save_checkpoint(model.state, ckpt_path, keep=config.saving.num_keep_ckpts)
+            # Saving
+            if config.saving.save_every_steps is not None:
+                if (step + 1) % config.saving.save_every_steps == 0 or (
+                    step + 1
+                ) == config.training.max_steps:
+                    ckpt_path = os.path.join(os.getcwd(),"ckpt",config.wandb.name)
+                    save_checkpoint(model.state, ckpt_path, keep=config.saving.num_keep_ckpts)
 
-    return model
+            #Early stop
+            if jax.process_index() == 0:
+                if step % config.logging.log_every_steps == 0:
+                    if config.type_csf == 'DN':
+                        if log_dict['res1_test'] < config.res_tol and log_dict['res2_test'] < config.res_tol and log_dict['ic_rel_test'] < config.ic_tol and log_dict['ld_test'] < config.dn_tol and log_dict['rd_test'] < config.dn_tol and log_dict['ld_test'] < config.dn_tol:
+                            break
+            bar()
 
-def uinitial(x):
-  b = jnp.log(jnp.pi)/3 + 3*jnp.pi
-  u1 = jnp.where(x <= -3*jnp.pi,x,-x*jnp.cos(-x))
-  u2 = jnp.where(x <= -3*jnp.pi,-1*jnp.sin(jnp.exp(3 * (b + x))),-x*jnp.sin(-x))
-  return u1,u2
+    #Run summary
+    log_dict['total_time'] = time.time() - t0
 
-def csf_circle(uinitial,xl,xu,tl,radius,file_name,Nt = 1000,N0 = 10000,Nc = 10000,Nb = 10000,type = 'DN',config = None,save_wandb = False,wandb_project = 'CSF_project',seed = 3284,workdir = '.'):
+    return model, log_dict
+
+def evaluate(config: ml_collections.ConfigDict):
+    # Initialize the model
+    t = jnp.linspace(config.tl, config.tu, config.Nt)
+    if config.type_csf == 'DN':
+        model = class_csf.DN_csf(config, uinitial, t)
+
+    # Restore the checkpoint
+    ckpt_path = os.path.join(
+        os.getcwd(), "ckpt", config.wandb.name,
+    )
+    model.state = restore_checkpoint(model.state, ckpt_path)
+    params = model.state.params
+
+    #Collocation data
+    tx = jnp.array([[t,x] for t in jnp.linspace(config.tl, config.tu, config.Nt) for x in jnp.linspace(config.xl, config.xu, config.Nc)])
+
+    #Predict
+    u1_pred = model.u1_pred_fn(params, tx[:,0], tx[:,1])
+    u2_pred = model.u2_pred_fn(params, tx[:,0], tx[:,1])
+
+    #Save
+    pred = jnp.append(tx,jnp.append(u1_pred.reshape((u1_pred.shape[0],1)),u2_pred.reshape((u2_pred.shape[0],1)),1),1)
+    jnp.save(config.wandb.project + '_' + config.wandb.name + '.npy',pred)
+
+    return pred
+
+def csf_circle(uinitial,xl,xu,tl,radius,file_name,Nt = 500,N0 = 10000,Nc = 500,Nb = 10000,type = 'DN',config = None,save_wandb = False,wandb_project = 'CSF_project',seed = 3284,demo = True,max_epochs = 150000,res_tol = 1e-6,dn_tol = 1e-6,ic_tol = 1e-3,framerate = 10,ffmpeg = 'ffmpeg'):
     #Set config file
     if config is None:
         config = get_base_config()
 
-    wandb.project = wandb_project
-    wandb.name = file_name
+    config.wandb.project = wandb_project
+    config.wandb.name = file_name
     config.seed = seed
     config.type_csf = type
     config.save_wandb = save_wandb
@@ -264,6 +304,23 @@ def csf_circle(uinitial,xl,xu,tl,radius,file_name,Nt = 1000,N0 = 10000,Nc = 1000
     config.N0 = N0
     config.Nc = Nc
     config.Nb = Nb
+    config.res_tol = res_tol
+    config.dn_tol = dn_tol
+    config.ic_tol = ic_tol
+    config.training.max_steps = max_epochs
 
-    #Define model
-    model = train_csf(config,workdir,unitial)
+    #Train model
+    model, results = train_csf(config,uinitial)
+
+    #Evaluate
+    pred = evaluate(config)
+
+    #Generate demo
+    if demo:
+        demo_time_CSF(pred,radius,file_name_save = file_name,framerate = 10,ffmpeg = 'ffmpeg')
+
+    #Print results
+    pd_results = pd.DataFrame(list(results.items()))
+    print(pd_results)
+
+    return results

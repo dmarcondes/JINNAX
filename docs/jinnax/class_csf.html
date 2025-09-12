@@ -129,6 +129,36 @@
                 </ul>
 
             </li>
+            <li>
+                    <a class="class" href="#DN_csf_Evaluator">DN_csf_Evaluator</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#DN_csf_Evaluator.__init__">DN_csf_Evaluator</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DN_csf_Evaluator.x0_test">x0_test</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DN_csf_Evaluator.tb_test">tb_test</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DN_csf_Evaluator.xc_test">xc_test</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DN_csf_Evaluator.tc_test">tc_test</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DN_csf_Evaluator.u2_0_test">u2_0_test</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DN_csf_Evaluator.u1_0_test">u1_0_test</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#DN_csf_Evaluator.log_errors">log_errors</a>
+                        </li>
+                </ul>
+
+            </li>
     </ul>
 
 
@@ -379,7 +409,7 @@
 </span><span id="L-227"><a href="#L-227"><span class="linenos">227</span></a>            <span class="n">res_loss2</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">res_pred2</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
 </span><span id="L-228"><a href="#L-228"><span class="linenos">228</span></a>
 </span><span id="L-229"><a href="#L-229"><span class="linenos">229</span></a>        <span class="n">loss_dict</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="L-230"><a href="#L-230"><span class="linenos">230</span></a>            <span class="s2">&quot;ic&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">u1_ic_loss</span> <span class="o">+</span> <span class="n">u2_ic_loss</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">u1_0</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">u2_0</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)),</span>
+</span><span id="L-230"><a href="#L-230"><span class="linenos">230</span></a>            <span class="s2">&quot;ic&quot;</span><span class="p">:</span> <span class="n">u1_ic_loss</span> <span class="o">+</span> <span class="n">u2_ic_loss</span><span class="p">,</span>
 </span><span id="L-231"><a href="#L-231"><span class="linenos">231</span></a>            <span class="s2">&quot;res1&quot;</span><span class="p">:</span> <span class="n">res_loss1</span><span class="p">,</span>
 </span><span id="L-232"><a href="#L-232"><span class="linenos">232</span></a>            <span class="s2">&quot;res2&quot;</span><span class="p">:</span> <span class="n">res_loss2</span><span class="p">,</span>
 </span><span id="L-233"><a href="#L-233"><span class="linenos">233</span></a>            <span class="s1">&#39;rd&#39;</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">res_right_dirichlet</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">batch</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">batch</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mi">1</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">xu</span><span class="p">)),</span>
@@ -452,6 +482,49 @@
 </span><span id="L-300"><a href="#L-300"><span class="linenos">300</span></a>            <span class="s1">&#39;ln&#39;</span><span class="p">:</span> <span class="n">ln_ntk</span>
 </span><span id="L-301"><a href="#L-301"><span class="linenos">301</span></a>        <span class="p">}</span>
 </span><span id="L-302"><a href="#L-302"><span class="linenos">302</span></a>        <span class="k">return</span> <span class="n">ntk_dict</span>
+</span><span id="L-303"><a href="#L-303"><span class="linenos">303</span></a>
+</span><span id="L-304"><a href="#L-304"><span class="linenos">304</span></a><span class="k">class</span> <span class="nc">DN_csf_Evaluator</span><span class="p">(</span><span class="n">BaseEvaluator</span><span class="p">):</span>
+</span><span id="L-305"><a href="#L-305"><span class="linenos">305</span></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">x0_test</span><span class="p">,</span> <span class="n">tb_test</span><span class="p">,</span> <span class="n">xc_test</span><span class="p">,</span> <span class="n">tc_test</span><span class="p">,</span> <span class="n">u1_0_test</span><span class="p">,</span> <span class="n">u2_0_test</span><span class="p">):</span>
+</span><span id="L-306"><a href="#L-306"><span class="linenos">306</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+</span><span id="L-307"><a href="#L-307"><span class="linenos">307</span></a>
+</span><span id="L-308"><a href="#L-308"><span class="linenos">308</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">x0_test</span> <span class="o">=</span> <span class="n">x0_test</span>
+</span><span id="L-309"><a href="#L-309"><span class="linenos">309</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">tb_test</span> <span class="o">=</span> <span class="n">tb_test</span>
+</span><span id="L-310"><a href="#L-310"><span class="linenos">310</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">xc_test</span> <span class="o">=</span> <span class="n">xc_test</span>
+</span><span id="L-311"><a href="#L-311"><span class="linenos">311</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">tc_test</span> <span class="o">=</span> <span class="n">tc_test</span>
+</span><span id="L-312"><a href="#L-312"><span class="linenos">312</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">u2_0_test</span> <span class="o">=</span> <span class="n">u2_0_test</span>
+</span><span id="L-313"><a href="#L-313"><span class="linenos">313</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">u1_0_test</span> <span class="o">=</span> <span class="n">u1_0_test</span>
+</span><span id="L-314"><a href="#L-314"><span class="linenos">314</span></a>
+</span><span id="L-315"><a href="#L-315"><span class="linenos">315</span></a>    <span class="k">def</span> <span class="nf">log_errors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+</span><span id="L-316"><a href="#L-316"><span class="linenos">316</span></a>        <span class="n">u1_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">u1_0_pred_fn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x0_test</span><span class="p">)</span>
+</span><span id="L-317"><a href="#L-317"><span class="linenos">317</span></a>        <span class="n">u2_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">u2_0_pred_fn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x0_test</span><span class="p">)</span>
+</span><span id="L-318"><a href="#L-318"><span class="linenos">318</span></a>
+</span><span id="L-319"><a href="#L-319"><span class="linenos">319</span></a>        <span class="n">u1_ic_loss</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">u1_pred</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">u1_0_test</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="L-320"><a href="#L-320"><span class="linenos">320</span></a>        <span class="n">u2_ic_loss</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">u2_pred</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">u2_0_test</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="L-321"><a href="#L-321"><span class="linenos">321</span></a>
+</span><span id="L-322"><a href="#L-322"><span class="linenos">322</span></a>        <span class="n">res_pred1</span><span class="p">,</span><span class="n">res_pred2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">r_pred_fn</span><span class="p">(</span>
+</span><span id="L-323"><a href="#L-323"><span class="linenos">323</span></a>            <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tc_test</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">xc_test</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="L-324"><a href="#L-324"><span class="linenos">324</span></a>        <span class="p">)</span>
+</span><span id="L-325"><a href="#L-325"><span class="linenos">325</span></a>        <span class="n">res_loss1</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">res_pred1</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="L-326"><a href="#L-326"><span class="linenos">326</span></a>        <span class="n">res_loss2</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">res_pred2</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="L-327"><a href="#L-327"><span class="linenos">327</span></a>
+</span><span id="L-328"><a href="#L-328"><span class="linenos">328</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;ic_rel_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">u1_ic_loss</span> <span class="o">+</span> <span class="n">u2_ic_loss</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">u1_0_test</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">u2_0_test</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)))</span>
+</span><span id="L-329"><a href="#L-329"><span class="linenos">329</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;res1_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">res_loss1</span>
+</span><span id="L-330"><a href="#L-330"><span class="linenos">330</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;res2_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">res_loss2</span>
+</span><span id="L-331"><a href="#L-331"><span class="linenos">331</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;rd_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">res_right_dirichlet</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tb_test</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">xu</span><span class="p">))</span>
+</span><span id="L-332"><a href="#L-332"><span class="linenos">332</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;ld_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">res_left_dirichlet</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tb_test</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">xl</span><span class="p">))</span>
+</span><span id="L-333"><a href="#L-333"><span class="linenos">333</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;ln_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">res_neumann</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tb_test</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">xl</span><span class="p">))</span>
+</span><span id="L-334"><a href="#L-334"><span class="linenos">334</span></a>
+</span><span id="L-335"><a href="#L-335"><span class="linenos">335</span></a>    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">batch</span><span class="p">):</span>
+</span><span id="L-336"><a href="#L-336"><span class="linenos">336</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__call__</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">batch</span><span class="p">)</span>
+</span><span id="L-337"><a href="#L-337"><span class="linenos">337</span></a>
+</span><span id="L-338"><a href="#L-338"><span class="linenos">338</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">logging</span><span class="o">.</span><span class="n">log_errors</span><span class="p">:</span>
+</span><span id="L-339"><a href="#L-339"><span class="linenos">339</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">log_errors</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+</span><span id="L-340"><a href="#L-340"><span class="linenos">340</span></a>
+</span><span id="L-341"><a href="#L-341"><span class="linenos">341</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">weighting</span><span class="o">.</span><span class="n">use_causal</span><span class="p">:</span>
+</span><span id="L-342"><a href="#L-342"><span class="linenos">342</span></a>            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">causal_weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">res_causal</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">params</span><span class="p">,</span> <span class="n">batch</span><span class="p">)</span>
+</span><span id="L-343"><a href="#L-343"><span class="linenos">343</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;cas_weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">causal_weight</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+</span><span id="L-344"><a href="#L-344"><span class="linenos">344</span></a>
+</span><span id="L-345"><a href="#L-345"><span class="linenos">345</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span>
 </span></pre></div>
 
 
@@ -682,7 +755,7 @@
 </span><span id="DN_csf-228"><a href="#DN_csf-228"><span class="linenos">228</span></a>            <span class="n">res_loss2</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">res_pred2</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
 </span><span id="DN_csf-229"><a href="#DN_csf-229"><span class="linenos">229</span></a>
 </span><span id="DN_csf-230"><a href="#DN_csf-230"><span class="linenos">230</span></a>        <span class="n">loss_dict</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="DN_csf-231"><a href="#DN_csf-231"><span class="linenos">231</span></a>            <span class="s2">&quot;ic&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">u1_ic_loss</span> <span class="o">+</span> <span class="n">u2_ic_loss</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">u1_0</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">u2_0</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)),</span>
+</span><span id="DN_csf-231"><a href="#DN_csf-231"><span class="linenos">231</span></a>            <span class="s2">&quot;ic&quot;</span><span class="p">:</span> <span class="n">u1_ic_loss</span> <span class="o">+</span> <span class="n">u2_ic_loss</span><span class="p">,</span>
 </span><span id="DN_csf-232"><a href="#DN_csf-232"><span class="linenos">232</span></a>            <span class="s2">&quot;res1&quot;</span><span class="p">:</span> <span class="n">res_loss1</span><span class="p">,</span>
 </span><span id="DN_csf-233"><a href="#DN_csf-233"><span class="linenos">233</span></a>            <span class="s2">&quot;res2&quot;</span><span class="p">:</span> <span class="n">res_loss2</span><span class="p">,</span>
 </span><span id="DN_csf-234"><a href="#DN_csf-234"><span class="linenos">234</span></a>            <span class="s1">&#39;rd&#39;</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">res_right_dirichlet</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">batch</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">batch</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mi">1</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">xu</span><span class="p">)),</span>
@@ -1361,7 +1434,7 @@
 </span><span id="DN_csf.losses-228"><a href="#DN_csf.losses-228"><span class="linenos">228</span></a>            <span class="n">res_loss2</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">res_pred2</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
 </span><span id="DN_csf.losses-229"><a href="#DN_csf.losses-229"><span class="linenos">229</span></a>
 </span><span id="DN_csf.losses-230"><a href="#DN_csf.losses-230"><span class="linenos">230</span></a>        <span class="n">loss_dict</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="DN_csf.losses-231"><a href="#DN_csf.losses-231"><span class="linenos">231</span></a>            <span class="s2">&quot;ic&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">u1_ic_loss</span> <span class="o">+</span> <span class="n">u2_ic_loss</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">u1_0</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">u2_0</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)),</span>
+</span><span id="DN_csf.losses-231"><a href="#DN_csf.losses-231"><span class="linenos">231</span></a>            <span class="s2">&quot;ic&quot;</span><span class="p">:</span> <span class="n">u1_ic_loss</span> <span class="o">+</span> <span class="n">u2_ic_loss</span><span class="p">,</span>
 </span><span id="DN_csf.losses-232"><a href="#DN_csf.losses-232"><span class="linenos">232</span></a>            <span class="s2">&quot;res1&quot;</span><span class="p">:</span> <span class="n">res_loss1</span><span class="p">,</span>
 </span><span id="DN_csf.losses-233"><a href="#DN_csf.losses-233"><span class="linenos">233</span></a>            <span class="s2">&quot;res2&quot;</span><span class="p">:</span> <span class="n">res_loss2</span><span class="p">,</span>
 </span><span id="DN_csf.losses-234"><a href="#DN_csf.losses-234"><span class="linenos">234</span></a>            <span class="s1">&#39;rd&#39;</span><span class="p">:</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">res_right_dirichlet</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">batch</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">batch</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mi">1</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">xu</span><span class="p">)),</span>
@@ -1450,6 +1523,192 @@
 </span><span id="DN_csf.compute_diag_ntk-301"><a href="#DN_csf.compute_diag_ntk-301"><span class="linenos">301</span></a>            <span class="s1">&#39;ln&#39;</span><span class="p">:</span> <span class="n">ln_ntk</span>
 </span><span id="DN_csf.compute_diag_ntk-302"><a href="#DN_csf.compute_diag_ntk-302"><span class="linenos">302</span></a>        <span class="p">}</span>
 </span><span id="DN_csf.compute_diag_ntk-303"><a href="#DN_csf.compute_diag_ntk-303"><span class="linenos">303</span></a>        <span class="k">return</span> <span class="n">ntk_dict</span>
+</span></pre></div>
+
+
+    
+
+                            </div>
+                </section>
+                <section id="DN_csf_Evaluator">
+                            <input id="DN_csf_Evaluator-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">DN_csf_Evaluator</span><wbr>(<span class="base">jaxpi.evaluator.BaseEvaluator</span>):
+
+                <label class="view-source-button" for="DN_csf_Evaluator-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#DN_csf_Evaluator"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="DN_csf_Evaluator-305"><a href="#DN_csf_Evaluator-305"><span class="linenos">305</span></a><span class="k">class</span> <span class="nc">DN_csf_Evaluator</span><span class="p">(</span><span class="n">BaseEvaluator</span><span class="p">):</span>
+</span><span id="DN_csf_Evaluator-306"><a href="#DN_csf_Evaluator-306"><span class="linenos">306</span></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">x0_test</span><span class="p">,</span> <span class="n">tb_test</span><span class="p">,</span> <span class="n">xc_test</span><span class="p">,</span> <span class="n">tc_test</span><span class="p">,</span> <span class="n">u1_0_test</span><span class="p">,</span> <span class="n">u2_0_test</span><span class="p">):</span>
+</span><span id="DN_csf_Evaluator-307"><a href="#DN_csf_Evaluator-307"><span class="linenos">307</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator-308"><a href="#DN_csf_Evaluator-308"><span class="linenos">308</span></a>
+</span><span id="DN_csf_Evaluator-309"><a href="#DN_csf_Evaluator-309"><span class="linenos">309</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">x0_test</span> <span class="o">=</span> <span class="n">x0_test</span>
+</span><span id="DN_csf_Evaluator-310"><a href="#DN_csf_Evaluator-310"><span class="linenos">310</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">tb_test</span> <span class="o">=</span> <span class="n">tb_test</span>
+</span><span id="DN_csf_Evaluator-311"><a href="#DN_csf_Evaluator-311"><span class="linenos">311</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">xc_test</span> <span class="o">=</span> <span class="n">xc_test</span>
+</span><span id="DN_csf_Evaluator-312"><a href="#DN_csf_Evaluator-312"><span class="linenos">312</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">tc_test</span> <span class="o">=</span> <span class="n">tc_test</span>
+</span><span id="DN_csf_Evaluator-313"><a href="#DN_csf_Evaluator-313"><span class="linenos">313</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">u2_0_test</span> <span class="o">=</span> <span class="n">u2_0_test</span>
+</span><span id="DN_csf_Evaluator-314"><a href="#DN_csf_Evaluator-314"><span class="linenos">314</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">u1_0_test</span> <span class="o">=</span> <span class="n">u1_0_test</span>
+</span><span id="DN_csf_Evaluator-315"><a href="#DN_csf_Evaluator-315"><span class="linenos">315</span></a>
+</span><span id="DN_csf_Evaluator-316"><a href="#DN_csf_Evaluator-316"><span class="linenos">316</span></a>    <span class="k">def</span> <span class="nf">log_errors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+</span><span id="DN_csf_Evaluator-317"><a href="#DN_csf_Evaluator-317"><span class="linenos">317</span></a>        <span class="n">u1_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">u1_0_pred_fn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x0_test</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator-318"><a href="#DN_csf_Evaluator-318"><span class="linenos">318</span></a>        <span class="n">u2_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">u2_0_pred_fn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x0_test</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator-319"><a href="#DN_csf_Evaluator-319"><span class="linenos">319</span></a>
+</span><span id="DN_csf_Evaluator-320"><a href="#DN_csf_Evaluator-320"><span class="linenos">320</span></a>        <span class="n">u1_ic_loss</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">u1_pred</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">u1_0_test</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator-321"><a href="#DN_csf_Evaluator-321"><span class="linenos">321</span></a>        <span class="n">u2_ic_loss</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">u2_pred</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">u2_0_test</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator-322"><a href="#DN_csf_Evaluator-322"><span class="linenos">322</span></a>
+</span><span id="DN_csf_Evaluator-323"><a href="#DN_csf_Evaluator-323"><span class="linenos">323</span></a>        <span class="n">res_pred1</span><span class="p">,</span><span class="n">res_pred2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">r_pred_fn</span><span class="p">(</span>
+</span><span id="DN_csf_Evaluator-324"><a href="#DN_csf_Evaluator-324"><span class="linenos">324</span></a>            <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tc_test</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">xc_test</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="DN_csf_Evaluator-325"><a href="#DN_csf_Evaluator-325"><span class="linenos">325</span></a>        <span class="p">)</span>
+</span><span id="DN_csf_Evaluator-326"><a href="#DN_csf_Evaluator-326"><span class="linenos">326</span></a>        <span class="n">res_loss1</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">res_pred1</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator-327"><a href="#DN_csf_Evaluator-327"><span class="linenos">327</span></a>        <span class="n">res_loss2</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">res_pred2</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator-328"><a href="#DN_csf_Evaluator-328"><span class="linenos">328</span></a>
+</span><span id="DN_csf_Evaluator-329"><a href="#DN_csf_Evaluator-329"><span class="linenos">329</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;ic_rel_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">u1_ic_loss</span> <span class="o">+</span> <span class="n">u2_ic_loss</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">u1_0_test</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">u2_0_test</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)))</span>
+</span><span id="DN_csf_Evaluator-330"><a href="#DN_csf_Evaluator-330"><span class="linenos">330</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;res1_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">res_loss1</span>
+</span><span id="DN_csf_Evaluator-331"><a href="#DN_csf_Evaluator-331"><span class="linenos">331</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;res2_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">res_loss2</span>
+</span><span id="DN_csf_Evaluator-332"><a href="#DN_csf_Evaluator-332"><span class="linenos">332</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;rd_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">res_right_dirichlet</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tb_test</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">xu</span><span class="p">))</span>
+</span><span id="DN_csf_Evaluator-333"><a href="#DN_csf_Evaluator-333"><span class="linenos">333</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;ld_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">res_left_dirichlet</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tb_test</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">xl</span><span class="p">))</span>
+</span><span id="DN_csf_Evaluator-334"><a href="#DN_csf_Evaluator-334"><span class="linenos">334</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;ln_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">res_neumann</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tb_test</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">xl</span><span class="p">))</span>
+</span><span id="DN_csf_Evaluator-335"><a href="#DN_csf_Evaluator-335"><span class="linenos">335</span></a>
+</span><span id="DN_csf_Evaluator-336"><a href="#DN_csf_Evaluator-336"><span class="linenos">336</span></a>    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">batch</span><span class="p">):</span>
+</span><span id="DN_csf_Evaluator-337"><a href="#DN_csf_Evaluator-337"><span class="linenos">337</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__call__</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">batch</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator-338"><a href="#DN_csf_Evaluator-338"><span class="linenos">338</span></a>
+</span><span id="DN_csf_Evaluator-339"><a href="#DN_csf_Evaluator-339"><span class="linenos">339</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">logging</span><span class="o">.</span><span class="n">log_errors</span><span class="p">:</span>
+</span><span id="DN_csf_Evaluator-340"><a href="#DN_csf_Evaluator-340"><span class="linenos">340</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">log_errors</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator-341"><a href="#DN_csf_Evaluator-341"><span class="linenos">341</span></a>
+</span><span id="DN_csf_Evaluator-342"><a href="#DN_csf_Evaluator-342"><span class="linenos">342</span></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">weighting</span><span class="o">.</span><span class="n">use_causal</span><span class="p">:</span>
+</span><span id="DN_csf_Evaluator-343"><a href="#DN_csf_Evaluator-343"><span class="linenos">343</span></a>            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">causal_weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">res_causal</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">params</span><span class="p">,</span> <span class="n">batch</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator-344"><a href="#DN_csf_Evaluator-344"><span class="linenos">344</span></a>            <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;cas_weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">causal_weight</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+</span><span id="DN_csf_Evaluator-345"><a href="#DN_csf_Evaluator-345"><span class="linenos">345</span></a>
+</span><span id="DN_csf_Evaluator-346"><a href="#DN_csf_Evaluator-346"><span class="linenos">346</span></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span>
+</span></pre></div>
+
+
+    
+
+                            <div id="DN_csf_Evaluator.__init__" class="classattr">
+                                        <input id="DN_csf_Evaluator.__init__-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="name">DN_csf_Evaluator</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">config</span>,</span><span class="param">	<span class="n">model</span>,</span><span class="param">	<span class="n">x0_test</span>,</span><span class="param">	<span class="n">tb_test</span>,</span><span class="param">	<span class="n">xc_test</span>,</span><span class="param">	<span class="n">tc_test</span>,</span><span class="param">	<span class="n">u1_0_test</span>,</span><span class="param">	<span class="n">u2_0_test</span></span>)</span>
+
+                <label class="view-source-button" for="DN_csf_Evaluator.__init__-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#DN_csf_Evaluator.__init__"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="DN_csf_Evaluator.__init__-306"><a href="#DN_csf_Evaluator.__init__-306"><span class="linenos">306</span></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">x0_test</span><span class="p">,</span> <span class="n">tb_test</span><span class="p">,</span> <span class="n">xc_test</span><span class="p">,</span> <span class="n">tc_test</span><span class="p">,</span> <span class="n">u1_0_test</span><span class="p">,</span> <span class="n">u2_0_test</span><span class="p">):</span>
+</span><span id="DN_csf_Evaluator.__init__-307"><a href="#DN_csf_Evaluator.__init__-307"><span class="linenos">307</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator.__init__-308"><a href="#DN_csf_Evaluator.__init__-308"><span class="linenos">308</span></a>
+</span><span id="DN_csf_Evaluator.__init__-309"><a href="#DN_csf_Evaluator.__init__-309"><span class="linenos">309</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">x0_test</span> <span class="o">=</span> <span class="n">x0_test</span>
+</span><span id="DN_csf_Evaluator.__init__-310"><a href="#DN_csf_Evaluator.__init__-310"><span class="linenos">310</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">tb_test</span> <span class="o">=</span> <span class="n">tb_test</span>
+</span><span id="DN_csf_Evaluator.__init__-311"><a href="#DN_csf_Evaluator.__init__-311"><span class="linenos">311</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">xc_test</span> <span class="o">=</span> <span class="n">xc_test</span>
+</span><span id="DN_csf_Evaluator.__init__-312"><a href="#DN_csf_Evaluator.__init__-312"><span class="linenos">312</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">tc_test</span> <span class="o">=</span> <span class="n">tc_test</span>
+</span><span id="DN_csf_Evaluator.__init__-313"><a href="#DN_csf_Evaluator.__init__-313"><span class="linenos">313</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">u2_0_test</span> <span class="o">=</span> <span class="n">u2_0_test</span>
+</span><span id="DN_csf_Evaluator.__init__-314"><a href="#DN_csf_Evaluator.__init__-314"><span class="linenos">314</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">u1_0_test</span> <span class="o">=</span> <span class="n">u1_0_test</span>
+</span></pre></div>
+
+
+    
+
+                            </div>
+                            <div id="DN_csf_Evaluator.x0_test" class="classattr">
+                                <div class="attr variable">
+            <span class="name">x0_test</span>
+
+        
+    </div>
+    <a class="headerlink" href="#DN_csf_Evaluator.x0_test"></a>
+    
+    
+
+                            </div>
+                            <div id="DN_csf_Evaluator.tb_test" class="classattr">
+                                <div class="attr variable">
+            <span class="name">tb_test</span>
+
+        
+    </div>
+    <a class="headerlink" href="#DN_csf_Evaluator.tb_test"></a>
+    
+    
+
+                            </div>
+                            <div id="DN_csf_Evaluator.xc_test" class="classattr">
+                                <div class="attr variable">
+            <span class="name">xc_test</span>
+
+        
+    </div>
+    <a class="headerlink" href="#DN_csf_Evaluator.xc_test"></a>
+    
+    
+
+                            </div>
+                            <div id="DN_csf_Evaluator.tc_test" class="classattr">
+                                <div class="attr variable">
+            <span class="name">tc_test</span>
+
+        
+    </div>
+    <a class="headerlink" href="#DN_csf_Evaluator.tc_test"></a>
+    
+    
+
+                            </div>
+                            <div id="DN_csf_Evaluator.u2_0_test" class="classattr">
+                                <div class="attr variable">
+            <span class="name">u2_0_test</span>
+
+        
+    </div>
+    <a class="headerlink" href="#DN_csf_Evaluator.u2_0_test"></a>
+    
+    
+
+                            </div>
+                            <div id="DN_csf_Evaluator.u1_0_test" class="classattr">
+                                <div class="attr variable">
+            <span class="name">u1_0_test</span>
+
+        
+    </div>
+    <a class="headerlink" href="#DN_csf_Evaluator.u1_0_test"></a>
+    
+    
+
+                            </div>
+                            <div id="DN_csf_Evaluator.log_errors" class="classattr">
+                                        <input id="DN_csf_Evaluator.log_errors-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">log_errors</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">params</span></span><span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="DN_csf_Evaluator.log_errors-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#DN_csf_Evaluator.log_errors"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="DN_csf_Evaluator.log_errors-316"><a href="#DN_csf_Evaluator.log_errors-316"><span class="linenos">316</span></a>    <span class="k">def</span> <span class="nf">log_errors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+</span><span id="DN_csf_Evaluator.log_errors-317"><a href="#DN_csf_Evaluator.log_errors-317"><span class="linenos">317</span></a>        <span class="n">u1_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">u1_0_pred_fn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x0_test</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator.log_errors-318"><a href="#DN_csf_Evaluator.log_errors-318"><span class="linenos">318</span></a>        <span class="n">u2_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">u2_0_pred_fn</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x0_test</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator.log_errors-319"><a href="#DN_csf_Evaluator.log_errors-319"><span class="linenos">319</span></a>
+</span><span id="DN_csf_Evaluator.log_errors-320"><a href="#DN_csf_Evaluator.log_errors-320"><span class="linenos">320</span></a>        <span class="n">u1_ic_loss</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">u1_pred</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">u1_0_test</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator.log_errors-321"><a href="#DN_csf_Evaluator.log_errors-321"><span class="linenos">321</span></a>        <span class="n">u2_ic_loss</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">u2_pred</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">u2_0_test</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator.log_errors-322"><a href="#DN_csf_Evaluator.log_errors-322"><span class="linenos">322</span></a>
+</span><span id="DN_csf_Evaluator.log_errors-323"><a href="#DN_csf_Evaluator.log_errors-323"><span class="linenos">323</span></a>        <span class="n">res_pred1</span><span class="p">,</span><span class="n">res_pred2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">r_pred_fn</span><span class="p">(</span>
+</span><span id="DN_csf_Evaluator.log_errors-324"><a href="#DN_csf_Evaluator.log_errors-324"><span class="linenos">324</span></a>            <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tc_test</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">xc_test</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="DN_csf_Evaluator.log_errors-325"><a href="#DN_csf_Evaluator.log_errors-325"><span class="linenos">325</span></a>        <span class="p">)</span>
+</span><span id="DN_csf_Evaluator.log_errors-326"><a href="#DN_csf_Evaluator.log_errors-326"><span class="linenos">326</span></a>        <span class="n">res_loss1</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">res_pred1</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator.log_errors-327"><a href="#DN_csf_Evaluator.log_errors-327"><span class="linenos">327</span></a>        <span class="n">res_loss2</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">res_pred2</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+</span><span id="DN_csf_Evaluator.log_errors-328"><a href="#DN_csf_Evaluator.log_errors-328"><span class="linenos">328</span></a>
+</span><span id="DN_csf_Evaluator.log_errors-329"><a href="#DN_csf_Evaluator.log_errors-329"><span class="linenos">329</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;ic_rel_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">u1_ic_loss</span> <span class="o">+</span> <span class="n">u2_ic_loss</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">u1_0_test</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">u2_0_test</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)))</span>
+</span><span id="DN_csf_Evaluator.log_errors-330"><a href="#DN_csf_Evaluator.log_errors-330"><span class="linenos">330</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;res1_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">res_loss1</span>
+</span><span id="DN_csf_Evaluator.log_errors-331"><a href="#DN_csf_Evaluator.log_errors-331"><span class="linenos">331</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;res2_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">res_loss2</span>
+</span><span id="DN_csf_Evaluator.log_errors-332"><a href="#DN_csf_Evaluator.log_errors-332"><span class="linenos">332</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;rd_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">res_right_dirichlet</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tb_test</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">xu</span><span class="p">))</span>
+</span><span id="DN_csf_Evaluator.log_errors-333"><a href="#DN_csf_Evaluator.log_errors-333"><span class="linenos">333</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;ld_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">res_left_dirichlet</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tb_test</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">xl</span><span class="p">))</span>
+</span><span id="DN_csf_Evaluator.log_errors-334"><a href="#DN_csf_Evaluator.log_errors-334"><span class="linenos">334</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">[</span><span class="s2">&quot;ln_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">res_neumann</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tb_test</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">xl</span><span class="p">))</span>
 </span></pre></div>
 
 

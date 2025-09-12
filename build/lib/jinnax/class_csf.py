@@ -227,7 +227,7 @@ class DN_csf(ForwardIVP):
             res_loss2 = jnp.mean(res_pred2 ** 2)
 
         loss_dict = {
-            "ic": (u1_ic_loss + u2_ic_loss)/(jnp.mean(u1_0 ** 2) + jnp.mean(u2_0 ** 2)),
+            "ic": u1_ic_loss + u2_ic_loss,
             "res1": res_loss1,
             "res2": res_loss2,
             'rd': jnp.mean(self.res_right_dirichlet(params, batch[:, 0].reshape((batch.shape[0],1)), self.xu)),
@@ -300,3 +300,46 @@ class DN_csf(ForwardIVP):
             'ln': ln_ntk
         }
         return ntk_dict
+
+class DN_csf_Evaluator(BaseEvaluator):
+    def __init__(self, config, model, x0_test, tb_test, xc_test, tc_test, u1_0_test, u2_0_test):
+        super().__init__(config, model)
+
+        self.x0_test = x0_test
+        self.tb_test = tb_test
+        self.xc_test = xc_test
+        self.tc_test = tc_test
+        self.u2_0_test = u2_0_test
+        self.u1_0_test = u1_0_test
+
+    def log_errors(self, params):
+        u1_pred = self.model.u1_0_pred_fn(params, 0.0, self.x0_test)
+        u2_pred = self.model.u2_0_pred_fn(params, 0.0, self.x0_test)
+
+        u1_ic_loss = jnp.mean((u1_pred - self.u1_0_test) ** 2)
+        u2_ic_loss = jnp.mean((u2_pred - self.u2_0_test) ** 2)
+
+        res_pred1,res_pred2 = self.model.r_pred_fn(
+            params, self.tc_test[:,0], self.xc_test[:,0]
+        )
+        res_loss1 = jnp.mean(res_pred1 ** 2)
+        res_loss2 = jnp.mean(res_pred2 ** 2)
+
+        self.log_dict["ic_rel_test"] = jnp.sqrt((u1_ic_loss + u2_ic_loss)/(jnp.mean(self.u1_0_test ** 2) + jnp.mean(self.u2_0_test ** 2)))
+        self.log_dict["res1_test"] = res_loss1
+        self.log_dict["res2_test"] = res_loss2
+        self.log_dict["rd_test"] = jnp.mean(self.model.res_right_dirichlet(params, self.tb_test, self.model.xu))
+        self.log_dict["ld_test"] = jnp.mean(self.model.res_left_dirichlet(params, self.tb_test, self.model.xl))
+        self.log_dict["ln_test"] = jnp.mean(self.model.res_neumann(params, self.tb_test, self.model.xl))
+
+    def __call__(self, state, batch):
+        self.log_dict = super().__call__(state, batch)
+
+        if self.config.logging.log_errors:
+            self.log_errors(state.params)
+
+        if self.config.weighting.use_causal:
+            _, _, causal_weight = self.model.res_causal(state.params, batch)
+            self.log_dict["cas_weight"] = causal_weight.min()
+
+        return self.log_dict
