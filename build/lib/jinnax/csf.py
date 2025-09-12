@@ -227,11 +227,11 @@ def train_csf(config: ml_collections.ConfigDict):
 
     # Initialize evaluator
     key = jax.random.split(jax.random.PRNGKey(config.seed),4)
-    x0_test = jax.random.uniform(key = jax.random.PRNGKey(key[0]),minval = config.xl,maxval = config.xu,shape = (config.N0,1))
+    x0_test = jax.random.uniform(key = jax.random.PRNGKey(key[0,0]),minval = config.xl,maxval = config.xu,shape = (config.N0,1))
     u1_0_test,u2_0_test = config.uinitial(x0_test)
-    tb_test = jax.random.uniform(key = jax.random.PRNGKey(key[1]),minval = config.tl,maxval = config.tu,shape = (config.Nb,1))
-    xc_test = jax.random.uniform(key = jax.random.PRNGKey(key[2]),minval = config.xl,maxval = config.xu,shape = (config.Nc ** 2,1))
-    tc_test = jax.random.uniform(key = jax.random.PRNGKey(key[3]),minval = config.tl,maxval = config.tu,shape = (config.Nc ** 2,1))
+    tb_test = jax.random.uniform(key = jax.random.PRNGKey(key[1,0]),minval = config.tl,maxval = config.tu,shape = (config.Nb,1))
+    xc_test = jax.random.uniform(key = jax.random.PRNGKey(key[2,0]),minval = config.xl,maxval = config.xu,shape = (config.Nc ** 2,1))
+    tc_test = jax.random.uniform(key = jax.random.PRNGKey(key[3,0]),minval = config.tl,maxval = config.tu,shape = (config.Nc ** 2,1))
     if config.type_csf == 'DN':
         evaluator = class_csf.DN_csf_Evaluator(config, model, x0_test, tb_test, xc_test, tc_test, u1_0_test, u2_0_test)
     elif config.type_csf == 'NN':
