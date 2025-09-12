@@ -13,14 +13,11 @@ from jaxpi.evaluator import BaseEvaluator
 from jaxpi.utils import ntk_fn
 
 class DN_csf(ForwardIVP):
-    def __init__(self, config, uinitial, t_star):
+    def __init__(self, config):
         super().__init__(config)
 
-        #Grid of time
-        self.t_star = t_star
-
         #Initial condition function
-        self.uinitial = uinitial
+        self.uinitial = config.uinitial
 
         #Boundary points
         self.xl = config.xl
@@ -63,7 +60,7 @@ class DN_csf(ForwardIVP):
 
     #Neural net forward function
     def neural_net(self, params, t, x):
-        t = t / self.t_star[-1]
+        t = t / self.tu
         z = jnp.stack([t, x])
         _, outputs = self.state.apply_fn(params, z)
         u1 = outputs[0]
@@ -345,14 +342,11 @@ class DN_csf_Evaluator(BaseEvaluator):
         return self.log_dict
 
 class NN_csf(ForwardIVP):
-    def __init__(self, config, uinitial, t_star):
+    def __init__(self, config):
         super().__init__(config)
 
-        #Grid of time
-        self.t_star = t_star
-
         #Initial condition function
-        self.uinitial = uinitial
+        self.uinitial = config.uinitial
 
         #Boundary points
         self.xl = config.xl
@@ -392,7 +386,7 @@ class NN_csf(ForwardIVP):
 
     #Neural net forward function
     def neural_net(self, params, t, x):
-        t = t / self.t_star[-1]
+        t = t / self.tu
         z = jnp.stack([t, x])
         _, outputs = self.state.apply_fn(params, z)
         u1 = outputs[0]
@@ -667,14 +661,11 @@ class NN_csf_Evaluator(BaseEvaluator):
         return self.log_dict
 
 class DD_csf(ForwardIVP):
-    def __init__(self, config, uinitial, t_star):
+    def __init__(self, config):
         super().__init__(config)
 
-        #Grid of time
-        self.t_star = t_star
-
         #Initial condition function
-        self.uinitial = uinitial
+        self.uinitial = config.uinitial
 
         #Boundary points
         self.xl = config.xl
@@ -715,7 +706,7 @@ class DD_csf(ForwardIVP):
 
     #Neural net forward function
     def neural_net(self, params, t, x):
-        t = t / self.t_star[-1]
+        t = t / self.tu
         z = jnp.stack([t, x])
         _, outputs = self.state.apply_fn(params, z)
         u1 = outputs[0]
@@ -951,14 +942,11 @@ class DD_csf_Evaluator(BaseEvaluator):
         return self.log_dict
 
 class closed_csf(ForwardIVP):
-    def __init__(self, config, uinitial, t_star):
+    def __init__(self, config):
         super().__init__(config)
 
-        #Grid of time
-        self.t_star = t_star
-
         #Initial condition function
-        self.uinitial = uinitial
+        self.uinitial = config.uinitial
 
         #Boundary points
         self.xl = config.xl
@@ -995,7 +983,7 @@ class closed_csf(ForwardIVP):
 
     #Neural net forward function
     def neural_net(self, params, t, x):
-        t = t / self.t_star[-1]
+        t = t / self.tu
         z = jnp.stack([t, x])
         _, outputs = self.state.apply_fn(params, z)
         u1 = outputs[0]

@@ -36,8 +36,6 @@ def get_base_config():
     #Get the default hyperparameter configuration.
     config = ml_collections.ConfigDict()
 
-    config.mode = "train"
-
     # Weights & Biases
     config.wandb = wandb = ml_collections.ConfigDict()
     wandb.tag = None
@@ -83,7 +81,7 @@ def get_base_config():
 
     # Logging
     config.logging = logging = ml_collections.ConfigDict()
-    logging.log_every_steps = 100
+    logging.log_every_steps = 1000
     logging.log_errors = True
     logging.log_losses = True
     logging.log_weights = True
@@ -185,7 +183,7 @@ def demo_time_CSF(data,type = 'DN',radius = None,file_name_save = 'result_pinn_C
     os.system(ffmpeg + ' -framerate ' + str(framerate) + ' -i ' + file_name_save + '/' + '%00d.png -c:v libx264 -profile:v high -crf 20 -pix_fmt yuv420p ' + file_name_save + '_time_demo.mp4')
 
 
-def train_csf(config: ml_collections.ConfigDict, uinitial):
+def train_csf(config: ml_collections.ConfigDict):
     """
     Train PINN for CSF in jaxpi
     ----------
@@ -209,30 +207,27 @@ def train_csf(config: ml_collections.ConfigDict, uinitial):
         wandb.init(project = wandb_config.project, name = wandb_config.name)
 
     # Define the time and space domain
-    t = jnp.linspace(config.tl, config.tu, config.Nt)
-    t0 = t[0]
-    t1 = t[-1]
-    dom = jnp.array([[t0, t1], [config.xl, config.xu]])
+    dom = jnp.array([[config.tl, config.tu], [config.xl, config.xu]])
 
     # Initialize the residual sampler
     res_sampler = iter(UniformSampler(dom, config.training.batch_size_per_device))
 
     # Initialize the model
     if config.type_csf == 'DN':
-        model = class_csf.DN_csf(config, uinitial, t)
+        model = class_csf.DN_csf(config)
     elif config.type_csf == 'NN':
-        model = class_csf.NN_csf(config, uinitial, t)
+        model = class_csf.NN_csf(config)
     elif config.type_csf == 'DD':
-        model = class_csf.DD_csf(config, uinitial, t)
+        model = class_csf.DD_csf(config)
     elif config.type_csf == 'closed':
-        model = class_csf.closed_csf(config, uinitial, t)
+        model = class_csf.closed_csf(config)
 
     # Logger
     logger = Logger()
 
     # Initialize evaluator
     x0_test = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = config.xl,maxval = config.xu,shape = (config.N0,1))
-    u1_0_test,u2_0_test = uinitial(x0_test)
+    u1_0_test,u2_0_test = config.uinitial(x0_test)
     tb_test = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = config.tl,maxval = config.tu,shape = (config.Nb,1))
     xc_test = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = config.xl,maxval = config.xu,shape = (config.Nc ** 2,1))
     tc_test = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = config.tl,maxval = config.tu,shape = (config.Nc ** 2,1))
@@ -297,7 +292,7 @@ def train_csf(config: ml_collections.ConfigDict, uinitial):
 
     return model, log_dict
 
-def evaluate(config: ml_collections.ConfigDict,uinitial):
+def evaluate(config: ml_collections.ConfigDict):
     """
     Evaluate PINN for CSF trained in jaxpi
     ----------
@@ -317,15 +312,14 @@ def evaluate(config: ml_collections.ConfigDict,uinitial):
     predicted values
     """
     # Initialize the model
-    t = jnp.linspace(config.tl, config.tu, config.Nt)
     if config.type_csf == 'DN':
-        model = class_csf.DN_csf(config, uinitial, t)
+        model = class_csf.DN_csf(config)
     elif config.type_csf == 'NN':
-        model = class_csf.NN_csf(config, uinitial, t)
+        model = class_csf.NN_csf(config)
     elif config.type_csf == 'DD':
-        model = class_csf.DD_csf(config, uinitial, t)
+        model = class_csf.DD_csf(config)
     elif config.type_csf == 'closed':
-        model = class_csf.closed_csf(config, uinitial, t)
+        model = class_csf.closed_csf(config)
 
     # Restore the checkpoint
     ckpt_path = os.path.join(
@@ -347,7 +341,7 @@ def evaluate(config: ml_collections.ConfigDict,uinitial):
 
     return pred
 
-def csf(uinitial,xl,xu,tl,tu,type = 'DN',radius = None,file_name = 'test',Nt = 500,N0 = 10000,Nb = 10000,Nc = 500,config = None,save_wandb = False,wandb_project = 'CSF_project',seed = 3284,demo = True,max_epochs = 150000,res_tol = 1e-6,dn_tol = 1e-6,ic_tol = 1e-3,framerate = 10,ffmpeg = 'ffmpeg'):
+def csf(uinitial,xl,xu,tl,tu,type = 'DN',radius = None,file_name = 'test',Nt = 400,N0 = 10000,Nb = 10000,Nc = 500,config = None,save_wandb = False,wandb_project = 'CSF_project',seed = 534,demo = True,max_epochs = 150000,res_tol = 5e-5,dn_tol = 5e-4,ic_tol = 0.01,framerate = 10,ffmpeg = 'ffmpeg'):
     """
     Train PINN for CSF in jaxpi
     ----------
@@ -436,6 +430,7 @@ def csf(uinitial,xl,xu,tl,tu,type = 'DN',radius = None,file_name = 'test',Nt = 5
     config.seed = seed
     config.type_csf = type
     config.save_wandb = save_wandb
+    config.uinitial = uinitial
     config.xl = xl
     config.xu = xu
     config.tl = tl
@@ -492,10 +487,10 @@ def csf(uinitial,xl,xu,tl,tu,type = 'DN',radius = None,file_name = 'test',Nt = 5
         )
 
     #Train model
-    model, results = train_csf(config,uinitial)
+    model, results = train_csf(config)
 
     #Evaluate
-    pred = evaluate(config,uinitial)
+    pred = evaluate(config)
 
     #Generate demo
     if demo:
