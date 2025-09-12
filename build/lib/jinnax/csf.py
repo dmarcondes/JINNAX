@@ -185,10 +185,8 @@ def train_csf(config: ml_collections.ConfigDict, workdir: str):
         wandb_config = config.wandb
         wandb.init(project = wandb_config.project, name = wandb_config.name)
 
-    uinitial, xl, xu, radius, rd, t_star, x0_test, tb_test, xc_test, tc_test, u1_0_test, u2_0_test = get_dataset(config.tu,config.Nt,config.N0_test,config.Nc_test,config.Nb_test)
-
     # Define the time and space domain
-    t = t_star
+    t = jnp.linspace(config.tl, config.tu, config.Nt)
     t0 = t[0]
     t1 = t[-1]
     dom = jnp.array([[t0, t1], [xl, xu]])
@@ -198,7 +196,7 @@ def train_csf(config: ml_collections.ConfigDict, workdir: str):
 
     # Initialize the model
     if config.type_csf == 'DN':
-        model = class_csf.DN_csf(config, uinitial, xl, xu, radius, rd, t_star)
+        model = class_csf.DN_csf(config, uinitial, t)
 
     # Logger
     logger = Logger()
@@ -240,13 +238,13 @@ def train_csf(config: ml_collections.ConfigDict, workdir: str):
 
     return model
 
-def uinitial(self,x):
+def uinitial(x):
   b = jnp.log(jnp.pi)/3 + 3*jnp.pi
   u1 = jnp.where(x <= -3*jnp.pi,x,-x*jnp.cos(-x))
   u2 = jnp.where(x <= -3*jnp.pi,-1*jnp.sin(jnp.exp(3 * (b + x))),-x*jnp.sin(-x))
   return u1,u2
 
-def csf_circle(uinitial,file_name,type = 'DN',config = None,wandb = False,wandb_project = 'CSF_project',seed = 3284,workdir = '.'):
+def csf_circle(uinitial,xl,xu,tl,radius,file_name,Nt = 1000,N0 = 10000,Nc = 10000,Nb = 10000,type = 'DN',config = None,save_wandb = False,wandb_project = 'CSF_project',seed = 3284,workdir = '.'):
     #Set config file
     if config is None:
         config = get_base_config()
@@ -255,7 +253,17 @@ def csf_circle(uinitial,file_name,type = 'DN',config = None,wandb = False,wandb_
     wandb.name = file_name
     config.seed = seed
     config.type_csf = type
-    config.save_wandb = wandb
+    config.save_wandb = save_wandb
+    config.xl = xl
+    config.xu = xu
+    config.tl = tl
+    config.tu = tu
+    config.radius = radius
+    config.rd = jnp.append(uinitial(xu)[0],uinitial(xu)[1])
+    config.Nt = Nt
+    config.N0 = N0
+    config.Nc = Nc
+    config.Nb = Nb
 
     #Define model
-    model = train_csf(config,workdir)
+    model = train_csf(config,workdir,unitial)

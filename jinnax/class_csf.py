@@ -13,7 +13,7 @@ from jaxpi.evaluator import BaseEvaluator
 from jaxpi.utils import ntk_fn
 
 class DN_csf(ForwardIVP):
-    def __init__(self, config, uinitial, xl, xu, radius, rd, t_star):
+    def __init__(self, config, uinitial, t_star):
         super().__init__(config)
 
         #Grid of time
@@ -23,14 +23,14 @@ class DN_csf(ForwardIVP):
         self.uinitial = uinitial
 
         #Boundary points
-        self.xl = xl
-        self.xu = xu
+        self.xl = config.xl
+        self.xu = config.xu
 
         #Radius left dirichlet condition
-        self.radius = radius
+        self.radius = config.radius
 
         #Right dirichlet point
-        self.rd = rd
+        self.rd = config.rd
 
         # Predictions over array of x fot t fixed
         self.u1_0_pred_fn = vmap(
