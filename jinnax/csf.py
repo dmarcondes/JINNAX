@@ -144,9 +144,9 @@ def demo_time_CSF(data,type = 'DN',radius = None,file_name_save = 'result_pinn_C
 
     #Plot parameters
     tdom = jnp.unique(data[:,0])
-    ylo = jnp.min(data[:,-2:])
+    ylo = jnp.min(data[data[:,0] == jnp.min(data[:,0]),-2:])
     ylo = ylo - 0.1*jnp.abs(ylo)
-    yup = jnp.max(data[:,-2:])
+    yup = jnp.max(data[data[:,0] == jnp.min(data[:,0]),-2:])
     yup = yup + 0.1*jnp.abs(yup)
 
     #Circle data
@@ -168,6 +168,8 @@ def demo_time_CSF(data,type = 'DN',radius = None,file_name_save = 'result_pinn_C
             if type == 'DN' or type == 'NN':
                 ax.plot(circle[:,0],circle[:,1],'r-',linewidth=2)
             ax.set_xlabel(' ')
+            if type != 'DN' and type != 'NN':
+                ax.set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
             #Title
             fig.suptitle(title + 't = ' + str(round(t,4)))
             fig.tight_layout()
