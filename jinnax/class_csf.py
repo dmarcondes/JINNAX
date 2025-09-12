@@ -1075,6 +1075,9 @@ class closed_csf(ForwardIVP):
         u1_ic_loss = jnp.mean((u1_pred - u1_0) ** 2)
         u2_ic_loss = jnp.mean((u2_pred - u2_0) ** 2)
 
+        periodic1 = jnp.mean((self.u1_bound_pred_fn(params,batch[:, 0].reshape((batch.shape[0],1)),self.xl) - self.u1_bound_pred_fn(params,batch[:, 0].reshape((batch.shape[0],1)),self.xu)) ** 2)
+        periodic2 = jnp.mean((self.u2_bound_pred_fn(params,batch[:, 0].reshape((batch.shape[0],1)),self.xl) - self.u2_bound_pred_fn(params,batch[:, 0].reshape((batch.shape[0],1)),self.xu)) ** 2)
+
         # Residual loss
         if self.config.weighting.use_causal == True:
             res_l1, res_l2, gamma = self.res_causal(params, batch)
@@ -1091,7 +1094,9 @@ class closed_csf(ForwardIVP):
         loss_dict = {
             "ic": u1_ic_loss + u2_ic_loss,
             "res1": res_loss1,
-            "res2": res_loss2
+            "res2": res_loss2,
+            'periodic1': periodic1,
+            'periodic2': periodic2
         }
         return loss_dict
 

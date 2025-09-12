@@ -249,49 +249,47 @@ def train_csf(config: ml_collections.ConfigDict, uinitial):
     print("Training CSF...")
     start_time = time.time()
     t0 = start_time
-    with alive_bar(config.training.max_steps) as bar:
-        for step in range(config.training.max_steps):
-            batch = next(res_sampler)
-            model.state = model.step(model.state, batch)
+    for step in range(config.training.max_steps):
+        batch = next(res_sampler)
+        model.state = model.step(model.state, batch)
 
-            # Update weights if necessary
-            if config.weighting.scheme in ["grad_norm", "ntk"]:
-                if step % config.weighting.update_every_steps == 0:
-                    model.state = model.update_weights(model.state, batch)
+        # Update weights if necessary
+        if config.weighting.scheme in ["grad_norm", "ntk"]:
+            if step % config.weighting.update_every_steps == 0:
+                model.state = model.update_weights(model.state, batch)
 
-            # Log training metrics, only use host 0 to record results
-            if jax.process_index() == 0:
-                if step % config.logging.log_every_steps == 0:
-                    # Get the first replica of the state and batch
-                    state = jax.device_get(tree_map(lambda x: x[0], model.state))
-                    batch = jax.device_get(tree_map(lambda x: x[0], batch))
-                    log_dict = evaluator(state, batch)
-                    if config.save_wandb:
-                        wandb.log(log_dict, step)
-                    end_time = time.time()
-                    logger.log_iter(step, start_time, end_time, log_dict)
-                    start_time = end_time
+        # Log training metrics, only use host 0 to record results
+        if jax.process_index() == 0:
+            if step % config.logging.log_every_steps == 0:
+                # Get the first replica of the state and batch
+                state = jax.device_get(tree_map(lambda x: x[0], model.state))
+                batch = jax.device_get(tree_map(lambda x: x[0], batch))
+                log_dict = evaluator(state, batch)
+                if config.save_wandb:
+                    wandb.log(log_dict, step)
+                end_time = time.time()
+                logger.log_iter(step, start_time, end_time, log_dict)
+                start_time = end_time
 
-            # Saving
-            if config.saving.save_every_steps is not None:
-                if (step + 1) % config.saving.save_every_steps == 0 or (
-                    step + 1
-                ) == config.training.max_steps:
-                    ckpt_path = os.path.join(os.getcwd(),"ckpt",config.wandb.name)
-                    save_checkpoint(model.state, ckpt_path, keep=config.saving.num_keep_ckpts)
-                    if config.type_csf == 'DN':
-                        if log_dict['res1_test'] < config.res_tol and log_dict['res2_test'] < config.res_tol and log_dict['ic_rel_test'] < config.ic_tol and log_dict['ld_test'] < config.dn_tol and log_dict['rd_test'] < config.dn_tol and log_dict['ln_test'] < config.dn_tol:
-                            break
-                    elif config.type_csf == 'NN':
-                        if log_dict['res1_test'] < config.res_tol and log_dict['res2_test'] < config.res_tol and log_dict['ic_rel_test'] < config.ic_tol and log_dict['ld_test'] < config.dn_tol and log_dict['rd_test'] < config.dn_tol and log_dict['ln_test'] < config.dn_tol and log_dict['rn_test'] < config.dn_tol:
-                            break
-                    elif config.type_csf == 'DD':
-                        if log_dict['res1_test'] < config.res_tol and log_dict['res2_test'] < config.res_tol and log_dict['ic_rel_test'] < config.ic_tol and log_dict['ld_test'] < config.dn_tol and log_dict['rd_test'] < config.dn_tol:
-                            break
-                    elif config.type_csf == 'closed':
-                        if log_dict['res1_test'] < config.res_tol and log_dict['res2_test'] < config.res_tol and log_dict['ic_rel_test'] < config.ic_tol:
-                            break
-            bar()
+        # Saving
+        if config.saving.save_every_steps is not None:
+            if (step + 1) % config.saving.save_every_steps == 0 or (
+                step + 1
+            ) == config.training.max_steps:
+                ckpt_path = os.path.join(os.getcwd(),"ckpt",config.wandb.name)
+                save_checkpoint(model.state, ckpt_path, keep=config.saving.num_keep_ckpts)
+                if config.type_csf == 'DN':
+                    if log_dict['res1_test'] < config.res_tol and log_dict['res2_test'] < config.res_tol and log_dict['ic_rel_test'] < config.ic_tol and log_dict['ld_test'] < config.dn_tol and log_dict['rd_test'] < config.dn_tol and log_dict['ln_test'] < config.dn_tol:
+                        break
+                elif config.type_csf == 'NN':
+                    if log_dict['res1_test'] < config.res_tol and log_dict['res2_test'] < config.res_tol and log_dict['ic_rel_test'] < config.ic_tol and log_dict['ld_test'] < config.dn_tol and log_dict['rd_test'] < config.dn_tol and log_dict['ln_test'] < config.dn_tol and log_dict['rn_test'] < config.dn_tol:
+                        break
+                elif config.type_csf == 'DD':
+                    if log_dict['res1_test'] < config.res_tol and log_dict['res2_test'] < config.res_tol and log_dict['ic_rel_test'] < config.ic_tol and log_dict['ld_test'] < config.dn_tol and log_dict['rd_test'] < config.dn_tol:
+                        break
+                elif config.type_csf == 'closed':
+                    if log_dict['res1_test'] < config.res_tol and log_dict['res2_test'] < config.res_tol and log_dict['ic_rel_test'] < config.ic_tol:
+                        break
 
     #Run summary
     log_dict['total_time'] = time.time() - t0
@@ -487,11 +485,10 @@ def csf(uinitial,xl,xu,tl,tu,type = 'DN',radius = None,file_name = 'test',Nt = 5
         config.weighting.init_weights = ml_collections.ConfigDict(
             {"ic": 1.0,
             "res1": 1.0,
-            "res2": 1.0
+            "res2": 1.0,
+            'periodic1': 1.0,
+            'periodic2': 1.0
             }
-        )
-        config.arch.periodicity = ml_collections.ConfigDict(
-        {"period": (xu - xl,), "axis": (1,), "trainable": (False,)}
         )
 
     #Train model
