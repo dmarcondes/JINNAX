@@ -5,4 +5,6 @@ test_pinn.py
 workspace/
 jinnax.egg-info/
 jinnax/__pycache__
-test_CSF
+test_CSF.py
+deeponet_jaxpi_try.py
+test_deeponet.py

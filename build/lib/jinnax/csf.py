@@ -195,11 +195,6 @@ def train_csf(config: ml_collections.ConfigDict):
 
         Dictionary for training PINN in jaxpi
 
-    uninitial : function
-
-        Function that computes the initial condition
-
-
     Returns
     -------
     model, log_dict
