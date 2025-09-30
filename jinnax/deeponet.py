@@ -365,7 +365,7 @@ class PI_DeepONet:
         log_dict['total_time'] = time.time() - t0
         log_dict['epochs'] = step + 1
 
-        return model, log_dict
+        return log_dict
 
 # Define PDE residual
 def bc_loss_periodic(pred_fn,params,batch,xl,xu):
