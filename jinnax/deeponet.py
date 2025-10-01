@@ -82,7 +82,7 @@ def get_base_config():
     training.batch_size_per_device = 4096
     config.training.batch_size_train_data = 128
     # Weighting
-    config.weights = {'b': 100,'res': 1,'data': 1,'ic' : 1}
+    config.weights = {'b': 100,'res': 1,'data': 1,'ic' : 100}
     # Logging
     config.logging = logging = ml_collections.ConfigDict()
     logging.log_every_steps = 1000
