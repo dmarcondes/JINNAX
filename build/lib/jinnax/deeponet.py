@@ -308,7 +308,10 @@ class PI_DeepONet:
             wandb.init(project = wandb_config.project, name = wandb_config.name)
 
         #Initialize the initial data sampler
-        initial_data = generate_initial_data(config.N0,int(config.size),kernel = config.kernel,xl = config.xl,xu = config.xu,key = 0)
+        if config.initial_data is None:
+            initial_data = generate_initial_data(config.N0,int(config.size),kernel = config.kernel,xl = config.xl,xu = config.xu,key = 0)
+        else:
+            initial_data = config.initial_data
         initial_sampler = iter(InitialDataSampler(initial_data, config.training.batch_size_per_device))
 
         # Initialize the residual sampler
