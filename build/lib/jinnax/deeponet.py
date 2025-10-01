@@ -82,7 +82,7 @@ def get_base_config():
     training.batch_size_per_device = 4096
     config.training.batch_size_train_data = 128
     # Weighting
-    config.weights = {'b': 100,'res': 1,'data': 1}
+    config.weights = {'b': 100,'res': 1,'data': 1,'ic' : 1}
     # Logging
     config.logging = logging = ml_collections.ConfigDict()
     logging.log_every_steps = 1000
@@ -232,6 +232,9 @@ class PI_DeepONet:
             ),(None,0,None,None)
         )
 
+        self.pred_batch_xt = vmap(
+                vmap(self.operator_net, (None, 0, None, None)),(None,None,0,0))
+
         self.r_pred_batch = vmap(
             vmap(
                 vmap(self.residual_net, (None, None, 0, None)),(None,None,None,0)
@@ -266,21 +269,30 @@ class PI_DeepONet:
 
     #Data loss
     def loss_data(self,params,batch_train):
-        pred = self.pred_batch(params,batch_train['u0'], batch_train['x'], batch_train['t'])
+        pred = self.pred_batch_xt(params,batch_train['u0'], batch_train['x'], batch_train['t'])
         return np.mean((pred - batch_train['u']) ** 2)
+
+    # Define initial condition loss
+    def loss_ic(self, params, batch):
+        # Compute forward pass
+        pred = self.pred_batch_xt(params,batch['u0'], self.x_mesh, np.zeros(self.x_mesh.shape[0]))
+        # Compute loss
+        loss = np.mean((pred - batch['u0'].transpose())**2)
+        return loss
 
     # Define total loss
     def loss(self, params, batch, batch_train):
         loss_bc = 0.0
         loss_data = 0.0
         loss_res = 0.0
+        loss_ic = 0.0
         if self.loss_bc is not None:
             loss_bc = self.loss_bc(self.pred_batch,params,batch,self.xl,self.xu)
         if self.residual_net is not None:
             loss_res = self.loss_res(params, batch)
         if batch_train is not None:
             loss_data = self.loss_data(params,batch_train)
-        loss = self.w['b'] * loss_bc +  self.w['res'] * loss_res + self.w['data'] * loss_data
+        loss = self.w['b'] * loss_bc +  self.w['res'] * loss_res + self.w['data'] * loss_data + self.w['ic'] * self.loss_ic(params,batch)
         return loss
 
     # Define a compiled update step
@@ -301,6 +313,7 @@ class PI_DeepONet:
         #Train
         log_dict['bc_loss'] = self.loss_bc(self.pred_batch,params,batch,self.xl,self.xu)
         log_dict['res_loss'] = self.loss_res(params,batch)
+        log_dict['ic_loss'] = self.loss_ic(params,batch)
         if batch_train is not None:
             log_dict['data_loss'] = self.loss_data(params,batch_train)
 
