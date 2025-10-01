@@ -233,7 +233,7 @@ class PI_DeepONet:
         )
 
         self.pred_batch0 = vmap(
-                vmap(self.operator_net, (None, 0, None, None)),(None,None,0,0)
+                vmap(self.operator_net, (None, 0, None, None)),(None,None, 0, 0)
         )
 
         self.r_pred_batch = vmap(
@@ -263,7 +263,7 @@ class PI_DeepONet:
     # Define residual loss
     def loss_res(self, params, batch):
         # Compute forward pass
-        pred = self.residual_net(self,params,batch)
+        pred = self.residual_net(self.operator_net,params,batch)
         # Compute loss
         loss = np.mean((pred)**2)
         return loss
@@ -303,11 +303,12 @@ class PI_DeepONet:
             log_dict['test_L2'] = np.mean(np.sqrt(np.mean((pred - self.u_test) ** 2,[1,2])/np.mean((self.u_test) ** 2,[1,2])))
 
         #Train
-        log_dict['bc_loss'] = self.loss_bc(self.pred_fn,params,batch,self.xl,self.xu)
+        log_dict['bc_loss'] = self.loss_bc(self.pred_batch0,params,batch,self.xl,self.xu)
         log_dict['res_loss'] = self.loss_res(params,batch)
         if batch_train is not None:
             log_dict['data_loss'] = self.loss_data(params,batch_train)
 
+        print(log_dict['res_loss'])
         return log_dict
 
     # Optimize parameters in a loop
@@ -383,9 +384,9 @@ class PI_DeepONet:
 # Define PDE residual
 def bc_loss_periodic(pred_batch0,params,batch,xl,xu):
     pred_xl = pred_batch0(
-        params, batch['u0'], xl + np.zeros(batch['t'].shape), batch['t']
+        params, batch['u0'], xl + np.zeros((batch['t'].shape[0],)), batch['t'].reshape((batch['t'].shape[0],))
     )
     pred_xu = pred_batch0(
-        params, batch['u0'], xu + np.zeros(batch['t'].shape), batch['t']
+        params, batch['u0'], xu + np.zeros((batch['t'].shape[0],)), batch['t'].reshape((batch['t'].shape[0],))
     )
     return np.mean((pred_xl - pred_xu) ** 2)
