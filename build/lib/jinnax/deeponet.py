@@ -308,7 +308,6 @@ class PI_DeepONet:
         if batch_train is not None:
             log_dict['data_loss'] = self.loss_data(params,batch_train)
 
-        print(log_dict['res_loss'])
         return log_dict
 
     # Optimize parameters in a loop
