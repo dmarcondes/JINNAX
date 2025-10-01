@@ -225,10 +225,16 @@ class PI_DeepONet:
         #Vmap residual operator
         self.r_pred_fn = vmap(self.residual_net, (None, 0, 0, 0))
 
-        #Vmap train dan test data
+        #Vmap train and test data
         self.pred_batch = vmap(
             vmap(
                 vmap(self.operator_net, (None, None, 0, None)),(None,None,None,0)
+            ),(None,0,None,None)
+        )
+
+        self.r_pred_batch = vmap(
+            vmap(
+                vmap(self.residual_net, (None, None, 0, None)),(None,None,None,0)
             ),(None,0,None,None)
         )
 
@@ -312,11 +318,11 @@ class PI_DeepONet:
             initial_data = generate_initial_data(config.N0,int(config.size),kernel = config.kernel,xl = config.xl,xu = config.xu,key = 0)
         else:
             initial_data = config.initial_data
-        initial_sampler = iter(InitialDataSampler(initial_data, config.training.batch_size_per_device))
+        initial_sampler = iter(InitialDataSampler(initial_data, config.training.batch_size_initial))
 
         # Initialize the residual sampler
         dom = np.array([[config.xl, config.xu],[config.tl, config.tu]])
-        res_sampler = iter(UniformSampler(dom, config.training.batch_size_per_device))
+        res_sampler = iter(UniformSampler(dom, config.training.batch_size_residuals))
 
         #Initialize the training data sampler
         batch_train = None
