@@ -232,10 +232,6 @@ class PI_DeepONet:
             ),(None,0,None,None)
         )
 
-        self.pred_batch0 = vmap(
-                vmap(self.operator_net, (None, 0, None, None)),(None,None, 0, 0)
-        )
-
         self.r_pred_batch = vmap(
             vmap(
                 vmap(self.residual_net, (None, None, 0, None)),(None,None,None,0)
@@ -279,7 +275,7 @@ class PI_DeepONet:
         loss_data = 0.0
         loss_res = 0.0
         if self.loss_bc is not None:
-            loss_bc = self.loss_bc(self.pred_batch0,params,batch,self.xl,self.xu)
+            loss_bc = self.loss_bc(self.pred_batch,params,batch,self.xl,self.xu)
         if self.residual_net is not None:
             loss_res = self.loss_res(params, batch)
         if batch_train is not None:
@@ -303,7 +299,7 @@ class PI_DeepONet:
             log_dict['test_L2'] = np.mean(np.sqrt(np.mean((pred - self.u_test) ** 2,[1,2])/np.mean((self.u_test) ** 2,[1,2])))
 
         #Train
-        log_dict['bc_loss'] = self.loss_bc(self.pred_batch0,params,batch,self.xl,self.xu)
+        log_dict['bc_loss'] = self.loss_bc(self.pred_batch,params,batch,self.xl,self.xu)
         log_dict['res_loss'] = self.loss_res(params,batch)
         if batch_train is not None:
             log_dict['data_loss'] = self.loss_data(params,batch_train)
@@ -381,11 +377,11 @@ class PI_DeepONet:
         return log_dict
 
 # Define PDE residual
-def bc_loss_periodic(pred_batch0,params,batch,xl,xu):
-    pred_xl = pred_batch0(
-        params, batch['u0'], xl + np.zeros((batch['t'].shape[0],)), batch['t'].reshape((batch['t'].shape[0],))
+def bc_loss_periodic(pred_batch,params,batch,xl,xu):
+    pred_xl = pred_batch(
+        params, batch['u0'], xl + np.zeros((1,)), batch['t'].reshape((batch['t'].shape[0],))
     )
-    pred_xu = pred_batch0(
-        params, batch['u0'], xu + np.zeros((batch['t'].shape[0],)), batch['t'].reshape((batch['t'].shape[0],))
+    pred_xu = pred_batch(
+        params, batch['u0'], xu + np.zeros((1,)), batch['t'].reshape((batch['t'].shape[0],))
     )
     return np.mean((pred_xl - pred_xu) ** 2)
