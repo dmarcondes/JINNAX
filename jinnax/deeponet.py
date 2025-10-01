@@ -275,7 +275,7 @@ class PI_DeepONet:
         loss_data = 0.0
         loss_res = 0.0
         if self.loss_bc is not None:
-            loss_bc = self.loss_bc(self.pred_fn,params,batch,self.xl,self.xu)
+            loss_bc = self.loss_bc(self.pred_batch,params,batch,self.xl,self.xu)
         if self.residual_net is not None:
             loss_res = self.loss_res(params, batch)
         if batch_train is not None:
@@ -377,7 +377,7 @@ class PI_DeepONet:
         return log_dict
 
 # Define PDE residual
-def bc_loss_periodic(pred_fn,params,batch,xl,xu):
+def bc_loss_periodic(pred_batch,params,batch,xl,xu):
     pred_xl = pred_batch(
         params, batch['u0'], xl, batch['t']
     )
