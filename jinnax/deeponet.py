@@ -379,9 +379,9 @@ class PI_DeepONet:
 # Define PDE residual
 def bc_loss_periodic(pred_batch,params,batch,xl,xu):
     pred_xl = pred_batch(
-        params, batch['u0'], np.array([xl]), batch['t']
+        params, batch['u0'], np.array([[xl]]), batch['t']
     )
     pred_xu = pred_barch(
-        params, batch['u0'], np.array([xu]), batch['t']
+        params, batch['u0'], np.array([[xu]]), batch['t']
     )
     return np.mean((pred_xl - pred_xu) ** 2)
