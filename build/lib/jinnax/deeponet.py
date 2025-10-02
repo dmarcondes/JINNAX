@@ -223,7 +223,8 @@ class PI_DeepONet:
         self.pred_fn = vmap(self.operator_net, (None, 0, 0, 0))
 
         #Vmap residual operator
-        self.r_pred_fn = vmap(self.residual_net, (None, 0, 0, 0))
+        if self.residual_net is not None:
+            self.r_pred_fn = vmap(self.residual_net, (None, 0, 0, 0))
 
         #Vmap train and test data
         self.pred_batch = vmap(
@@ -234,12 +235,12 @@ class PI_DeepONet:
 
         self.pred_batch_xt = vmap(
                 vmap(self.operator_net, (None, 0, None, None)),(None,None,0,0))
-
-        self.r_pred_batch = vmap(
-            vmap(
-                vmap(self.residual_net, (None, None, 0, None)),(None,None,None,0)
-            ),(None,0,None,None)
-        )
+        if self.residual_net is not None:
+            self.r_pred_batch = vmap(
+                vmap(
+                    vmap(self.residual_net, (None, None, 0, None)),(None,None,None,0)
+                ),(None,0,None,None)
+            )
 
         #Data
         self.u_test = config.u_test
@@ -251,6 +252,7 @@ class PI_DeepONet:
         self.w = config.weights
 
     # Define DeepONet architecture
+    @partial(jit, static_argnums=(0,))
     def operator_net(self, params, u, x, t):
         branch_params, trunk_params = params
         y = np.stack([x,t])
@@ -260,6 +262,7 @@ class PI_DeepONet:
         return outputs
 
     # Define residual loss
+    @partial(jit, static_argnums=(0,))
     def loss_res(self, params, batch):
         # Compute forward pass
         pred = self.residual_net(self.operator_net,params,batch)
@@ -268,11 +271,13 @@ class PI_DeepONet:
         return loss
 
     #Data loss
+    @partial(jit, static_argnums=(0,))
     def loss_data(self,params,batch_train):
         pred = self.pred_batch_xt(params,batch_train['u0'], batch_train['x'], batch_train['t'])
         return np.mean((pred - batch_train['u']) ** 2)
 
     # Define initial condition loss
+    @partial(jit, static_argnums=(0,))
     def loss_ic(self, params, batch):
         # Compute forward pass
         pred = self.pred_batch_xt(params,batch['u0'], self.x_mesh, np.zeros(self.x_mesh.shape[0]))
@@ -281,13 +286,14 @@ class PI_DeepONet:
         return loss
 
     # Define total loss
+    @partial(jit, static_argnums=(0,))
     def loss(self, params, batch, batch_train):
         loss_bc = 0.0
         loss_data = 0.0
         loss_res = 0.0
         loss_ic = 0.0
         if self.loss_bc is not None:
-            loss_bc = self.loss_bc(self.pred_batch,params,batch,self.xl,self.xu)
+            loss_bc = self.loss_bc(self.pred_batch,params,{'u0': batch['u0'],'t': batch['t_bc']},self.xl,self.xu)
         if self.residual_net is not None:
             loss_res = self.loss_res(params, batch)
         if batch_train is not None:
@@ -311,8 +317,10 @@ class PI_DeepONet:
             log_dict['test_L2'] = np.mean(np.sqrt(np.mean((pred - self.u_test) ** 2,[1,2])/np.mean((self.u_test) ** 2,[1,2])))
 
         #Train
-        log_dict['bc_loss'] = self.loss_bc(self.pred_batch,params,batch,self.xl,self.xu)
-        log_dict['res_loss'] = self.loss_res(params,batch)
+        if self.loss_bc is not None:
+            log_dict['bc_loss'] = self.loss_bc(self.pred_batch,params,{'u0': batch['u0'],'t': batch['t_bc']},self.xl,self.xu)
+        if self.residual_net is not None:
+            log_dict['res_loss'] = self.loss_res(params,batch)
         log_dict['ic_loss'] = self.loss_ic(params,batch)
         if batch_train is not None:
             log_dict['data_loss'] = self.loss_data(params,batch_train)
@@ -331,11 +339,14 @@ class PI_DeepONet:
             initial_data = generate_initial_data(config.N0,int(config.size),kernel = config.kernel,xl = config.xl,xu = config.xu,key = 0)
         else:
             initial_data = config.initial_data
-        initial_sampler = iter(InitialDataSampler(initial_data, config.training.batch_size_initial))
+        initial_sampler = iter(InitialDataSampler(initial_data, config.N))
 
         # Initialize the residual sampler
         dom = np.array([[config.xl, config.xu],[config.tl, config.tu]])
-        res_sampler = iter(UniformSampler(dom, config.training.batch_size_residuals))
+        res_sampler = iter(UniformSampler(dom, config.Q))
+
+        # Initialize the boundary condition sampler
+        bc_sampler = iter(UniformSampler(np.array([[config.tl, config.tu]]), config.N0))
 
         #Initialize the training data sampler
         batch_train = None
@@ -344,7 +355,7 @@ class PI_DeepONet:
 
         # Logger
         logger = Logger()
-        batch = {'u0': None,'x': None,'t': None}
+        batch = {'u0': None,'x': None,'t': None,'t_bc': None}
 
         #Train
         print("Training DeepONet...")
@@ -356,6 +367,7 @@ class PI_DeepONet:
             res_data_tmp = next(res_sampler)[0,:,:]
             batch['x'] = res_data_tmp[:,0]
             batch['t'] = res_data_tmp[:,1]
+            batch['t_bc'] = next(bc_sampler)[0,:]
             if config.u_train is not None:
                 u = next(data_sampler)
                 batch_train = {'u0': u[:,0,:],'u': u,'t': self.t_mesh,'x': self.x_mesh}
