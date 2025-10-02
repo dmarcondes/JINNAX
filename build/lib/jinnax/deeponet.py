@@ -273,7 +273,7 @@ class PI_DeepONet:
     #Data loss
     @partial(jit, static_argnums=(0,))
     def loss_data(self,params,batch_train):
-        pred = self.pred_batch_xt(params,batch_train['u0'], batch_train['x'], batch_train['t'])
+        pred = self.pred_batch(params,batch_train['u0'],batch_train['x'],batch_train['t'])
         return np.mean((pred - batch_train['u']) ** 2)
 
     # Define initial condition loss
@@ -370,6 +370,7 @@ class PI_DeepONet:
             batch['t_bc'] = next(bc_sampler)[0,:]
             if config.u_train is not None:
                 u = next(data_sampler)
+                u = u.reshape((u.shape[1],u.shape[2],u.shape[3]))
                 batch_train = {'u0': u[:,0,:],'u': u,'t': self.t_mesh,'x': self.x_mesh}
 
             #Step
