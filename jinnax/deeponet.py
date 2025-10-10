@@ -82,7 +82,8 @@ def get_base_config():
     training.batch_size_per_device = 4096
     config.training.batch_size_train_data = 128
     # Weighting
-    config.weights = {'b': 100,'res': 1,'data': 1,'ic' : 100}
+    config.weights = {'b': np.array([100.0]),'res': np.array([1.0]),'data': np.array([1.0]),'ic' : np.array([100.0])}
+    config.sa = True
     # Logging
     config.logging = logging = ml_collections.ConfigDict()
     logging.log_every_steps = 1000
@@ -193,9 +194,9 @@ class PI_DeepONet:
         self.trunk_init, self.trunk_apply = modified_MLP(config.arch.trunk_layers, activation = np.tanh)
 
         # Initialize
-        branch_params = self.branch_init(rng_key = random.PRNGKey(config.seed))
-        trunk_params = self.trunk_init(rng_key = random.PRNGKey(config.seed + 1))
-        params = (branch_params, trunk_params)
+        self.branch_params = self.branch_init(rng_key = random.PRNGKey(config.seed))
+        self.trunk_params = self.trunk_init(rng_key = random.PRNGKey(config.seed + 1))
+        self.params = (self.branch_params, self.trunk_params,{'b': config.weights['b'],'res': config.weights['res'],'data': config.weights['data'],'ic' : config.weights['ic']})
 
         # Use optimizers to set optimizer initialization and update functions
         self.opt_init, \
@@ -203,10 +204,10 @@ class PI_DeepONet:
         self.get_params = optimizers.adam(optimizers.exponential_decay(config.optim.learning_rate,
                                                                       decay_steps = config.optim.decay_steps,
                                                                       decay_rate = config.optim.decay_rate))
-        self.opt_state = self.opt_init(params)
+        self.opt_state = self.opt_init(self.params)
 
         # Used to restore the trained model parameters
-        _, self.unravel_params = ravel_pytree(params)
+        _, self.unravel_params = ravel_pytree(self.params)
 
         self.itercount = itertools.count()
 
@@ -254,7 +255,7 @@ class PI_DeepONet:
     # Define DeepONet architecture
     @partial(jit, static_argnums=(0,))
     def operator_net(self, params, u, x, t):
-        branch_params, trunk_params = params
+        branch_params, trunk_params,_ = params
         y = np.stack([x,t])
         B = self.branch_apply(branch_params, u)
         T = self.trunk_apply(trunk_params, y)
@@ -298,7 +299,7 @@ class PI_DeepONet:
             loss_res = self.loss_res(params, batch)
         if batch_train is not None:
             loss_data = self.loss_data(params,batch_train)
-        loss = self.w['b'] * loss_bc +  self.w['res'] * loss_res + self.w['data'] * loss_data + self.w['ic'] * self.loss_ic(params,batch)
+        loss = (params[-1]['b'] ** 2) * loss_bc +  (params[-1]['res'] ** 2) * loss_res + (params[-1]['data'] ** 2) * loss_data + (params[-1]['ic'] ** 2) * self.loss_ic(params,batch)
         return loss
 
     # Define a compiled update step
@@ -306,6 +307,11 @@ class PI_DeepONet:
     def step(self, i, opt_state, batch, batch_train):
         params = self.get_params(opt_state)
         g = grad(self.loss)(params, batch, batch_train)
+        if self.config.sa:
+            g[-1]['b'] = -g[-1]['b']
+            g[-1]['res'] = -g[-1]['res']
+            g[-1]['data'] = -g[-1]['data']
+            g[-1]['ic'] = -g[-1]['ic']
         return self.opt_update(i, g, opt_state)
 
     def evaluator(self,batch,batch_train):
@@ -324,6 +330,11 @@ class PI_DeepONet:
         log_dict['ic_loss'] = self.loss_ic(params,batch)
         if batch_train is not None:
             log_dict['data_loss'] = self.loss_data(params,batch_train)
+        if self.config.sa:
+            log_dict['Wb'] = params[-1]['b']
+            log_dict['Wres'] = params[-1]['res']
+            log_dict['Wdata'] = params[-1]['data']
+            log_dict['Wic'] = params[-1]['ic']
 
         return log_dict
 
@@ -358,6 +369,7 @@ class PI_DeepONet:
         batch = {'u0': None,'x': None,'t': None,'t_bc': None}
 
         #Train
+        w = None
         print("Training DeepONet...")
         start_time = time.time()
         t0 = start_time
@@ -372,6 +384,29 @@ class PI_DeepONet:
                 u = next(data_sampler)
                 u = u.reshape((u.shape[1],u.shape[2],u.shape[3]))
                 batch_train = {'u0': u[:,0,:],'u': u,'t': self.t_mesh,'x': self.x_mesh}
+
+            #Initialise weights
+            if config.sa and step == 0:
+                params = self.get_params(self.opt_state)
+                if self.loss_bc is not None:
+                    lb = self.loss_bc(self.pred_batch,params,{'u0': batch['u0'],'t': batch['t_bc']},self.xl,self.xu)
+                else:
+                    lb = np.array(0.0)
+                if self.residual_net is not None:
+                    lr = self.loss_res(params, batch)
+                else:
+                    lr = np.array(0.0)
+                if batch_train is not None:
+                    ld = self.loss_data(params,batch_train)
+                else:
+                    ld = np.array(0.0)
+                li = self.loss_ic(params,batch)
+                total = lb + lr + ld + li
+                w = {'b': np.sqrt(total/lb),'res': np.sqrt(total/lr),'data': np.sqrt(total/ld),'ic' : np.sqrt(total/li)}
+                self.params = (self.branch_params, self.trunk_params,w)
+                self.opt_state = self.opt_init(self.params)
+                # Used to restore the trained model parameters
+                _, self.unravel_params = ravel_pytree(self.params)
 
             #Step
             self.opt_state = self.step(next(self.itercount), self.opt_state, batch, batch_train)
