@@ -755,14 +755,16 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
                 output_w = pde(lambda x: forward(x,params['net']),grid,params['inverse'])
                 integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(test_functions)
                 loss_res_weak = jnp.mean(integralOmega ** 2)
-                integralOmega2 = jax.vmap(lambda psi: jnp.mean((psi*output_w.reshape((N,) * d)) ** 2))(test_functions)
-                loss_res = jnp.mean(integralOmega2)
+                if x['collocation'] is None:
+                    integralOmega2 = jax.vmap(lambda psi: jnp.mean((psi*output_w.reshape((N,) * d)) ** 2))(test_functions)
+                    loss_res = jnp.mean(integralOmega2)
             else:
                 output_w = pde(lambda x: forward(x,params['net']),grid)
                 integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(test_functions)
                 loss_res_weak = jnp.mean(integralOmega ** 2)
-                integralOmega2 = jax.vmap(lambda psi: jnp.mean((psi*output_w.reshape((N,) * d)) ** 2))(test_functions)
-                loss_res = jnp.mean(integralOmega2)
+                if x['collocation'] is None:
+                    integralOmega2 = jax.vmap(lambda psi: jnp.mean((psi*output_w.reshape((N,) * d)) ** 2))(test_functions)
+                    loss_res = jnp.mean(integralOmega2)
         return {'ls': loss_sensor,'lb': loss_boundary,'li': loss_initial,'lc': loss_res,'lc_weak': loss_res_weak}
 
     @jax.jit
@@ -819,7 +821,10 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
                 print(l)
             if ((e % at_each == 0 and at_each != epochs) or e == epochs - 1) and save:
                 #Save current parameters
-                pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': lf(params,data,k[e,:])},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+                if test_data is not None:
+                    pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': lf(params,data,k[e,:]),'L2error': L2error(forward(test_data['sensor'],params['net']),test_data['usensor'])},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+                else:
+                    pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': lf(params,data,k[e,:])},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
             #Update alive_bar
             bar()
     #Define estimated function
