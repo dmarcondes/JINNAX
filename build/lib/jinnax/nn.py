@@ -23,7 +23,6 @@ def MSE(pred,true):
     """
     Mean square error
     ----------
-
     Parameters
     ----------
     pred : jax.numpy.array
@@ -46,7 +45,6 @@ def MSE_SA(pred,true,w):
     """
     Selft-adaptative mean square error
     ----------
-
     Parameters
     ----------
     pred : jax.numpy.array
@@ -77,7 +75,6 @@ def L2error(pred,true):
     """
     L2-error
     ----------
-
     Parameters
     ----------
     pred : jax.numpy.array
@@ -94,12 +91,66 @@ def L2error(pred,true):
     """
     return jnp.sqrt(jnp.sum((true - pred)**2))/jnp.sqrt(jnp.sum(true ** 2))
 
+#Sample from d-dimensional Matern process
+def generate_matern_sample(key,d = 2,N = 128,L = 1.0,kappa = 1,alpha = 1,sigma = 1):
+    """
+    Sample d-dimensional Matern process
+    ----------
+    Parameters
+    ----------
+    key : int
+
+        Seed for randomization
+
+    d : int
+
+        Dimension. Default 2
+
+    N : int
+
+        Size of grid in each dimension. Default 128
+
+    L : list of float
+
+        The domain of the function in each coordinate is [0,L[1]]. If a float, repeat the same interval for all coordinates. Default 1
+
+    kappa,alpha,sigma : float
+
+        Parameters of the Matern process
+
+    Returns
+    -------
+    (N,N) jax.array
+    """
+    #Shape and key
+    key = jax.random.PRNGKey(key)
+    shape = (N,) * d
+    if isinstance(L,float) or isinstance(L,int):
+        L = d*[L]
+    #Setup Frequency Grid (2D)
+    freq = [jnp.fft.fftfreq(N,d = L[j]/N) * 2 * jnp.pi for j in range(d)]
+    grids = jnp.meshgrid(*freq, indexing='ij')
+    sq_norm_xi = sum(g**2 for g in grids)
+    #Generate White Noise in Fourier Space
+    key_re, key_im = jax.random.split(key)
+    white_noise_f = (jax.random.normal(key_re, shape) +
+                     1j * jax.random.normal(key_im, shape))
+    #Apply the Whittle Filter
+    amplitude_filter = (kappa**2 + sq_norm_xi)**(-alpha / 2.0)
+    field_f = white_noise_f * amplitude_filter
+    #Transform back to Physical Space
+    sample = jnp.real(jnp.fft.ifftn(field_f))
+    return sigma*sample
+
+#Vectorized generate_matern_sample
+def generate_matern_sample_batch(d = 2,N = 512,L = 1.0,kappa = 10.0,alpha = 1,sigma = 10):
+    return jax.vmap(lambda k: generate_matern_sample(k,d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma))
+
 #Simple fully connected architecture. Return the initial parameters and the function for the forward pass
-def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False):
+def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = 0):
     """
     Initialize fully connected neural network
     ----------
-
     Parameters
     ----------
     width : list
@@ -118,6 +169,10 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False):
 
         Whether to consider a modified multilayer perceptron. Assumes all hidden layers have the same dimension.
 
+    ff : float
+
+        Variance of Fourrier Features parameters. If zero, Fourrier Feautures are not considered. The dimension is that of the second layer.
+
     Returns
     -------
     dict with initial parameters and the function for the forward pass
@@ -125,6 +180,10 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False):
     #Initialize parameters with Glorot initialization
     initializer = jax.nn.initializers.glorot_normal()
     params = list()
+    if ff > 0:
+        Bff = ff*jax.random.normal(jax.random.PRNGKey(key + 1),(width[0],int(width[1]/2)))
+        params.append({'Bff':Bff})
+        width[0] = width[1]
     if mlp:
         k = jax.random.split(jax.random.PRNGKey(key),4)
         WU = initializer(k[0],(width[0],width[1]),jnp.float32)
@@ -140,22 +199,45 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False):
 
     #Define function for forward pass
     if mlp:
-        @jax.jit
-        def forward(x,params):
-            encode,*hidden,output = params
-            U = activation(x @ encode['WU'] + encode['BU'])
-            V = activation(x @ encode['WV'] + encode['BV'])
-            for layer in hidden:
-                x = activation(x @ layer['W'] + layer['B'])
-                x = x * U + (1 - x) * V
-            return x @ output['W'] + output['B']
+        if ff > 0:
+            @jax.jit
+            def forward(x,params):
+                ff,encode,*hidden,output = params
+                x = x @ ff['Bff']
+                x = jnp.append(jnp.sin(2 * jnp.pi * x),jnp.cos(2 * jnp.pi * x),1)
+                U = activation(x @ encode['WU'] + encode['BU'])
+                V = activation(x @ encode['WV'] + encode['BV'])
+                for layer in hidden:
+                    x = activation(x @ layer['W'] + layer['B'])
+                    x = x * U + (1 - x) * V
+                return x @ output['W'] + output['B']
+        else:
+            @jax.jit
+            def forward(x,params):
+                encode,*hidden,output = params
+                U = activation(x @ encode['WU'] + encode['BU'])
+                V = activation(x @ encode['WV'] + encode['BV'])
+                for layer in hidden:
+                    x = activation(x @ layer['W'] + layer['B'])
+                    x = x * U + (1 - x) * V
+                return x @ output['W'] + output['B']
     else:
-        @jax.jit
-        def forward(x,params):
-            *hidden,output = params
-            for layer in hidden:
-                x = activation(x @ layer['W'] + layer['B'])
-            return x @ output['W'] + output['B']
+        if ff > 0:
+            @jax.jit
+            def forward(x,params):
+                ff,*hidden,output = params
+                x = x @ ff['Bff']
+                x = jnp.append(jnp.sin(2 * jnp.pi * x),jnp.cos(2 * jnp.pi * x),1)
+                for layer in hidden:
+                    x = activation(x @ layer['W'] + layer['B'])
+                return x @ output['W'] + output['B']
+        else:
+            @jax.jit
+            def forward(x,params):
+                *hidden,output = params
+                for layer in hidden:
+                    x = activation(x @ layer['W'] + layer['B'])
+                return x @ output['W'] + output['B']
 
     #Return initial parameters and forward function
     return {'params': params,'forward': forward}
@@ -165,7 +247,6 @@ def get_activation(act):
     """
     Return activation function from string
     ----------
-
     Parameters
     ----------
     act : str
@@ -222,11 +303,10 @@ def get_activation(act):
         return jax.nn.mish
 
 #Training PINN
-def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = False,sa = False,c = {'ws': 1,'wr': 1,'w0': 100,'wb': 1},inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,ff = False):
+def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = False,sa = False,c = {'ws': 1,'wr': 1,'w0': 100,'wb': 1},inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,mlp = False):
     """
     Train a Physics-informed Neural Network
     ----------
-
     Parameters
     ----------
     data : dict
@@ -313,9 +393,9 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
 
         Rate of exponential decay. Default 0.9
 
-    ff : logical
+    mlp : logical
 
-        Whether to consider Fourrier features
+        Whether to consider modifed multi-layer perceptron
 
     Returns
     -------
@@ -323,7 +403,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     """
 
     #Initialize architecture
-    nnet = fconNN(width,get_activation(activation),key,ff)
+    nnet = fconNN(width,get_activation(activation),key,mlp)
     forward = nnet['forward']
 
     #Initialize self adaptative weights
@@ -462,6 +542,262 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
         return forward(xt,params['net'])
 
     return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
+
+#Training PINN
+def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,mlp = False,ff = 0):
+    """
+    Train a Physics-informed Neural Network
+    ----------
+    Parameters
+    ----------
+    data : dict
+
+        Data generated by the jinnax.data.generate_PINNdata function
+
+    width : list
+
+        A list with the width of each layer
+
+    pde : function
+
+        The partial differential operator. Its arguments are u, x and t
+
+    test_data : dict, None
+
+        A dictionay with test data for L2 error calculation generated by the jinnax.data.generate_PINNdata function. Default None for not calculating L2 error
+
+    params : list
+
+        Initial parameters for the neural network. Default None to initialize randomly
+
+    d : int
+
+        Dimension of the problem including the time variable if present. Default 2
+
+    N : int
+
+        Size of grid in each dimension. Default 128
+
+    L : list of float
+
+        The domain of the function in each coordinate is [0,L[1]]. If a float, repeat the same interval for all coordinates. Default 1
+
+    kappa,alpha,sigma : float
+
+        Parameters of the Matern process
+
+    bsize : int
+
+        Batch size for weak norm computation. Default 1
+
+    epochs : int
+
+        Number of training epochs. Default 100
+
+    at_each : int
+
+        Save results for epochs multiple of at_each. Default 10
+
+    activation : str
+
+        The name of the activation function of the neural network. Default 'tanh'
+
+    neumann : logical
+
+        Whether to consider Neumann boundary conditions
+
+    oper_neumann : function
+
+        Penalization of Neumann boundary conditions
+
+    inverse : logical
+
+        Whether to estimate parameters of the PDE
+
+    initial_par : jax.numpy.array
+
+        Initial value of the parameters of the PDE in an inverse problem
+
+    lr,b1,b2,eps,eps_root: float
+
+        Hyperparameters of the Adam algorithm. Default lr = 0.001, b1 = 0.9, b2 = 0.999, eps = 1e-08, eps_root = 0.0
+
+    key : int
+
+        Seed for parameters initialization. Default 0
+
+    epoch_print : int
+
+        Number of epochs to calculate and print test errors. Default 100
+
+    save : logical
+
+        Whether to save the current parameters. Default False
+
+    file_name : str
+
+        File prefix to save the current parameters. Default 'result_pinn'
+
+    exp_decay : logical
+
+        Whether to consider exponential decay of learning rate. Default False
+
+    transition_steps : int
+
+        Number of steps for exponential decay. Default 1000
+
+    decay_rate : float
+
+        Rate of exponential decay. Default 0.9
+
+    mlp : logical
+
+        Whether to consider modifed multilayer perceptron
+
+    ff : float
+
+        Variance of Fourrier Features parameters. If zero, Fourrier Feautures are not considered. The dimension is that of the second layer.
+
+    Returns
+    -------
+    dict-like object with the estimated function, the estimated parameters, the neural network function for the forward pass and the training time
+    """
+    #Generate from Matern process
+    if sigma > 0:
+        if isinstance(L,float) or isinstance(L,int):
+            L = d*[L]
+        gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma)
+        #Grid for weak norm
+        grid = [jnp.linspace(0,L[i],N) for i in range(d)]
+        grid = jnp.meshgrid(*grid, indexing='ij')
+        grid = jnp.stack(grid, axis=-1).reshape((-1, d))
+
+    #Initialize architecture
+    nnet = fconNN(width,get_activation(activation),key,mlp,ff)
+    forward = nnet['forward']
+    if params is not None:
+        nnet['params'] = params
+
+    #Initialize self-adaptive weights
+    w = {'ws': jnp.array(1.0),'wb': jnp.array(1.0),'wi': jnp.array(1.0),'wc': jnp.array(1.0),'wc_weak': jnp.array(1.0)}
+    if data['sensor'] is not None:
+        w['ws'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+1),(data['sensor'].shape[0],1))
+    if data['boundary'] is not None:
+        w['wb'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+2),(data['boundary'].shape[0],1))
+    if data['initial'] is not None:
+        w['wi'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+3),(data['initial'].shape[0],1))
+    if data['collocation'] is not None:
+        w['wc'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+4),(data['collocation'].shape[0],1))
+
+    #Store all parameters
+    params = {'net': nnet['params'],'inverse': initial_par,'w': w}
+
+    #Save config file
+    if save:
+        pickle.dump({'train_data': data,'epochs': epochs,'activation': activation,'init_params': params,'forward': forward,'width': width,'pde': pde,'lr': lr,'b1': b1,'b2': b2,'eps': eps,'eps_root': eps_root,'key': key,'inverse': inverse},open(file_name + '_config.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+
+    #Define loss function
+    @jax.jit
+    def lf_each(params,x,k):
+        loss_sensor = loss_boundary = loss_initial = loss_res = loss_res_weak = 0
+        if x['sensor'] is not None:
+            #Term that refers to sensor data
+            loss_sensor = jnp.mean(MSE(forward(x['sensor'],params['net']),x['usensor']))
+        if x['boundary'] is not None:
+            if neumann:
+                #Neumann coditions
+                xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
+                tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
+                loss_boundary = oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params['net']),xb,tb)
+            else:
+                #Term that refers to boundary data
+                loss_boundary = MSE(forward(x['boundary'],params['net']),x['uboundary'])
+        if x['initial'] is not None:
+            #Term that refers to initial data
+            loss_initial = MSE(forward(x['initial'],params['net']),x['uinitial'])
+        if x['collocation'] is not None:
+            if sigma > 0:
+                #Term that refers to collocation points
+                test_functions = gen(jax.random.split(jax.random.PRNGKey(k[0]),(bsize,))[:,0])
+            if inverse:
+                output = pde(lambda x: forward(x,params['net']),x['collocation'],params['inverse'])
+                loss_res = MSE(output,0)
+                if sigma > 0:
+                    output_w = pde(lambda x: forward(x,params['net']),grid,params['inverse'])
+                    integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(test_functions)
+                    loss_res_weak = jnp.mean(integralOmega ** 2)
+            else:
+                output = pde(lambda x: forward(x,params['net']),x['collocation'])
+                loss_res = MSE(output,0)
+                if sigma > 0:
+                    output_w = pde(lambda x: forward(x,params['net']),grid)
+                    integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(test_functions)
+                    loss_res_weak = jnp.mean(integralOmega ** 2)
+        return {'ls': loss_sensor,'lb': loss_boundary,'li': loss_initial,'lc': loss_res,'lc_weak': loss_res_weak}
+
+    @jax.jit
+    def lf(params,x,k):
+        l = lf_each(params,x,k)
+        w = params['w']
+        return jnp.mean((w['ws'] ** 1)*l['ls']) + jnp.mean((w['wb'] ** 1)*l['lb']) + jnp.mean((w['wi'] ** 1)*l['li']) + jnp.mean((w['wc'] ** 1)*l['lc']) + (w['wc_weak'] ** 1)*l['lc_weak']
+
+    #Initialize Adam Optmizer
+    if exp_decay:
+        lr = optax.exponential_decay(lr,transition_steps,decay_rate)
+    optimizer = optax.adam(lr,b1,b2,eps,eps_root)
+    opt_state = optimizer.init(params)
+
+    #Define the gradient function
+    grad_loss = jax.jit(jax.grad(lf,0))
+
+    #Define update function
+    @jax.jit
+    def update(opt_state,params,x,k):
+        #Compute gradient
+        grads = grad_loss(params,x,k)
+        #Change sign weights
+        for i in grads['w']:
+            grads['w'][i] = - grads['w'][i]
+        #Calculate parameters updates
+        updates, opt_state = optimizer.update(grads, opt_state)
+        #Update parameters
+        params = optax.apply_updates(params, updates)
+        #Return state of optmizer and updated parameters
+        return opt_state,params
+
+    ###Training###
+    t0 = time.time()
+    k = jax.random.split(jax.random.PRNGKey(key+234),(epochs,))
+    #Initialize alive_bar for tracing in terminal
+    with alive_bar(epochs) as bar:
+        #For each epoch
+        for e in range(epochs):
+            #Update optimizer state and parameters
+            opt_state,params = update(opt_state,params,data,k[e,:])
+            #After epoch_print epochs
+            if e % epoch_print == 0:
+                #Compute elapsed time and current error
+                l = 'Time: ' + str(round(time.time() - t0)) + ' s Loss: ' + str(jnp.round(lf(params,data,k[e,:]),6))
+                #If there is test data, compute current L2 error
+                if test_data is not None:
+                    #Compute L2 error
+                    l2_test = L2error(forward(test_data['sensor'],params['net']),test_data['usensor']).tolist()
+                    l = l + ' L2 error: ' + str(jnp.round(l2_test,6))
+                if inverse:
+                    l = l + ' Parameter: ' + str(jnp.round(params['inverse'].tolist(),6))
+                #Print
+                print(l)
+            if ((e % at_each == 0 and at_each != epochs) or e == epochs - 1) and save:
+                #Save current parameters
+                pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': lf(params,data,k[e,:])},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+            #Update alive_bar
+            bar()
+    #Define estimated function
+    def u(xt):
+        return forward(xt,params['net'])
+
+    return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
+
 
 #Process result
 def process_result(test_data,fit,train_data,plot = True,plot_test = True,times = 5,d2 = True,save = False,show = True,file_name = 'result_pinn',print_res = True,p = 1):
