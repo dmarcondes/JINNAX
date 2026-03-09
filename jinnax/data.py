@@ -183,7 +183,7 @@ def generate_PINNdata(u,xl,xu,tl = None,tu = None,Ns = None,Nts = None,Nb = None
                 x_collocation = jnp.stack(x_collocation, axis=-1).reshape((-1, d))
                 if Ntc is not None:
                     #Product of x and t
-                    xt_collocation = jnp.array([x + [t.tolist()] for t in t_collocation for x in x_collocation],dtype = jnp.float32)
+                    xt_collocation = jnp.array([x.tolist() + [t.tolist()] for t in t_collocation for x in x_collocation],dtype = jnp.float32)
                 else:
                     xt_collocation = x_collocation
             else:
