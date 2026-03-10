@@ -183,7 +183,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = 0):
     if ff != 0:
         Bff = ff*jax.random.normal(jax.random.PRNGKey(key + 1),(width[0],int(width[1]/2)))
         if ff > 0:
-            params.append({'ff': jnp.array(float(ff))})
+            params.append({'ff': jnp.array(float(ff)),'Bff': Bff})
         width[0] = width[1]
     if mlp:
         k = jax.random.split(jax.random.PRNGKey(key),4)
@@ -204,7 +204,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = 0):
             @jax.jit
             def forward(x,params):
                 ff,encode,*hidden,output = params
-                x = x @ (ff['ff'] * Bff)
+                x = x @ (ff['ff'] * ff['Bff'])
                 x = jnp.append(jnp.sin(2 * jnp.pi * x),jnp.cos(2 * jnp.pi * x),1)
                 U = activation(x @ encode['WU'] + encode['BU'])
                 V = activation(x @ encode['WV'] + encode['BV'])
@@ -239,7 +239,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = 0):
             @jax.jit
             def forward(x,params):
                 ff,*hidden,output = params
-                x = x @ (ff['ff'] * Bff)
+                x = x @ (ff['ff'] * ff['Bff'])
                 x = jnp.append(jnp.sin(2 * jnp.pi * x),jnp.cos(2 * jnp.pi * x),1)
                 for layer in hidden:
                     x = activation(x @ layer['W'] + layer['B'])
