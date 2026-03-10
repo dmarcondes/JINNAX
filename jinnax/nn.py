@@ -566,7 +566,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
 
 #Training PINN
-def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,mlp = False,ff = 0,q = 2):
+def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1,resample = True,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,mlp = False,ff = 0,q = 2):
     """
     Train a Physics-informed Neural Network
     ----------
@@ -611,6 +611,10 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
     bsize : int
 
         Batch size for weak norm computation. Default 1
+
+    resample : logical
+
+        Whether to resample the test functions at each epoch
 
     epochs : int
 
@@ -697,6 +701,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         grid = [jnp.linspace(0,L[i],N) for i in range(d)]
         grid = jnp.meshgrid(*grid, indexing='ij')
         grid = jnp.stack(grid, axis=-1).reshape((-1, d))
+        tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
 
     #Initialize architecture
     nnet = fconNN(width,get_activation(activation),key,mlp,ff)
@@ -750,7 +755,10 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
                 loss_res = MSE(output,0)
         if sigma > 0:
             #Term that refers to weak loss
-            test_functions = gen(jax.random.split(jax.random.PRNGKey(k[0]),(bsize,))[:,0])
+            if resample:
+                test_functions = gen(jax.random.split(jax.random.PRNGKey(k[0]),(bsize,))[:,0])
+            else:
+                test_functions = tf
             if inverse:
                 output_w = pde(lambda x: forward(x,params['net']),grid,params['inverse'])
                 integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(test_functions)
