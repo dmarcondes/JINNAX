@@ -701,6 +701,13 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         grid = [jnp.linspace(0,L[i],N) for i in range(d)]
         grid = jnp.meshgrid(*grid, indexing='ij')
         grid = jnp.stack(grid, axis=-1).reshape((-1, d))
+        if d > 1 and data['boundary'] is not None:
+            mask = jax.vmap(lambda x: jnp.sum((x == 0).astype(jnp.int32) + (x == L[0]).astype(jnp.int32)) > 0)(grid)
+            mask_rd = mask.reshape((N,)*d)
+            def masked_mean_flat(v):
+                v = v.reshape((N,)*d)
+                # mean over the masked region only
+                return jnp.sum(v * mask_rd) / jnp.sum(mask_rd)
         tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
 
     #Initialize architecture
@@ -730,19 +737,35 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
     #Define loss function
     @jax.jit
     def lf_each(params,x,k):
+        if sigma > 0:
+            #Term that refers to weak loss
+            if resample:
+                test_functions = gen(jax.random.split(jax.random.PRNGKey(k[0]),(bsize,))[:,0])
+            else:
+                test_functions = tf
         loss_sensor = loss_boundary = loss_initial = loss_res = loss_res_weak = 0
         if x['sensor'] is not None:
             #Term that refers to sensor data
             loss_sensor = jnp.mean(MSE(forward(x['sensor'],params['net']),x['usensor']))
-        if x['boundary'] is not None:
+        if x['boundary'] is not None or s > 0:
             if neumann:
-                #Neumann coditions
-                xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
-                tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
-                loss_boundary = oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params['net']),xb,tb)
+                if sigma == 0 or d == 1:
+                    #Neumann coditions
+                    xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
+                    tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
+                    loss_boundary = oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params['net']),xb,tb)
+                else:
+                    output_b = oper_neumann(lambda x: forward(jnp.append(x,t,1),params['net']),grid)
+                    integralBoundary = jax.vmap(lambda psi: masked_mean_flat(psi*output_b.reshape((N,) * d)))(test_functions)
+                    loss_boundary = jnp.mean(integralBoundary ** 2)
             else:
-                #Term that refers to boundary data
-                loss_boundary = MSE(forward(x['boundary'],params['net']),x['uboundary'])
+                if sigma == 0 or d == 1:
+                    #Term that refers to boundary data
+                    loss_boundary = MSE(forward(x['boundary'],params['net']),x['uboundary'])
+                else:
+                    output_b = forward(grid,params['net'])
+                    integralBoundary = jax.vmap(lambda psi: masked_mean_flat(psi*output_b.reshape((N,) * d)))(test_functions)
+                    loss_boundary = jnp.mean(integralBoundary ** 2)
         if x['initial'] is not None:
             #Term that refers to initial data
             loss_initial = MSE(forward(x['initial'],params['net']),x['uinitial'])
@@ -755,10 +778,6 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
                 loss_res = MSE(output,0)
         if sigma > 0:
             #Term that refers to weak loss
-            if resample:
-                test_functions = gen(jax.random.split(jax.random.PRNGKey(k[0]),(bsize,))[:,0])
-            else:
-                test_functions = tf
             if inverse:
                 output_w = pde(lambda x: forward(x,params['net']),grid,params['inverse'])
                 integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(test_functions)
