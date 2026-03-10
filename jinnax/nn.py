@@ -692,47 +692,39 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
     -------
     dict-like object with the estimated function, the estimated parameters, the neural network function for the forward pass and the training time
     """
-    #Generate from Matern process
-    if sigma > 0:
-        if isinstance(L,float) or isinstance(L,int):
-            L = d*[L]
-        gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma)
-        #Grid for weak norm
-        grid = [jnp.linspace(0,L[i],N) for i in range(d)]
-        grid = jnp.meshgrid(*grid, indexing='ij')
-        grid = jnp.stack(grid, axis=-1).reshape((-1, d))
-        if d > 1 and data['boundary'] is not None:
-            mask = jax.vmap(lambda x: jnp.sum((x == 0).astype(jnp.int32) + (x == L[0]).astype(jnp.int32)) > 0)(grid)
-            mask_rd = mask.reshape((N,)*d)
-            def masked_mean_flat(v):
-                v = v.reshape((N,)*d)
-                # mean over the masked region only
-                return jnp.sum(v * mask_rd) / jnp.sum(mask_rd)
-        tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
-
     #Initialize architecture
     nnet = fconNN(width,get_activation(activation),key,mlp,ff)
     forward = nnet['forward']
     if params is not None:
         nnet['params'] = params
 
-    #Initialize self-adaptive weights
-    w = {'ws': jnp.array(1.0),'wb': jnp.array(1.0),'wi': jnp.array(1.0),'wc': jnp.array(1.0),'wc_weak': jnp.array(1.0)}
-    if data['sensor'] is not None:
-        w['ws'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+1),(data['sensor'].shape[0],1))
-    if data['boundary'] is not None:
-        w['wb'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+2),(data['boundary'].shape[0],1))
-    if data['initial'] is not None:
-        w['wi'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+3),(data['initial'].shape[0],1))
-    if data['collocation'] is not None:
-        w['wc'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+4),(data['collocation'].shape[0],1))
+    #Generate from Matern process
+    if sigma > 0:
+        if isinstance(L,float) or isinstance(L,int):
+            L = d*[L]
+        #Grid for weak norm
+        grid = [jnp.linspace(0,L[i],N) for i in range(d)]
+        grid = jnp.meshgrid(*grid, indexing='ij')
+        grid = jnp.stack(grid, axis=-1).reshape((-1, d))
+        if d > 1 and data['boundary'] is not None:
+            mask = jnp.sum(jnp.array([(grid[:,i] == 0).astype(jnp.int32) + (grid[:,i] == L[i]).astype(jnp.int32) for i in range(d)]).transpose(),1) > 0
+            gridB = grid[mask,:]
+            mask_rd = mask.reshape((N,)*d)
+            def masked_mean(psi,output_b):
+                psi = psi.reshape((-1,1))[mask]
+                # mean over the masked region only
+                return jnp.mean(psi * output_b)
+        #Set sigma
+        gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma)
+        tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
+        loss_boundary = jnp.mean(MSE(forward(data['boundary'],nnet['params']),data['uboundary']))
+        output_w = pde(lambda x: forward(x,nnet['params']),grid)
+        integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(tf)
+        loss_res_weak = jnp.mean(integralOmega ** 2)
+        sigma = float((jnp.sqrt(loss_boundary/loss_res_weak)).tolist())
+        gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma)
+        tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
 
-    #Store all parameters
-    params = {'net': nnet['params'],'inverse': initial_par,'w': w}
-
-    #Save config file
-    if save:
-        pickle.dump({'train_data': data,'epochs': epochs,'activation': activation,'init_params': params,'forward': forward,'width': width,'pde': pde,'lr': lr,'b1': b1,'b2': b2,'eps': eps,'eps_root': eps_root,'key': key,'inverse': inverse},open(file_name + '_config.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
 
     #Define loss function
     @jax.jit
@@ -749,27 +741,27 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             loss_sensor = jnp.mean(MSE(forward(x['sensor'],params['net']),x['usensor']))
         if x['boundary'] is not None or s > 0:
             if neumann:
-                if sigma == 0 or d == 1:
+                if True:#sigma == 0 or d == 1:
                     #Neumann coditions
                     xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
                     tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
                     loss_boundary = oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params['net']),xb,tb)
                 else:
-                    output_b = oper_neumann(lambda x: forward(jnp.append(x,t,1),params['net']),grid)
-                    integralBoundary = jax.vmap(lambda psi: masked_mean_flat(psi*output_b.reshape((N,) * d)))(test_functions)
+                    output_b = oper_neumann(lambda x: forward(x,params['net']),gridB)
+                    integralBoundary = jax.vmap(lambda psi: masked_mean(psi,output_b))(test_functions)
                     loss_boundary = jnp.mean(integralBoundary ** 2)
             else:
-                if sigma == 0 or d == 1:
+                if True:#sigma == 0 or d == 1:
                     #Term that refers to boundary data
                     loss_boundary = MSE(forward(x['boundary'],params['net']),x['uboundary'])
                 else:
-                    output_b = forward(grid,params['net'])
-                    integralBoundary = jax.vmap(lambda psi: masked_mean_flat(psi*output_b.reshape((N,) * d)))(test_functions)
+                    output_b = forward(gridB,params['net'])
+                    integralBoundary = jax.vmap(lambda psi: masked_mean(psi,output_b))(test_functions)
                     loss_boundary = jnp.mean(integralBoundary ** 2)
         if x['initial'] is not None:
             #Term that refers to initial data
             loss_initial = MSE(forward(x['initial'],params['net']),x['uinitial'])
-        if x['collocation'] is not None:
+        if x['collocation'] is not None and sigma == 0:
             if inverse:
                 output = pde(lambda x: forward(x,params['net']),x['collocation'],params['inverse'])
                 loss_res = MSE(output,0)
@@ -793,6 +785,24 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         l = lf_each(params,x,k)
         w = params['w']
         return jnp.mean((w['ws'] ** q)*l['ls']) + jnp.mean((w['wb'] ** q)*l['lb']) + jnp.mean((w['wi'] ** q)*l['li']) + jnp.mean((w['wc'] ** q)*l['lc']) + (w['wc_weak'] ** q)*l['lc_weak']
+
+    #Initialize self-adaptive weights
+    w = {'ws': jnp.array(1.0),'wb': jnp.array(1.0),'wi': jnp.array(1.0),'wc': jnp.array(1.0),'wc_weak': jnp.array(1.0)}
+    if data['sensor'] is not None:
+        w['ws'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+1),(data['sensor'].shape[0],1))
+    if data['boundary'] is not None and sigma == 0:
+        w['wb'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+2),(data['boundary'].shape[0],1))
+    if data['initial'] is not None:
+        w['wi'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+3),(data['initial'].shape[0],1))
+    if data['collocation'] is not None and sigma == 0:
+        w['wc'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+4),(data['collocation'].shape[0],1))
+
+    #Store all parameters
+    params = {'net': nnet['params'],'inverse': initial_par,'w': w}
+
+    #Save config file
+    if save:
+        pickle.dump({'train_data': data,'epochs': epochs,'activation': activation,'init_params': params,'forward': forward,'width': width,'pde': pde,'lr': lr,'b1': b1,'b2': b2,'eps': eps,'eps_root': eps_root,'key': key,'inverse': inverse},open(file_name + '_config.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
 
     #Initialize Adam Optmizer
     if exp_decay:
@@ -852,7 +862,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
     def u(xt):
         return forward(xt,params['net'])
 
-    return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
+    return {'u': u,'params': params,'forward': forward,'time': time.time() - t0,'loss_each': lf_each(params,data,[key + 100])}
 
 
 #Process result
