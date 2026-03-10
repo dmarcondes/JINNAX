@@ -755,16 +755,10 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
                 output_w = pde(lambda x: forward(x,params['net']),grid,params['inverse'])
                 integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(test_functions)
                 loss_res_weak = jnp.mean(integralOmega ** 2)
-                if x['collocation'] is None:
-                    integralOmega2 = jax.vmap(lambda psi: jnp.mean((psi*output_w.reshape((N,) * d)) ** 2))(test_functions)
-                    loss_res = jnp.mean(integralOmega2)
             else:
                 output_w = pde(lambda x: forward(x,params['net']),grid)
                 integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(test_functions)
                 loss_res_weak = jnp.mean(integralOmega ** 2)
-                if x['collocation'] is None:
-                    integralOmega2 = jax.vmap(lambda psi: jnp.mean((psi*output_w.reshape((N,) * d)) ** 2))(test_functions)
-                    loss_res = jnp.mean(integralOmega2)
         return {'ls': loss_sensor,'lb': loss_boundary,'li': loss_initial,'lc': loss_res,'lc_weak': loss_res_weak}
 
     @jax.jit
