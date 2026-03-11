@@ -147,7 +147,7 @@ def generate_matern_sample_batch(d = 2,N = 512,L = 1.0,kappa = 10.0,alpha = 1,si
     return jax.vmap(lambda k: generate_matern_sample(k,d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma))
 
 #Simple fully connected architecture. Return the initial parameters and the function for the forward pass
-def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = 0):
+def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = None):
     """
     Initialize fully connected neural network
     ----------
@@ -180,11 +180,15 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = 0):
     #Initialize parameters with Glorot initialization
     initializer = jax.nn.initializers.glorot_normal()
     params = list()
-    if ff != 0:
-        Bff = jax.random.normal(jax.random.PRNGKey(key + 1),(width[0],int(width[1]/2)))
-        if ff > 0:
-            params.append({'ff': jnp.array(float(ff))})
-        width[0] = width[1]
+    if ff is not None:
+        for s in range(ff[0]):
+            sd = ff[1] ** ((s + 1)/ff[0])
+            if s == 0:
+                Bff = sd*jax.random.normal(jax.random.PRNGKey(key + s + 1),(width[0],int(width[1]/2)))
+            else:
+                Bff = jnp.append(Bff,sd*jax.random.normal(jax.random.PRNGKey(key + s + 1),(width[0],int(width[1]/2))),1)
+        params.append({'Bff': Bff})
+        width[0] = 2*Bff.shape[1]
     if mlp:
         k = jax.random.split(jax.random.PRNGKey(key),4)
         WU = initializer(k[0],(width[0],width[1]),jnp.float32)
@@ -200,23 +204,11 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = 0):
 
     #Define function for forward pass
     if mlp:
-        if ff > 0:
+        if ff is not None:
             @jax.jit
             def forward(x,params):
                 ff,encode,*hidden,output = params
-                x = x @ (ff['ff'] * Bff)
-                x = jnp.append(jnp.sin(2 * jnp.pi * x),jnp.cos(2 * jnp.pi * x),1)
-                U = activation(x @ encode['WU'] + encode['BU'])
-                V = activation(x @ encode['WV'] + encode['BV'])
-                for layer in hidden:
-                    x = activation(x @ layer['W'] + layer['B'])
-                    x = x * U + (1 - x) * V
-                return x @ output['W'] + output['B']
-        elif ff < 0:
-            @jax.jit
-            def forward(x,params):
-                encode,*hidden,output = params
-                x = x @ ff*Bff
+                x = x @ ff['Bff']
                 x = jnp.append(jnp.sin(2 * jnp.pi * x),jnp.cos(2 * jnp.pi * x),1)
                 U = activation(x @ encode['WU'] + encode['BU'])
                 V = activation(x @ encode['WV'] + encode['BV'])
@@ -235,20 +227,11 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = 0):
                     x = x * U + (1 - x) * V
                 return x @ output['W'] + output['B']
     else:
-        if ff > 0:
+        if ff is not None:
             @jax.jit
             def forward(x,params):
                 ff,*hidden,output = params
-                x = x @ (ff['ff'] * Bff)
-                x = jnp.append(jnp.sin(2 * jnp.pi * x),jnp.cos(2 * jnp.pi * x),1)
-                for layer in hidden:
-                    x = activation(x @ layer['W'] + layer['B'])
-                return x @ output['W'] + output['B']
-        elif ff < 0:
-            @jax.jit
-            def forward(x,params):
-                *hidden,output = params
-                x = x @ ff*Bff
+                x = x @ ff['Bff']
                 x = jnp.append(jnp.sin(2 * jnp.pi * x),jnp.cos(2 * jnp.pi * x),1)
                 for layer in hidden:
                     x = activation(x @ layer['W'] + layer['B'])
@@ -549,7 +532,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
                 if test_data is not None:
                     #Compute L2 error
                     l2_test = L2error(forward(test_data['xt'],params['net']),test_data['u']).tolist()
-                    l = l + ' L2 error: ' + str(jnp.round(l2_test,6))
+                    l = l + ' L2 error: ' + str(jnp.round(l2_test,3))
                 if inverse:
                     l = l + ' Parameter: ' + str(jnp.round(params['inverse'].tolist(),6))
                 #Print
@@ -853,7 +836,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             if ((e % at_each == 0 and at_each != epochs) or e == epochs - 1) and save:
                 #Save current parameters
                 if test_data is not None:
-                    pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': lf(params,data,k[e,:]),'L2error': L2error(forward(test_data['sensor'],params['net']),test_data['usensor'])},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+                    pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': lf(params,data,k[e,:]),'L2error': jnp.round(L2error(forward(test_data['sensor'],params['net']),test_data['usensor']),3)},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
                 else:
                     pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': lf(params,data,k[e,:])},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
             #Update alive_bar
