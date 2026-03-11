@@ -14,6 +14,8 @@ from genree import kernel as gk
 from jax import random
 from jinnax import data as jd
 import os
+import numpy as np
+from scipy.fft import dst, idst
 
 __docformat__ = "numpy"
 
@@ -91,8 +93,51 @@ def L2error(pred,true):
     """
     return 100*jnp.sqrt(jnp.sum((true - pred)**2))/jnp.sqrt(jnp.sum(true ** 2))
 
+#Auxialiry functions to sample singular Matern (generated with AI)
+def idst1(x, axis=-1):
+    """IDST-I equals DST-I with orthonormal scaling."""
+    return idst(x, type=1, axis=axis, norm='ortho')
+
+def dstn(x, axes=None):
+    """Apply DST-I along all axes in 'axes' (default: all axes)."""
+    if axes is None:
+        axes = tuple(range(x.ndim))
+    y = x
+    for ax in axes:
+        y = dst(x,type = 1,axis = ax,norm = 'ortho')
+    return y
+
+def idstn(x, axes=None):
+    """Inverse of dstn (same calls with orthonormal scaling)."""
+    if axes is None:
+        axes = tuple(range(x.ndim))
+    y = x
+    for ax in axes:
+        y = idst1(y, axis=ax)
+    return y
+
+
+def dirichlet_eigs_nd(n_vec, L_vec):
+    """
+    n_vec: list/tuple of interior counts per axis [n1,...,nd]
+    L_vec: list/tuple of lengths per axis     [L1,...,Ld]
+    returns: Λ grid of shape (n1,...,nd)
+    """
+    lam_axes = []
+    for n, L in zip(n_vec, L_vec):
+        h = L / (n + 1.0)
+        k = np.arange(1, n + 1, dtype=np.float64)
+        lam1 = (2.0 / (h*h)) * (1.0 - np.cos(np.pi * k / (n + 1.0)))
+        lam_axes.append(lam1)
+    grids = np.meshgrid(*lam_axes, indexing='ij')
+    Lam = np.zeros_like(grids[0])
+    for g in grids:
+        Lam += g
+    return Lam  # shape (n1,...,nd)
+
+
 #Sample from d-dimensional Matern process
-def generate_matern_sample(key,d = 2,N = 128,L = 1.0,kappa = 1,alpha = 1,sigma = 1):
+def generate_matern_sample(key,d = 2,N = 128,L = 1.0,kappa = 1,alpha = 1,sigma = 1,periodic = False):
     """
     Sample d-dimensional Matern process
     ----------
@@ -118,33 +163,63 @@ def generate_matern_sample(key,d = 2,N = 128,L = 1.0,kappa = 1,alpha = 1,sigma =
 
         Parameters of the Matern process
 
+    periodic : logical
+
+        Whether to sample with periodic boundary conditions.
+
     Returns
     -------
     (N,N) jax.array
     """
-    #Shape and key
-    key = jax.random.PRNGKey(key)
-    shape = (N,) * d
-    if isinstance(L,float) or isinstance(L,int):
-        L = d*[L]
-    #Setup Frequency Grid (2D)
-    freq = [jnp.fft.fftfreq(N,d = L[j]/N) * 2 * jnp.pi for j in range(d)]
-    grids = jnp.meshgrid(*freq, indexing='ij')
-    sq_norm_xi = sum(g**2 for g in grids)
-    #Generate White Noise in Fourier Space
-    key_re, key_im = jax.random.split(key)
-    white_noise_f = (jax.random.normal(key_re, shape) +
-                     1j * jax.random.normal(key_im, shape))
-    #Apply the Whittle Filter
-    amplitude_filter = (kappa**2 + sq_norm_xi)**(-alpha / 2.0)
-    field_f = white_noise_f * amplitude_filter
-    #Transform back to Physical Space
-    sample = jnp.real(jnp.fft.ifftn(field_f))
-    return sigma*sample
+    if periodic:
+        #Shape and key
+        key = jax.random.PRNGKey(key)
+        shape = (N,) * d
+        if isinstance(L,float) or isinstance(L,int):
+            L = d*[L]
+        if isinstance(N,float) or isinstance(N,int):
+            N = d*[N]
+        #Setup Frequency Grid (2D)
+        freq = [jnp.fft.fftfreq(N[j],d = L[j]/N[j]) * 2 * jnp.pi for j in range(d)]
+        grids = jnp.meshgrid(*freq, indexing='ij')
+        sq_norm_xi = sum(g**2 for g in grids)
+        #Generate White Noise in Fourier Space
+        key_re, key_im = jax.random.split(key)
+        white_noise_f = (jax.random.normal(key_re, shape) +
+                         1j * jax.random.normal(key_im, shape))
+        #Apply the Whittle Filter
+        amplitude_filter = (kappa**2 + sq_norm_xi)**(-alpha / 2.0)
+        field_f = white_noise_f * amplitude_filter
+        #Transform back to Physical Space
+        sample = jnp.real(jnp.fft.ifftn(field_f))
+        return sigma*sample
+    else:
+        #Shape and key
+        rng = np.random.default_rng(seed = key)
+        if isinstance(L,float) or isinstance(L,int):
+            L = d*[L]
+        if isinstance(N,float) or isinstance(N,int):
+            N = d*[N]
+        shape = tuple(N)
+        #White noise in real space
+        W = rng.standard_normal(size = shape)
+        #To Dirichlet eigenbasis via separable DST-I (orthonormal)
+        W_hat = dstn(W)
+        #Discrete Dirichlet Laplacian eigenvalues
+        lam = dirichlet_eigs_nd(N, L)
+        #Spectral filter (tau + lam)^(-1/2)
+        filt = sigma * ((kappa + lam) ** (-alpha/2.0))
+        psi_hat = filt * W_hat
+        #Back to real space
+        psi = idstn(psi_hat)
+        return jnp.array(sigma*psi)
 
 #Vectorized generate_matern_sample
-def generate_matern_sample_batch(d = 2,N = 512,L = 1.0,kappa = 10.0,alpha = 1,sigma = 10):
-    return jax.vmap(lambda k: generate_matern_sample(k,d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma))
+def generate_matern_sample_batch(d = 2,N = 512,L = 1.0,kappa = 10.0,alpha = 1,sigma = 10,periodic = False):
+    if periodic:
+        return jax.vmap(lambda k: generate_matern_sample(k,d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic))
+    else:
+        return lambda keys: jnp.array(np.apply_along_axis(lambda k: generate_matern_sample(k,d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic),1,keys.reshape((keys.shape[0],1))))
 
 #Simple fully connected architecture. Return the initial parameters and the function for the forward pass
 def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = None):
@@ -549,7 +624,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
 
 #Training PINN
-def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1,resample = True,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,mlp = False,ff = None,q = 2,w = None):
+def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1,resample = True,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,mlp = False,ff = None,q = 2,w = None,periodic = False):
     """
     Train a Physics-informed Neural Network
     ----------
@@ -675,6 +750,10 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
         Initila weights for self-adaptive scheme.
 
+    periodic : logical
+
+        Whether to consider periodic test functions. Default False.
+
     Returns
     -------
     dict-like object with the estimated function, the estimated parameters, the neural network function for the forward pass and the training time
@@ -709,7 +788,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(tf)
         loss_res_weak = jnp.mean(integralOmega ** 2)
         sigma = float((jnp.sqrt(loss_boundary/loss_res_weak)).tolist())
-        gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma)
+        gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic)
         tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
 
 
