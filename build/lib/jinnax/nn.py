@@ -549,7 +549,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
 
 #Training PINN
-def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1,resample = True,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,mlp = False,ff = 0,q = 2):
+def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1,resample = True,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,mlp = False,ff = None,q = 2,w = None):
     """
     Train a Physics-informed Neural Network
     ----------
@@ -671,6 +671,10 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
         Power of weights mask. Default 2
 
+    w : dict
+
+        Initila weights for self-adaptive scheme.
+
     Returns
     -------
     dict-like object with the estimated function, the estimated parameters, the neural network function for the forward pass and the training time
@@ -770,15 +774,16 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         return jnp.mean((w['ws'] ** q)*l['ls']) + jnp.mean((w['wb'] ** q)*l['lb']) + jnp.mean((w['wi'] ** q)*l['li']) + jnp.mean((w['wc'] ** q)*l['lc']) + (w['wc_weak'] ** q)*l['lc_weak']
 
     #Initialize self-adaptive weights
-    w = {'ws': jnp.array(1.0),'wb': jnp.array(1.0),'wi': jnp.array(1.0),'wc': jnp.array(1.0),'wc_weak': jnp.array(1.0)}
+    if w is None:
+        w = {'ws': jnp.array(1.0),'wb': jnp.array(1.0),'wi': jnp.array(1.0),'wc': jnp.array(1.0),'wc_weak': jnp.array(1.0)}
     if data['sensor'] is not None:
-        w['ws'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+1),(data['sensor'].shape[0],1))
+        w['ws'] = w['ws'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+1),(data['sensor'].shape[0],1))
     if data['boundary'] is not None and sigma == 0:
-        w['wb'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+2),(data['boundary'].shape[0],1))
+        w['wb'] = w['wb'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+2),(data['boundary'].shape[0],1))
     if data['initial'] is not None:
-        w['wi'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+3),(data['initial'].shape[0],1))
+        w['wi'] = w['wi'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+3),(data['initial'].shape[0],1))
     if data['collocation'] is not None and sigma == 0:
-        w['wc'] = 1.0 + 0.05*jax.random.normal(jax.random.PRNGKey(key+4),(data['collocation'].shape[0],1))
+        w['wc'] = w['wc'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+4),(data['collocation'].shape[0],1))
 
     #Store all parameters
     params = {'net': nnet['params'],'inverse': initial_par,'w': w}
