@@ -223,7 +223,7 @@ def generate_matern_sample_batch(d = 2,N = 512,L = 1.0,kappa = 10.0,alpha = 1,si
         return lambda keys: jnp.array(np.apply_along_axis(lambda k: generate_matern_sample(k,d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic),1,keys.reshape((keys.shape[0],1))))
 
 #DaFFs in rectangular grid (AI)
-def build_phi_rect_callable(L_vec,kmax_per_axis=None,bc="dirichlet",m=None,normalize=True,sort_by_eigenvalue=True):
+def build_phi_rect_callable(L_vec,kmax_per_axis=None,bc="dirichlet"):
     """
     Build a callable phi(x) that returns stacked rectangular Laplace eigenfunctions
     on Ω = ∏[0, L_i], satisfying the boundary operator h(φ)=0:
@@ -264,14 +264,8 @@ def build_phi_rect_callable(L_vec,kmax_per_axis=None,bc="dirichlet",m=None,norma
     d = L_vec.shape[0]
     bc = bc.lower()
     # 1) Build the candidate multi-indices per axis
-    if kmax_per_axis is None and m is None:
-        raise ValueError("Provide either kmax_per_axis or m (or both).")
     if kmax_per_axis is None:
-        # crude heuristic if only m is given: try roughly uniform cube of modes
-        # so that ∏ (kmax_i + shift) >= m ; shift=1 for Dirichlet, 0 for Neumann
-        shift = 1 if bc.startswith("d") else 0
-        p = int(jnp.ceil(m ** (1.0 / d))) - shift
-        kmax_per_axis = [max(0, p)] * d
+        raise ValueError("Provide either kmax_per_axis or m (or both).")
     kmax_per_axis = list(map(int, kmax_per_axis))
     if bc.startswith("d"):
         axis_ranges = [range(1, km + 1) for km in kmax_per_axis]
@@ -287,18 +281,14 @@ def build_phi_rect_callable(L_vec,kmax_per_axis=None,bc="dirichlet",m=None,norma
     # 2) Eigenvalues λ_k = sum_i (π k_i / L_i)^2 (continuous Laplacian)
     pi_over_L = jnp.pi / L_vec  # (d,)
     lambdas_all = jnp.sum((Ks * pi_over_L) ** 2, axis=1)  # (M,)
-    # 3) Optional sort by eigenvalue
-    if sort_by_eigenvalue:
-        order = jnp.argsort(lambdas_all)
-        Ks = Ks[order]
-        lambdas_all = lambdas_all[order]
+    # 3) Sort by eigenvalue
+    order = jnp.argsort(lambdas_all)
+    Ks = Ks[order]
+    lambdas_all = lambdas_all[order]
     # 4) Keep first m if requested
-    if m is not None:
-        Ks = Ks[:m]
-        lambdas = lambdas_all[:m]
-    else:
-        lambdas = lambdas_all
-        m = Ks.shape[0]
+    Ks = Ks[lambdas_all <= jnp.max(jnp.array(kmax_per_axis)) ** 2]
+    lambdas = lambdas_all[lambdas_all <= jnp.max(jnp.array(kmax_per_axis)) ** 2]
+    m = Ks.shape[0]
     # 5) Precompute per-feature normalization factor (closed form)
     # Dirichlet 1D: ∫ sin^2 = L/2  -> factor √(2/L)
     # Neumann  1D: k=0: ∫ cos^2 = L -> factor 1/√L;  k>0: L/2 -> √(2/L)
@@ -307,17 +297,14 @@ def build_phi_rect_callable(L_vec,kmax_per_axis=None,bc="dirichlet",m=None,norma
             return jnp.sqrt(2.0 / L_i)
         else:
             return jnp.where(k_i == 0, jnp.sqrt(1.0 / L_i), jnp.sqrt(2.0 / L_i))
-    if normalize:
-        if bc.startswith("d"):
-            nf = jnp.prod(jnp.sqrt(2.0 / L_vec)[None, :], axis=1)  # (1,) broadcast
-            norm_factors = jnp.ones((m,), dtype=jnp.float32) * nf  # all same
-        else:
-            # per-mode product across axes
-            def nf_row(k_row):
-                return jnp.prod(per_axis_norm_factor(k_row, L_vec, False))
-            norm_factors = jax.vmap(nf_row)(Ks)  # (m,)
+    if bc.startswith("d"):
+        nf = jnp.prod(jnp.sqrt(2.0 / L_vec)[None, :], axis=1)  # (1,) broadcast
+        norm_factors = jnp.ones((m,), dtype=jnp.float32) * nf  # all same
     else:
-        norm_factors = jnp.ones((m,), dtype=jnp.float32)
+        # per-mode product across axes
+        def nf_row(k_row):
+            return jnp.prod(per_axis_norm_factor(k_row, L_vec, False))
+        norm_factors = jax.vmap(nf_row)(Ks)  # (m,)
     # 6) Build the callable φ(x) → (..., m)
     # Vectorized formula: for each axis i, compute sin/cos(π k_i x_i / L_i) for all selected k_i
     # and multiply across axes.
@@ -394,8 +381,9 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = None,daff = N
         params.append({'Bff': Bff})
         width[0] = 2*Bff.shape[1]
     elif daff is not None:
-        phi,_,_ = build_phi_rect_callable(daff,kmax_per_axis = [width[1]] * width[0],bc = "dirichlet",m = width[1],normalize = True,sort_by_eigenvalue = True)
+        phi,_,lamb = build_phi_rect_callable(daff,kmax_per_axis = [width[1]] * width[0],bc = "dirichlet")
         width = width[1:]
+        width[0] = lamb.shape[0]
         #width[0] = width[0] ** len(daff)
     if mlp:
         k = jax.random.split(jax.random.PRNGKey(key),4)
