@@ -286,8 +286,8 @@ def build_phi_rect_callable(L_vec,kmax_per_axis=None,bc="dirichlet"):
     Ks = Ks[order]
     lambdas_all = lambdas_all[order]
     # 4) Keep first m if requested
-    #Ks = Ks[lambdas_all <= jnp.max(jnp.array(kmax_per_axis)) ** 2]
-    lambdas = lambdas_all#[lambdas_all <= jnp.max(jnp.array(kmax_per_axis)) ** 2]
+    Ks = Ks[:jnp.max(jnp.array(kmax_per_axis))]
+    lambdas = lambdas_all[:jnp.max(jnp.array(kmax_per_axis))]
     m = Ks.shape[0]
     # 5) Precompute per-feature normalization factor (closed form)
     # Dirichlet 1D: ∫ sin^2 = L/2  -> factor √(2/L)
@@ -944,7 +944,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             loss_res_weak = jnp.mean(integralOmega ** 2)
             sigmaB = jnp.sqrt(loss_boundary/loss_res_weak)
             sigmaI = jnp.sqrt(loss_initial/loss_res_weak)
-            sigma = float(jnp.maximum(sigmaB,sigmaI).tolist())
+            sigma = float(jnp.minimum(sigmaB,sigmaI).tolist())
         gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic)
         tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
 
