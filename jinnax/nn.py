@@ -286,8 +286,8 @@ def build_phi_rect_callable(L_vec,kmax_per_axis=None,bc="dirichlet"):
     Ks = Ks[order]
     lambdas_all = lambdas_all[order]
     # 4) Keep first m if requested
-    Ks = Ks[lambdas_all <= jnp.max(jnp.array(kmax_per_axis)) ** 2]
-    lambdas = lambdas_all[lambdas_all <= jnp.max(jnp.array(kmax_per_axis)) ** 2]
+    #Ks = Ks[lambdas_all <= jnp.max(jnp.array(kmax_per_axis)) ** 2]
+    #lambdas = lambdas_all[lambdas_all <= jnp.max(jnp.array(kmax_per_axis)) ** 2]
     m = Ks.shape[0]
     # 5) Precompute per-feature normalization factor (closed form)
     # Dirichlet 1D: ∫ sin^2 = L/2  -> factor √(2/L)
@@ -925,14 +925,26 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
                 # mean over the masked region only
                 return jnp.mean(psi * output_b)
         #Set sigma
-        if data['boundary'] is not None:
+        if data['boundary'] is not None or data['initial'] is not None:
             gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma)
             tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
-            loss_boundary = jnp.mean(MSE(forward(data['boundary'],nnet['params']),data['uboundary']))
+            if data['boundary'] is not None:
+                if neumann:
+                    loss_boundary = oper_neumann(lambda x: forward(x,params['net']),data['bounday'])
+                else:
+                    loss_boundary = jnp.mean(MSE(forward(data['boundary'],nnet['params']),data['uboundary']))
+            else:
+                loss_boundary = 0
+            if data['initial'] is not None:
+                loss_initial = jnp.mean(MSE(forward(data['initial'],nnet['params']),data['uinitial']))
+            else:
+                loss_initial = 0
             output_w = pde(lambda x: forward(x,nnet['params']),grid)
             integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(tf)
             loss_res_weak = jnp.mean(integralOmega ** 2)
-            sigma = float((jnp.sqrt(loss_boundary/loss_res_weak)).tolist())
+            sigmaB = jnp.sqrt(loss_boundary/loss_res_weak)
+            sigmaI = jnp.sqrt(loss_initial/loss_res_weak)
+            sigma = float(jnp.maximum(sigmaB,sigmaI).tolist())
         gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic)
         tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
 
@@ -953,9 +965,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         if x['boundary'] is not None:
             if neumann:
                 #Neumann coditions
-                xb = x['boundary'][:,:-1].reshape((x['boundary'].shape[0],x['boundary'].shape[1] - 1))
-                tb = x['boundary'][:,-1].reshape((x['boundary'].shape[0],1))
-                loss_boundary = oper_neumann(lambda x,t: forward(jnp.append(x,t,1),params['net']),xb,tb)
+                loss_boundary = oper_neumann(lambda x: forward(x,params['net']),x['boundary'])
             else:
                 #Term that refers to boundary data
                 loss_boundary = MSE(forward(x['boundary'],params['net']),x['uboundary'])
@@ -992,11 +1002,11 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         w = {'ws': jnp.array(1.0),'wb': jnp.array(1.0),'wi': jnp.array(1.0),'wc': jnp.array(1.0),'wc_weak': jnp.array(1.0)}
     if data['sensor'] is not None:
         w['ws'] = w['ws'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+1),(data['sensor'].shape[0],1))
-    if data['boundary'] is not None and sigma == 0:
+    if data['boundary'] is not None:
         w['wb'] = w['wb'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+2),(data['boundary'].shape[0],1))
     if data['initial'] is not None:
         w['wi'] = w['wi'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+3),(data['initial'].shape[0],1))
-    if data['collocation'] is not None and sigma == 0:
+    if data['collocation'] is not None:
         w['wc'] = w['wc'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+4),(data['collocation'].shape[0],1))
 
     #Store all parameters
