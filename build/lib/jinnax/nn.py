@@ -394,9 +394,9 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = None,daff = N
         params.append({'Bff': Bff})
         width[0] = 2*Bff.shape[1]
     elif daff is not None:
-        phi,_,_ = build_phi_rect_callable(daff,kmax_per_axis = [width[1]] * width[0],bc = "dirichlet",m = None,normalize = True,sort_by_eigenvalue = True)
+        phi,_,_ = build_phi_rect_callable(daff,kmax_per_axis = [width[1]] * width[0],bc = "dirichlet",m = width[1],normalize = True,sort_by_eigenvalue = True)
         width = width[1:]
-        width[0] = width[0] ** len(daff)
+        #width[0] = width[0] ** len(daff)
     if mlp:
         k = jax.random.split(jax.random.PRNGKey(key),4)
         WU = initializer(k[0],(width[0],width[1]),jnp.float32)
