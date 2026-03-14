@@ -351,7 +351,7 @@ def multiple_daff(L_vec,kmax_per_axis = None,bc = "dirichlet"):
     return mff,lamb
 
 #Chebyshev polynomial
-@partial(jax.jit, static_argnums=(0,4))
+@partial(jax.jit, static_argnums=(4,))
 def chebyshev_basis_ab(n, x, a, b,nmax):
     """
     Computes phi_n(x) = T_{n+2}(t) - T_n(t)
@@ -362,6 +362,7 @@ def chebyshev_basis_ab(n, x, a, b,nmax):
 
 def multiple_cheb(L_vec,n = None):
     d = len(L_vec[0])
+    @jax.jit
     def mcheb(x):
         y = None
         for l in range(len(L_vec)):
