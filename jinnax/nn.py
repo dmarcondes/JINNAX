@@ -1107,12 +1107,17 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
     ###Training###
     t0 = time.time()
     k = jax.random.split(jax.random.PRNGKey(key+234),(epochs,))
+    sloss = jnp.array([])
+    sL2 = jnp.array([])
     #Initialize alive_bar for tracing in terminal
     with alive_bar(epochs) as bar:
         #For each epoch
         for e in range(epochs):
             #Update optimizer state and parameters
             opt_state,params = update(opt_state,params,data,k[e,:])
+            sloss = jnp.append(sloss,lf(params,data,k[e,:]))
+            if test_data is not None:
+                sL2 = jnp.append(sL2,L2error(forward(test_data['sensor'],params['net']),test_data['usensor']))
             #After epoch_print epochs
             if e % epoch_print == 0:
                 #Compute elapsed time and current error
@@ -1128,17 +1133,14 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
                 print(l)
             if ((e % at_each == 0 and at_each != epochs) or e == epochs - 1) and save:
                 #Save current parameters
-                if test_data is not None:
-                    pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': lf(params,data,k[e,:]),'L2error': jnp.round(L2error(forward(test_data['sensor'],params['net']),test_data['usensor']),3)},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
-                else:
-                    pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': lf(params,data,k[e,:])},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+                pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': sloss,'L2error': sL2},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
             #Update alive_bar
             bar()
     #Define estimated function
     def u(xt):
         return forward(xt,params['net'])
 
-    return {'u': u,'params': params,'forward': forward,'time': time.time() - t0,'loss_each': lf_each(params,data,[key + 100])}
+    return {'u': u,'params': params,'forward': forward,'time': time.time() - t0,'loss_each': lf_each(params,data,[key + 100]),'loss': sloss,'L2error': sL2}
 
 
 #Process result
