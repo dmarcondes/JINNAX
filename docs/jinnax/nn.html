@@ -475,7 +475,7 @@
 </span><span id="L-350"><a href="#L-350"><span class="linenos"> 350</span></a>    <span class="k">return</span> <span class="n">mff</span><span class="p">,</span><span class="n">lamb</span>
 </span><span id="L-351"><a href="#L-351"><span class="linenos"> 351</span></a>
 </span><span id="L-352"><a href="#L-352"><span class="linenos"> 352</span></a><span class="c1">#Chebyshev polynomial</span>
-</span><span id="L-353"><a href="#L-353"><span class="linenos"> 353</span></a><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
+</span><span id="L-353"><a href="#L-353"><span class="linenos"> 353</span></a><span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnums</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
 </span><span id="L-354"><a href="#L-354"><span class="linenos"> 354</span></a><span class="k">def</span> <span class="nf">chebyshev_basis_ab</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
 </span><span id="L-355"><a href="#L-355"><span class="linenos"> 355</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-356"><a href="#L-356"><span class="linenos"> 356</span></a><span class="sd">    Computes phi_n(x) = T_{n+2}(t) - T_n(t)</span>
@@ -2638,7 +2638,7 @@ The corresponding continuous Laplace eigenvalues.</li>
                 <section id="chebyshev_basis_ab">
                             <input id="chebyshev_basis_ab-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
-                    <div class="decorator decorator-jax.jit">@jax.jit</div>
+                    <div class="decorator decorator-partial">@partial(jax.jit, static_argnums=(0, 2, 3))</div>
 
         <span class="def">def</span>
         <span class="name">chebyshev_basis_ab</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">n</span>, </span><span class="param"><span class="n">x</span>, </span><span class="param"><span class="n">a</span>, </span><span class="param"><span class="n">b</span></span><span class="return-annotation">):</span></span>
@@ -2647,7 +2647,7 @@ The corresponding continuous Laplace eigenvalues.</li>
 
     </div>
     <a class="headerlink" href="#chebyshev_basis_ab"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="chebyshev_basis_ab-354"><a href="#chebyshev_basis_ab-354"><span class="linenos">354</span></a><span class="nd">@jax</span><span class="o">.</span><span class="n">jit</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="chebyshev_basis_ab-354"><a href="#chebyshev_basis_ab-354"><span class="linenos">354</span></a><span class="nd">@partial</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">jit</span><span class="p">,</span> <span class="n">static_argnums</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
 </span><span id="chebyshev_basis_ab-355"><a href="#chebyshev_basis_ab-355"><span class="linenos">355</span></a><span class="k">def</span> <span class="nf">chebyshev_basis_ab</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
 </span><span id="chebyshev_basis_ab-356"><a href="#chebyshev_basis_ab-356"><span class="linenos">356</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="chebyshev_basis_ab-357"><a href="#chebyshev_basis_ab-357"><span class="linenos">357</span></a><span class="sd">    Computes phi_n(x) = T_{n+2}(t) - T_n(t)</span>
