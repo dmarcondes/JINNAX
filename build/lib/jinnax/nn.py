@@ -19,6 +19,7 @@ from scipy.fft import dst, idst
 from itertools import product
 from functools import partial
 import orthax
+from jax import lax
 
 __docformat__ = "numpy"
 
@@ -350,18 +351,14 @@ def multiple_daff(L_vec,kmax_per_axis = None,bc = "dirichlet"):
     return mff,lamb
 
 #Chebyshev polynomial
-@partial(jax.jit, static_argnums=(0,2,3))
-def chebyshev_basis_ab(n, x, a, b):
+@partial(jax.jit, static_argnums=(0,4))
+def chebyshev_basis_ab(n, x, a, b,nmax):
     """
     Computes phi_n(x) = T_{n+2}(t) - T_n(t)
     where t maps x from [a, b] to [-1, 1].
     """
-    # 1. Change of variable (Linear map)
     t = (2 * x - (a + b)) / (b - a)
-    # 3. Compute the basis function
-    tn_plus_2 = orthax.chebyshev.chebval(t, jnp.eye(n+3)[n+2])
-    tn = orthax.chebyshev.chebval(t, jnp.eye(n+3)[n])
-    return tn_plus_2 - tn
+    return orthax.chebyshev.chebval(t, jax.nn.one_hot(n+2, nmax+3) - jax.nn.one_hot(n, nmax+3))
 
 def multiple_cheb(L_vec,n = None):
     d = len(L_vec[0])
@@ -372,15 +369,16 @@ def multiple_cheb(L_vec,n = None):
                 z = None
                 for j in range(d):
                     if z is None:
-                        z = chebyshev_basis_ab(k, x[:,j].reshape((x.shape[0],1)), 0, L_vec[l][j])
+                        z = chebyshev_basis_ab(k, x[:,j].reshape((x.shape[0],1)), 0, L_vec[l][j],n)
                     else:
-                        z = z*chebyshev_basis_ab(k, x[:,j].reshape((x.shape[0],1)),0, L_vec[l][j])
+                        z = z*chebyshev_basis_ab(k, x[:,j].reshape((x.shape[0],1)),0, L_vec[l][j],n)
                 if y is None:
                     y = z
                 else:
                     y = jnp.append(y,z,1)
         return y
     return mcheb
+
 
 #Simple fully connected architecture. Return the initial parameters and the function for the forward pass
 def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs = None,static = None):
