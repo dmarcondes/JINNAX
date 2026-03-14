@@ -17,6 +17,8 @@ import os
 import numpy as np
 from scipy.fft import dst, idst
 from itertools import product
+from functools import partial
+import orthax
 
 __docformat__ = "numpy"
 
@@ -329,12 +331,59 @@ def build_phi_rect_callable(L_vec,kmax_per_axis=None,bc="dirichlet"):
             vals = vals * comp
         # Apply L2-normalizing constants (if enabled)
         vals = vals * norm_factors[None, ...] if vals.ndim > 1 else vals * norm_factors
-        return vals/jnp.sqrt(1 + lambdas)
+        return vals#/jnp.sqrt(1 + lambdas)
     return phi, Ks.astype(jnp.int32), lambdas
 
+def multiple_daff(L_vec,kmax_per_axis = None,bc = "dirichlet"):
+    psi = []
+    lamb = jnp.array([])
+    for L in L_vec:
+        tmp,_,l = build_phi_rect_callable(L,kmax_per_axis,bc)
+        lamb = jnp.append(lamb,l)
+        psi.append(tmp)
+        del tmp
+    def mff(x):
+        y = psi[0](x)
+        for i in range(len(psi) - 1):
+            y = jnp.append(y,psi[i + 1](x),1)
+        return y
+    return mff,lamb
+
+#Chebyshev polynomial
+@partial(jax.jit, static_argnums=(0,2,3))
+def chebyshev_basis_ab(n, x, a, b):
+    """
+    Computes phi_n(x) = T_{n+2}(t) - T_n(t)
+    where t maps x from [a, b] to [-1, 1].
+    """
+    # 1. Change of variable (Linear map)
+    t = (2 * x - (a + b)) / (b - a)
+    # 3. Compute the basis function
+    tn_plus_2 = orthax.chebyshev.chebval(t, jnp.eye(n+3)[n+2])
+    tn = orthax.chebyshev.chebval(t, jnp.eye(n+3)[n])
+    return tn_plus_2 - tn
+
+def multiple_cheb(L_vec,n = None):
+    d = len(L_vec[0])
+    def mcheb(x):
+        y = None
+        for l in range(len(L_vec)):
+            for k in range(n):
+                z = None
+                for j in range(d):
+                    if z is None:
+                        z = chebyshev_basis_ab(k, x[:,j].reshape((x.shape[0],1)), 0, L_vec[l][j])
+                    else:
+                        z = z*chebyshev_basis_ab(k, x[:,j].reshape((x.shape[0],1)),0, L_vec[l][j])
+                if y is None:
+                    y = z
+                else:
+                    y = jnp.append(y,z,1)
+        return y
+    return mcheb
 
 #Simple fully connected architecture. Return the initial parameters and the function for the forward pass
-def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = None,daff = None):
+def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs = None,static = None):
     """
     Initialize fully connected neural network
     ----------
@@ -356,13 +405,21 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = None,daff = N
 
         Whether to consider a modified multilayer perceptron. Assumes all hidden layers have the same dimension.
 
-    ff : float
+    ftype : str
 
-        Variance of Fourrier Features parameters. If zero, Fourrier Feautures are not considered. If positive, the parameters are trainable, if negative they are not. The dimension is that of the second layer.
+        Type of feature transformation to use: None, 'ff', 'daff','daff_bias', 'cheb', 'cheb_bias'.
 
-    daff : none or list
+    fargs : list
 
-        Whether to consider DaFF. If None, does not use, otherwise it is a list with the size of rectangles. The number of frequencies is the size of the second layer.
+        Arguments for deature transformation:
+
+        For 'ff': A list with the number of frequences and value of greatest frequence.
+
+        For 'daff' and 'daff' bias: A list with the size of rectangles.
+
+    static : function
+
+        A static function to sum to the neural network output.
 
     Returns
     -------
@@ -371,20 +428,35 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = None,daff = N
     #Initialize parameters with Glorot initialization
     initializer = jax.nn.initializers.glorot_normal()
     params = list()
-    if ff is not None:
-        for s in range(ff[0]):
-            sd = ff[1] ** ((s + 1)/ff[0])
+    if static is None:
+        static = lambda x: 0
+
+    #Feature mapping
+    if ftype == 'ff':
+        for s in range(fargs[0]):
+            sd = fargs[1] ** ((s + 1)/fargs[0])
             if s == 0:
                 Bff = sd*jax.random.normal(jax.random.PRNGKey(key + s + 1),(width[0],int(width[1]/2)))
             else:
                 Bff = jnp.append(Bff,sd*jax.random.normal(jax.random.PRNGKey(key + s + 1),(width[0],int(width[1]/2))),1)
-        params.append({'Bff': Bff})
+        def phi(x):
+            x = x @ Bff
+            return jnp.append(jnp.sin(2 * jnp.pi * x),jnp.cos(2 * jnp.pi * x),1)
+        width = width[1:]
         width[0] = 2*Bff.shape[1]
-    elif daff is not None:
-        phi,_,lamb = build_phi_rect_callable(daff,kmax_per_axis = [width[1]] * width[0],bc = "dirichlet")
+    elif ftype == 'daff' or ftype == 'daff_bias':
+        phi,lamb = multiple_daff(fargs,kmax_per_axis = [width[1]] * width[0],bc = "dirichlet")
         width = width[1:]
         width[0] = lamb.shape[0]
-        #width[0] = width[0] ** len(daff)
+    elif ftype == 'cheb' or ftype == 'cheb_bias':
+        phi = multiple_cheb(fargs,n = width[1])
+        width = width[1:]
+        width[0] = len(fargs)*width[0]
+    else:
+        def phi(x):
+            return x
+
+    #Initialize parameters
     if mlp:
         k = jax.random.split(jax.random.PRNGKey(key),4)
         WU = initializer(k[0],(width[0],width[1]),jnp.float32)
@@ -400,64 +472,49 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ff = None,daff = N
 
     #Define function for forward pass
     if mlp:
-        if ff is not None:
+        if ftype != 'daff' and ftype != 'cheb':
             @jax.jit
             def forward(x,params):
-                ff,encode,*hidden,output = params
-                x = x @ ff['Bff']
-                x = jnp.append(jnp.sin(2 * jnp.pi * x),jnp.cos(2 * jnp.pi * x),1)
+                encode,*hidden,output = params
+                sx = static(x)
+                x = phi(x)
                 U = activation(x @ encode['WU'] + encode['BU'])
                 V = activation(x @ encode['WV'] + encode['BV'])
                 for layer in hidden:
                     x = activation(x @ layer['W'] + layer['B'])
                     x = x * U + (1 - x) * V
-                return x @ output['W'] + output['B']
-        elif daff is not None:
-            @jax.jit
-            def forward(x,params):
-                encode,*hidden,output = params
-                x = phi(x)
-                U = activation(x @ encode['WU']) # + encode['BU'])
-                V = activation(x @ encode['WV']) # + encode['BV'])
-                for layer in hidden:
-                    x = activation(x @ layer['W'])# + layer['B'])
-                    x = x * U + (1 - x) * V
-                return x @ output['W']# + output['B']
+                return x @ output['W'] + output['B'] + sx
         else:
             @jax.jit
             def forward(x,params):
                 encode,*hidden,output = params
-                U = activation(x @ encode['WU'] + encode['BU'])
-                V = activation(x @ encode['WV'] + encode['BV'])
+                sx = static(x)
+                x = phi(x)
+                U = activation(x @ encode['WU'])
+                V = activation(x @ encode['WV'])
                 for layer in hidden:
-                    x = activation(x @ layer['W'] + layer['B'])
+                    x = activation(x @ layer['W'])
                     x = x * U + (1 - x) * V
-                return x @ output['W'] + output['B']
+                return x @ output['W'] + sx
     else:
-        if ff is not None:
-            @jax.jit
-            def forward(x,params):
-                ff,*hidden,output = params
-                x = x @ ff['Bff']
-                x = jnp.append(jnp.sin(2 * jnp.pi * x),jnp.cos(2 * jnp.pi * x),1)
-                for layer in hidden:
-                    x = activation(x @ layer['W'] + layer['B'])
-                return x @ output['W'] + output['B']
-        elif daff is not None:
+        if ftype != 'daff' and ftype != 'cheb':
             @jax.jit
             def forward(x,params):
                 *hidden,output = params
+                sx = static(x)
                 x = phi(x)
                 for layer in hidden:
-                    x = activation(x @ layer['W'])# + layer['B'])
-                return x @ output['W'] #+ output['B']
+                    x = activation(x @ layer['W'] + layer['B'])
+                return x @ output['W'] + output['B'] + sx
         else:
             @jax.jit
             def forward(x,params):
                 *hidden,output = params
+                sx = static(x)
+                x = phi(x)
                 for layer in hidden:
-                    x = activation(x @ layer['W'] + layer['B'])
-                return x @ output['W'] + output['B']
+                    x = activation(x @ layer['W'])
+                return x @ output['W'] + sx
 
     #Return initial parameters and forward function
     return {'params': params,'forward': forward}
@@ -764,7 +821,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
 
 #Training PINN
-def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1,resample = True,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,mlp = False,ff = None,daff = None,q = 2,w = None,periodic = False):
+def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1,resample = True,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,mlp = False,ftype = None,fargs = None,q = 2,w = None,periodic = False,static = None):
     """
     Train a Physics-informed Neural Network
     ----------
@@ -878,13 +935,17 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
         Whether to consider modifed multilayer perceptron
 
-    ff : float
+    ftype : str
 
-        review
+        Type of feature transformation to use: None, 'ff', 'daff','daff_bias', 'cheb', 'cheb_bias'.
 
-    daff : None or list
+    fargs : list
 
-        Review
+        Arguments for deature transformation:
+
+        For 'ff': A list with the number of frequences and value of greatest frequence.
+
+        For 'daff' and 'daff' bias: A list with the size of rectangles.
 
     q : int
 
@@ -898,12 +959,16 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
         Whether to consider periodic test functions. Default False.
 
+    static : function
+
+        A static function to sum to the neural network output.
+
     Returns
     -------
     dict-like object with the estimated function, the estimated parameters, the neural network function for the forward pass and the training time
     """
     #Initialize architecture
-    nnet = fconNN(width,get_activation(activation),key,mlp,ff,daff)
+    nnet = fconNN(width,get_activation(activation),key,mlp,ftype,fargs,static)
     forward = nnet['forward']
     if params is not None:
         nnet['params'] = params
@@ -947,7 +1012,6 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             sigma = float(jnp.minimum(sigmaB,sigmaI).tolist())
         gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic)
         tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
-
 
     #Define loss function
     @jax.jit
