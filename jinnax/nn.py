@@ -376,7 +376,7 @@ def _chebyshev_T_all(t, K: int):
     (_, _), T2_to_TK = lax.scan(body, (T0, T1), jnp.arange(K - 1))  # (K-1, ..., d)
     return jnp.concatenate([T0[None, ...], T1[None, ...], T2_to_TK], axis=0)  # (K+1, ..., d)
 
-@jax.jit(static_argnums=(2,))  # n is static here; compile once per n
+@partial(jax.jit,static_argnums=(2,))  # n is static here; compile once per n
 def multiple_cheb_fast(x, L_vec, n: int):
     """
     x: (N, d)
