@@ -480,7 +480,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs
                 Bff = jnp.append(Bff,sd*jax.random.normal(jax.random.PRNGKey(key + s + 1),(width[0],int(width[1]/2))),1)
         def phi(x):
             x = x @ Bff
-            return jnp.append(jnp.sin(2 * jnp.pi * x),jnp.cos(2 * jnp.pi * x),1)
+            return jnp.concatenate([jnp.sin(2 * jnp.pi * x),jnp.cos(2 * jnp.pi * x)],axis = -1)
         width = width[1:]
         width[0] = 2*Bff.shape[1]
     elif ftype == 'daff' or ftype == 'daff_bias':
@@ -1029,26 +1029,17 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
                 # mean over the masked region only
                 return jnp.mean(psi * output_b)
         #Set sigma
-        if data['boundary'] is not None or data['initial'] is not None:
+        if data['boundary'] is not None:
             gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma)
             tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
-            if data['boundary'] is not None:
-                if neumann:
-                    loss_boundary = oper_neumann(lambda x: forward(x,params['net']),data['boundary'])
-                else:
-                    loss_boundary = jnp.mean(MSE(forward(data['boundary'],nnet['params']),data['uboundary']))
+            if neumann:
+                loss_boundary = oper_neumann(lambda x: forward(x,params['net']),data['boundary'])
             else:
-                loss_boundary = 0
-            if data['initial'] is not None:
-                loss_initial = jnp.mean(MSE(forward(data['initial'],nnet['params']),data['uinitial']))
-            else:
-                loss_initial = 0
+                loss_boundary = jnp.mean(MSE(forward(data['boundary'],nnet['params']),data['uboundary']))
             output_w = pde(lambda x: forward(x,nnet['params']),grid)
             integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(tf)
             loss_res_weak = jnp.mean(integralOmega ** 2)
-            sigmaB = jnp.sqrt(loss_boundary/loss_res_weak)
-            sigmaI = jnp.sqrt(loss_initial/loss_res_weak)
-            sigma = float(jnp.minimum(sigmaB,sigmaI).tolist())
+            sigma = float(jnp.sqrt(loss_boundary/loss_res_weak).tolist())
         gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic)
         tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
 
