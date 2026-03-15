@@ -350,36 +350,48 @@ def multiple_daff(L_vec,kmax_per_axis = None,bc = "dirichlet"):
         return y
     return mff,lamb
 
-#Chebyshev polynomial
-@partial(jax.jit, static_argnums=(4,))
-def chebyshev_basis_ab(n, x, a, b,nmax):
-    """
-    Computes phi_n(x) = T_{n+2}(t) - T_n(t)
-    where t maps x from [a, b] to [-1, 1].
-    """
-    t = (2 * x - (a + b)) / (b - a)
-    return orthax.chebyshev.chebval(t, jax.nn.one_hot(n+2, nmax+3) - jax.nn.one_hot(n, nmax+3))
+def _chebyshev_T_all(t, K: int):
+    """Compute T_0..T_K(t) with the standard recurrence, assuming K is a Python int."""
+    t = jnp.squeeze(t, axis=-1) if (t.ndim > 0 and t.shape[-1] == 1) else t
+    T0 = jnp.ones_like(t)
+    if K == 0:
+        return T0[None, ...]
+    T1 = t
+    if K == 1:
+        return jnp.stack([T0, T1], axis=0)
+    def body(carry, _):
+        Tkm1, Tk = carry
+        Tkp1 = 2.0 * t * Tk - Tkm1
+        return (Tk, Tkp1), Tkp1
+    (_, _), T2_to_TK = lax.scan(body, (T0, T1), jnp.arange(K - 1))
+    return jnp.concatenate([T0[None, ...], T1[None, ...], T2_to_TK], axis=0)
 
-def multiple_cheb(L_vec,n = None):
-    d = len(L_vec[0])
-    @jax.jit
+@partial(jax.jit,static_argnums=(2,))   # <-- n is static here
+def multiple_cheb_fast(x, L_vec, n: int):
+    """
+    x: (N, d)
+    L_vec: (L, d)
+    n: int (static) -> number of k terms
+    returns: (N, L*n)
+    """
+    N, d = x.shape
+    L = L_vec.shape[0]
+    a = 0.0
+    b = L_vec
+    t = (2.0 * x[None, :, :] - (a + b)[:, None, :]) / (b - a)[:, None, :]
+    T = _chebyshev_T_all(t, n + 2)          # OK because n is static (Python int here)
+    ks = jnp.arange(n)
+    phi = T[ks + 2, ...] - T[ks, ...]       # (n, L, N, d)
+    z = jnp.prod(phi, axis=-1)              # (n, L, N)
+    z = jnp.transpose(z, (2, 1, 0)).reshape(N, L * n)
+    return z
+
+def multiple_cheb(L_vec, n: int):
+    L_vec = jnp.asarray(L_vec)
+    @jax.jit  # optional; this one can also be left unjitted since multiple_cheb_fast is jitted
     def mcheb(x):
-        y = None
-        for l in range(len(L_vec)):
-            for k in range(n):
-                z = None
-                for j in range(d):
-                    if z is None:
-                        z = chebyshev_basis_ab(k, x[:,j].reshape((x.shape[0],1)), 0, L_vec[l][j],n)
-                    else:
-                        z = z*chebyshev_basis_ab(k, x[:,j].reshape((x.shape[0],1)),0, L_vec[l][j],n)
-                if y is None:
-                    y = z
-                else:
-                    y = jnp.append(y,z,1)
-        return y
+        return multiple_cheb_fast(jnp.asarray(x), L_vec, n)  # n is closed over as Python int
     return mcheb
-
 
 #Simple fully connected architecture. Return the initial parameters and the function for the forward pass
 def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs = None,static = None):
