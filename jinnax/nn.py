@@ -350,48 +350,73 @@ def multiple_daff(L_vec,kmax_per_axis = None,bc = "dirichlet"):
         return y
     return mff,lamb
 
-def _chebyshev_T_all(t, K: int):
-    """Compute T_0..T_K(t) with the standard recurrence, assuming K is a Python int."""
-    t = jnp.squeeze(t, axis=-1) if (t.ndim > 0 and t.shape[-1] == 1) else t
-    T0 = jnp.ones_like(t)
-    if K == 0:
-        return T0[None, ...]
-    T1 = t
-    if K == 1:
-        return jnp.stack([T0, T1], axis=0)
-    def body(carry, _):
-        Tkm1, Tk = carry
-        Tkp1 = 2.0 * t * Tk - Tkm1
-        return (Tk, Tkp1), Tkp1
-    (_, _), T2_to_TK = lax.scan(body, (T0, T1), jnp.arange(K - 1))
-    return jnp.concatenate([T0[None, ...], T1[None, ...], T2_to_TK], axis=0)
 
-@partial(jax.jit,static_argnums=(2,))   # <-- n is static here
+def _chebyshev_T_all(t, K: int):
+    """
+    Compute T_0..T_K(t) with the standard recurrence.
+    t shape should be (..., d). We DO NOT squeeze any axis to preserve 'd'
+    even when d == 1.
+    Returns: array of shape (K+1, ...) matching t's batch dims, including d.
+    """
+    # Expect t to have last axis = d (keep it, even if d == 1)
+    T0 = jnp.ones_like(t)           # (..., d)
+    if K == 0:
+        return T0[None, ...]        # (1, ..., d)
+
+    T1 = t                          # (..., d)
+    if K == 1:
+        return jnp.stack([T0, T1], axis=0)  # (2, ..., d)
+
+    def body(carry, _):
+        Tkm1, Tk = carry            # each (..., d)
+        Tkp1 = 2.0 * t * Tk - Tkm1  # (..., d)
+        return (Tk, Tkp1), Tkp1
+
+    # K >= 2: produce T_2..T_K
+    (_, _), T2_to_TK = lax.scan(body, (T0, T1), jnp.arange(K - 1))  # (K-1, ..., d)
+    return jnp.concatenate([T0[None, ...], T1[None, ...], T2_to_TK], axis=0)  # (K+1, ..., d)
+
+@jax.jit(static_argnums=(2,))  # n is static here; compile once per n
 def multiple_cheb_fast(x, L_vec, n: int):
     """
     x: (N, d)
-    L_vec: (L, d)
-    n: int (static) -> number of k terms
+    L_vec: (L, d) containing 'b' endpoints (a is 0) for each dimension
+    n: number of k terms (static)
     returns: (N, L*n)
     """
     N, d = x.shape
     L = L_vec.shape[0]
+
     a = 0.0
-    b = L_vec
+    b = L_vec                       # (L, d)
+    # Map x to t in [-1, 1] for each l, j: shape (L, N, d)
     t = (2.0 * x[None, :, :] - (a + b)[:, None, :]) / (b - a)[:, None, :]
-    T = _chebyshev_T_all(t, n + 2)          # OK because n is static (Python int here)
+
+    # Chebyshev T_0..T_{n+2} for all (L, N, d): shape (n+3, L, N, d)
+    T = _chebyshev_T_all(t, n + 2)
+
+    # phi_k = T_{k+2} - T_k, k = 0..n-1  => shape (n, L, N, d)
     ks = jnp.arange(n)
-    phi = T[ks + 2, ...] - T[ks, ...]       # (n, L, N, d)
-    z = jnp.prod(phi, axis=-1)              # (n, L, N)
+    phi = T[ks + 2, ...] - T[ks, ...]
+
+    # Multiply across dimensions (over the last axis = d) => (n, L, N)
+    z = jnp.prod(phi, axis=-1)
+
+    # Reorder to (N, L, n) then flatten to (N, L*n)
     z = jnp.transpose(z, (2, 1, 0)).reshape(N, L * n)
     return z
 
 def multiple_cheb(L_vec, n: int):
+    """
+    Factory that closes over static n and L_vec (so shapes are constant).
+    """
     L_vec = jnp.asarray(L_vec)
-    @jax.jit  # optional; this one can also be left unjitted since multiple_cheb_fast is jitted
+    @jax.jit  # optional; multiple_cheb_fast is already jitted
     def mcheb(x):
-        return multiple_cheb_fast(jnp.asarray(x), L_vec, n)  # n is closed over as Python int
+        x = jnp.asarray(x)
+        return multiple_cheb_fast(x, L_vec, n)
     return mcheb
+
 
 #Simple fully connected architecture. Return the initial parameters and the function for the forward pass
 def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs = None,static = None):
