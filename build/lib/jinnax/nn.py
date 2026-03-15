@@ -1020,14 +1020,6 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         grid = [jnp.linspace(0,L[i],N) for i in range(d)]
         grid = jnp.meshgrid(*grid, indexing='ij')
         grid = jnp.stack(grid, axis=-1).reshape((-1, d))
-        if d > 1 and data['boundary'] is not None:
-            mask = jnp.sum(jnp.array([(grid[:,i] == 0).astype(jnp.int32) + (grid[:,i] == L[i]).astype(jnp.int32) for i in range(d)]).transpose(),1) > 0
-            gridB = grid[mask,:]
-            mask_rd = mask.reshape((N,)*d)
-            def masked_mean(psi,output_b):
-                psi = psi.reshape((-1,1))[mask]
-                # mean over the masked region only
-                return jnp.mean(psi * output_b)
         #Set sigma
         if data['boundary'] is not None:
             gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma)
@@ -1095,13 +1087,13 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
     if w is None:
         w = {'ws': jnp.array(1.0),'wb': jnp.array(1.0),'wi': jnp.array(1.0),'wc': jnp.array(1.0),'wc_weak': jnp.array(1.0)}
     if data['sensor'] is not None:
-        w['ws'] = w['ws'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+1),(data['sensor'].shape[0],1))
+        w['ws'] = w['ws'] + jax.random.normal(jax.random.PRNGKey(key+1),(data['sensor'].shape[0],1))
     if data['boundary'] is not None:
-        w['wb'] = w['wb'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+2),(data['boundary'].shape[0],1))
+        w['wb'] = w['wb'] + jax.random.normal(jax.random.PRNGKey(key+2),(data['boundary'].shape[0],1))
     if data['initial'] is not None:
-        w['wi'] = w['wi'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+3),(data['initial'].shape[0],1))
+        w['wi'] = w['wi'] + jax.random.normal(jax.random.PRNGKey(key+3),(data['initial'].shape[0],1))
     if data['collocation'] is not None:
-        w['wc'] = w['wc'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+4),(data['collocation'].shape[0],1))
+        w['wc'] = w['wc'] + jax.random.normal(jax.random.PRNGKey(key+4),(data['collocation'].shape[0],1))
 
     #Store all parameters
     params = {'net': nnet['params'],'inverse': initial_par,'w': w}
@@ -1126,11 +1118,11 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         grads = grad_loss(params,x,k)
         #Change sign weights
         #for i in grads['w']:
-            #grads['w'][i] = - grads['w'][i]
-        grads = {**grads, 'w': jax.tree.map(lambda g: -g, grads['w'])}
+        #    grads['w'][i] = - grads['w'][i]
         #Calculate parameters updates
         updates, opt_state = optimizer.update(grads, opt_state)
         #Update parameters
+        updates = {**updates, 'w': jax.tree_util.tree_map(lambda x: -x, updates['w'])}
         params = optax.apply_updates(params, updates)
         #Return state of optmizer and updated parameters
         return opt_state,params
