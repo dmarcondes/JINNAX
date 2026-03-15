@@ -347,7 +347,10 @@ def multiple_daff(L_vec,kmax_per_axis = None,bc = "dirichlet"):
         y = []
         for i in range(len(psi)):
             y.append(psi[i](x))
-        return jnp.concatenate(y,1)
+        if len(y) == 1:
+            return y[0]
+        else:
+            return jnp.concatenate(y,1)
     return mff,jnp.concatenate(lamb)
 
 
@@ -1133,7 +1136,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         #Change sign weights
         #for i in grads['w']:
             #grads['w'][i] = - grads['w'][i]
-        grads = {**grads, 'w': jax.tree_map(lambda g: -g, grads['w'])}
+        grads = {**grads, 'w': jax.tree.map(lambda g: -g, grads['w'])}
         #Calculate parameters updates
         updates, opt_state = optimizer.update(grads, opt_state)
         #Update parameters
@@ -1158,7 +1161,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             #After epoch_print epochs
             if e % epoch_print == 0:
                 #Compute elapsed time and current error
-                l = 'Time: ' + str(round(time.time() - t0)) + ' s Loss: ' + str(jnp.round(sloss[-1]),6)
+                l = 'Time: ' + str(round(time.time() - t0)) + ' s Loss: ' + str(jnp.round(sloss[-1],6))
                 #If there is test data, compute current L2 error
                 if test_data is not None:
                     #Compute L2 error
@@ -1169,7 +1172,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
                 print(l)
             if ((e % at_each == 0 and at_each != epochs) or e == epochs - 1) and save:
                 #Save current parameters
-                pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': jnp.concatenate(sloss),'L2error': jnp.concatenate(sL2)},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+                pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': sloss,'L2error': sL2},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
             #Update alive_bar
             bar()
     #Define estimated function
