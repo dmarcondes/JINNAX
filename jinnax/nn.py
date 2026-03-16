@@ -20,6 +20,7 @@ from itertools import product
 from functools import partial
 import orthax
 from jax import lax
+from jaxopt import LBFGS
 
 __docformat__ = "numpy"
 
@@ -860,7 +861,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
 
 #Training PINN
-def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1,resample = True,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,mlp = False,ftype = None,fargs = None,q = 2,w = None,periodic = False,static = None):
+def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1,resample = True,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,mlp = False,ftype = None,fargs = None,q = 2,w = None,periodic = False,static = None,opt = 'LBFGS'):
     """
     Train a Physics-informed Neural Network
     ----------
@@ -1081,7 +1082,14 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
     def lf(params,x,k):
         l = lf_each(params,x,k)
         w = params['w']
-        return jnp.mean((w['ws'] ** q)*l['ls']) + jnp.mean((w['wb'] ** q)*l['lb']) + jnp.mean((w['wi'] ** q)*l['li']) + jnp.mean((w['wc'] ** q)*l['lc']) + (w['wc_weak'] ** q)*l['lc_weak']
+        if opt != 'LBFGS':
+            return jnp.mean((w['ws'] ** q)*l['ls']) + jnp.mean((w['wb'] ** q)*l['lb']) + jnp.mean((w['wi'] ** q)*l['li']) + jnp.mean((w['wc'] ** q)*l['lc']) + (w['wc_weak'] ** q)*l['lc_weak']
+        else:
+            loss = jnp.mean((w['ws'] ** q)*l['ls']) + jnp.mean((w['wb'] ** q)*l['lb']) + jnp.mean((w['wi'] ** q)*l['li']) + jnp.mean((w['wc'] ** q)*l['lc']) + (w['wc_weak'] ** q)*l['lc_weak']
+            l2 = None
+            if test_data is not None:
+                l2 = L2error(forward(test_data['sensor'],params['net']),test_data['usensor'])
+            return loss,{'loss': loss,'l2': l2}
 
     #Initialize self-adaptive weights
     if w is None:
@@ -1103,44 +1111,60 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         pickle.dump({'train_data': data,'epochs': epochs,'activation': activation,'init_params': params,'forward': forward,'width': width,'pde': pde,'lr': lr,'b1': b1,'b2': b2,'eps': eps,'eps_root': eps_root,'key': key,'inverse': inverse},open(file_name + '_config.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
 
     #Initialize Adam Optmizer
-    if exp_decay:
-        lr = optax.exponential_decay(lr,transition_steps,decay_rate)
-    optimizer = optax.adam(lr,b1,b2,eps,eps_root)
-    opt_state = optimizer.init(params)
+    if opt != 'LBFGS':
+        print('--------- GRADIENT DESCENT OPTIMIZER ---------')
+        if exp_decay:
+            lr = optax.exponential_decay(lr,transition_steps,decay_rate)
+        optimizer = optax.adam(lr,b1,b2,eps,eps_root)
+        opt_state = optimizer.init(params)
 
-    #Define the gradient function
-    grad_loss = jax.jit(jax.grad(lf,0))
+        #Define the gradient function
+        grad_loss = jax.jit(jax.grad(lf,0))
 
-    #Define update function
-    @jax.jit
-    def update(opt_state,params,x,k):
-        #Compute gradient
-        grads = grad_loss(params,x,k)
-        #Change sign weights
-        #for i in grads['w']:
-        #    grads['w'][i] = - grads['w'][i]
-        #Calculate parameters updates
-        updates, opt_state = optimizer.update(grads, opt_state)
-        #Update parameters
-        updates = {**updates, 'w': jax.tree_util.tree_map(lambda x: -x, updates['w'])}
-        params = optax.apply_updates(params, updates)
-        #Return state of optmizer and updated parameters
-        return opt_state,params
+        #Define update function
+        @jax.jit
+        def update(opt_state,params,x,k):
+            #Compute gradient
+            grads = grad_loss(params,x,k)
+            #Change sign weights
+            #for i in grads['w']:
+            #    grads['w'][i] = - grads['w'][i]
+            #Calculate parameters updates
+            updates, opt_state = optimizer.update(grads, opt_state)
+            #Update parameters
+            updates = {**updates, 'w': jax.tree_util.tree_map(lambda x: -x, updates['w'])}
+            params = optax.apply_updates(params, updates)
+            #Return state of optmizer and updated parameters
+            return opt_state,params
+    else:
+        print('--------- LBFGS OPTIMIZER ---------')
+        @jax.jit
+        def loss_LBFGS(params):
+            return lf(params,data,key + 234)
+        solver = LBFGS(fun = loss_LBFGS,has_aux = True,maxiter = epochs,tol = 1e-9,verbose = False,linesearch = 'zoom',history_size = 100)  # linesearch='zoom' by default
+        state = solver.init_state(params)
 
     ###Training###
     t0 = time.time()
     k = jax.random.split(jax.random.PRNGKey(key+234),(epochs,))
     sloss = []
     sL2 = []
+    stime = []
     #Initialize alive_bar for tracing in terminal
     with alive_bar(epochs) as bar:
         #For each epoch
         for e in range(epochs):
-            #Update optimizer state and parameters
-            opt_state,params = update(opt_state,params,data,k[e,:])
-            sloss.append(lf(params,data,k[e,:]))
-            if test_data is not None:
-                sL2.append(L2error(forward(test_data['sensor'],params['net']),test_data['usensor']))
+            if opt != 'LBFGS':
+                #Update optimizer state and parameters
+                opt_state,params = update(opt_state,params,data,k[e,:])
+                sloss.append(lf(params,data,k[e,:]))
+                if test_data is not None:
+                    sL2.append(L2error(forward(test_data['sensor'],params['net']),test_data['usensor']))
+            else:
+                params, state = solver.update(params, state)
+                sL2.append(state.aux["l2"])
+                sloss.append(state.aux["loss"])
+            stime.append(time.time() - t0)
             #After epoch_print epochs
             if e % epoch_print == 0:
                 #Compute elapsed time and current error
@@ -1155,7 +1179,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
                 print(l)
             if ((e % at_each == 0 and at_each != epochs) or e == epochs - 1) and save:
                 #Save current parameters
-                pickle.dump({'params': params,'width': width,'time': time.time() - t0,'loss': sloss,'L2error': sL2},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
+                pickle.dump({'params': params,'width': width,'time': stime,'loss': sloss,'L2error': sL2},open(file_name + '_epoch' + str(e).rjust(6, '0') + '.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
             #Update alive_bar
             bar()
     #Define estimated function
