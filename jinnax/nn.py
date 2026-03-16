@@ -28,7 +28,7 @@ __docformat__ = "numpy"
 @jax.jit
 def MSE(pred,true):
     """
-    Mean square error
+    Squared error
     ----------
     Parameters
     ----------
@@ -42,15 +42,15 @@ def MSE(pred,true):
 
     Returns
     -------
-    mean square error
+    squared error
     """
     return (true - pred) ** 2
 
 #MSE self-adaptative
 @jax.jit
-def MSE_SA(pred,true,w):
+def MSE_SA(pred,true,w,q = 2):
     """
-    Selft-adaptative mean square error
+    Selft-adaptative squared error
     ----------
     Parameters
     ----------
@@ -62,19 +62,19 @@ def MSE_SA(pred,true,w):
 
         A JAX numpy array with the true values
 
-    wheight : jax.numpy.array
+    weight : jax.numpy.array
 
         A JAX numpy array with the weights
 
-    c : float
+    q : float
 
-        Hyperparameter
+        Power for the weights mask
 
     Returns
     -------
-    self-adaptative mean square error with sigmoid mask
+    self-adaptative squared error with polynomial mask
     """
-    return (w * (true - pred)) ** 2
+    return (w ** q) * ((true - pred) ** 2)
 
 #L2 error
 @jax.jit
@@ -98,13 +98,45 @@ def L2error(pred,true):
     """
     return 100*jnp.sqrt(jnp.sum((true - pred)**2))/jnp.sqrt(jnp.sum(true ** 2))
 
-#Auxialiry functions to sample singular Matern (generated with AI)
-def idst1(x, axis=-1):
-    """IDST-I equals DST-I with orthonormal scaling."""
-    return idst(x, type=1, axis=axis, norm='ortho')
+#Auxialiry functions to sample singular Matern
+def idst1(x,axis = -1):
+    """
+    Inverse Discrete Sine Transform of type I with orthonormal scaling
+    ----------
+    Parameters
+    ----------
+    x : jax.numpy.array
 
-def dstn(x, axes=None):
-    """Apply DST-I along all axes in 'axes' (default: all axes)."""
+        Array to apply the transformation
+
+    axis : int
+
+        Axis to apply the transformation over
+
+    Returns
+    -------
+    jax.numpy.array
+    """
+    return idst(x,type = 1,axis = axis,norm = 'ortho')
+
+def dstn(x,axes = None):
+    """
+    Discrete Sine Transform of type I with orthonormal scaling over many axes
+    ----------
+    Parameters
+    ----------
+    x : jax.numpy.array
+
+        Array to apply the transformation
+
+    axes : int
+
+        Axes to apply the transformation over
+
+    Returns
+    -------
+    jax.numpy.array
+    """
     if axes is None:
         axes = tuple(range(x.ndim))
     y = x
@@ -112,33 +144,61 @@ def dstn(x, axes=None):
         y = dst(x,type = 1,axis = ax,norm = 'ortho')
     return y
 
-def idstn(x, axes=None):
-    """Inverse of dstn (same calls with orthonormal scaling)."""
+def idstn(x,axes = None):
+    """
+    Inverse Discrete Sine Transform of type I with orthonormal scaling over many axes
+    ----------
+    Parameters
+    ----------
+    x : jax.numpy.array
+
+        Array to apply the transformation
+
+    axes : int
+
+        Axes to apply the transformation over
+
+    Returns
+    -------
+    jax.numpy.array
+    """
     if axes is None:
         axes = tuple(range(x.ndim))
     y = x
     for ax in axes:
-        y = idst1(y, axis=ax)
+        y = idst1(y,axis = ax)
     return y
 
+def dirichlet_eigs_nd(n,L):
+    """
+    Eigenvalues of the discrete Dirichlet-Laplace operator in a rectangle
+    ----------
+    Parameters
+    ----------
+    n : list
 
-def dirichlet_eigs_nd(n_vec, L_vec):
+        List with the number of points in the grid in each dimension
+
+    L : list
+
+        List with the upper limit of the interval of the domain in each dimension. Assumed the lower limit is zero
+
+    Returns
+    -------
+    jax.numpy.array
     """
-    n_vec: list/tuple of interior counts per axis [n1,...,nd]
-    L_vec: list/tuple of lengths per axis     [L1,...,Ld]
-    returns: Λ grid of shape (n1,...,nd)
-    """
+    #Unidimensional eigenvalues
     lam_axes = []
-    for n, L in zip(n_vec, L_vec):
+    for n, L in zip(n,L):
         h = L / (n + 1.0)
-        k = np.arange(1, n + 1, dtype=np.float64)
-        lam1 = (2.0 / (h*h)) * (1.0 - np.cos(np.pi * k / (n + 1.0)))
-        lam_axes.append(lam1)
-    grids = np.meshgrid(*lam_axes, indexing='ij')
-    Lam = np.zeros_like(grids[0])
+        k = jnp.arange(1, n + 1)
+        ln = (2.0 / (h*h)) * (1.0 - jnp.cos(jnp.pi * k / (n + 1.0)))
+        lam_axes.append(ln)
+    grids = jnp.meshgrid(*lam_axes, indexing='ij')
+    Lam = jnp.zeros_like(grids[0])
     for g in grids:
         Lam += g
-    return Lam  # shape (n1,...,nd)
+    return Lam
 
 
 #Sample from d-dimensional Matern process
@@ -170,11 +230,11 @@ def generate_matern_sample(key,d = 2,N = 128,L = 1.0,kappa = 1,alpha = 1,sigma =
 
     periodic : logical
 
-        Whether to sample with periodic boundary conditions.
+        Whether to sample with periodic boundary conditions. Periodic = False is not JAX native and does not work with JIT
 
     Returns
     -------
-    (N,N) jax.array
+    jax.numpy.array
     """
     if periodic:
         #Shape and key
@@ -184,21 +244,25 @@ def generate_matern_sample(key,d = 2,N = 128,L = 1.0,kappa = 1,alpha = 1,sigma =
             L = d*[L]
         if isinstance(N,float) or isinstance(N,int):
             N = d*[N]
+
         #Setup Frequency Grid (2D)
         freq = [jnp.fft.fftfreq(N[j],d = L[j]/N[j]) * 2 * jnp.pi for j in range(d)]
         grids = jnp.meshgrid(*freq, indexing='ij')
         sq_norm_xi = sum(g**2 for g in grids)
+
         #Generate White Noise in Fourier Space
         key_re, key_im = jax.random.split(key)
         white_noise_f = (jax.random.normal(key_re, shape) +
                          1j * jax.random.normal(key_im, shape))
+
         #Apply the Whittle Filter
-        amplitude_filter = (kappa**2 + sq_norm_xi)**(-alpha / 2.0)
+        amplitude_filter = (kappa ** 2 + sq_norm_xi) ** (-alpha / 2.0)
         field_f = white_noise_f * amplitude_filter
+
         #Transform back to Physical Space
         sample = jnp.real(jnp.fft.ifftn(field_f))
         return sigma*sample
-    else:
+    else: #NOT JAX
         #Shape and key
         rng = np.random.default_rng(seed = key)
         if isinstance(L,float) or isinstance(L,int):
@@ -206,155 +270,204 @@ def generate_matern_sample(key,d = 2,N = 128,L = 1.0,kappa = 1,alpha = 1,sigma =
         if isinstance(N,float) or isinstance(N,int):
             N = d*[N]
         shape = tuple(N)
+
         #White noise in real space
         W = rng.standard_normal(size = shape)
+
         #To Dirichlet eigenbasis via separable DST-I (orthonormal)
         W_hat = dstn(W)
+
         #Discrete Dirichlet Laplacian eigenvalues
         lam = dirichlet_eigs_nd(N, L)
-        #Spectral filter (tau + lam)^(-1/2)
-        filt = sigma * ((kappa + lam) ** (-alpha/2.0))
+
+        #Spectral filter
+        filt = ((kappa + lam) ** (-alpha/2.0))
         psi_hat = filt * W_hat
+
         #Back to real space
         psi = idstn(psi_hat)
         return jnp.array(sigma*psi)
 
 #Vectorized generate_matern_sample
 def generate_matern_sample_batch(d = 2,N = 512,L = 1.0,kappa = 10.0,alpha = 1,sigma = 10,periodic = False):
+    """
+    Create function to sample d-dimensional Matern process
+    ----------
+    Parameters
+    ----------
+    d : int
+
+        Dimension. Default 2
+
+    N : int
+
+        Size of grid in each dimension. Default 128
+
+    L : list of float
+
+        The domain of the function in each coordinate is [0,L[1]]. If a float, repeat the same interval for all coordinates. Default 1
+
+    kappa,alpha,sigma : float
+
+        Parameters of the Matern process
+
+    periodic : logical
+
+        Whether to sample with periodic boundary conditions. Periodic = False is not JAX native and does not work with JIT
+
+    Returns
+    -------
+    function
+    """
     if periodic:
         return jax.vmap(lambda k: generate_matern_sample(k,d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic))
     else:
         return lambda keys: jnp.array(np.apply_along_axis(lambda k: generate_matern_sample(k,d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic),1,keys.reshape((keys.shape[0],1))))
 
-#DaFFs in rectangular grid (AI)
-def build_phi_rect_callable(L_vec,kmax_per_axis=None,bc="dirichlet"):
+#Build function to compute the eigenfunctions of Laplacian
+def eigenf_laplace(L_vec,kmax_per_axis = None,bc = "dirichlet",max_ef = None):
     """
-    Build a callable phi(x) that returns stacked rectangular Laplace eigenfunctions
-    on Ω = ∏[0, L_i], satisfying the boundary operator h(φ)=0:
-      - Dirichlet  -> sine basis (φ|_{∂Ω}=0)
-      - Neumann    -> cosine basis (∂_n φ|_{∂Ω}=0)
-    These are the DaFFs in the paper for rectangles (closed-form eigenfunctions).
-
+    Create function to compute in batches the eigenfunctions of the Dirichlet-Laplace or Neumann-Laplace.
+    ----------
     Parameters
     ----------
-    L_vec : sequence of length d
-        Side lengths (L1,...,Ld) of the rectangle [0,Li] in each axis.
+    L_vec : list of float
+
+        The domain of the function in each coordinate is [0,L[1]]
+
+    kmax_per_axis : list
+
+        List with the maximum number of eigenfunctions per dimension. Consider d * max(kmax_per_axis) eigenfunctions
+
     bc : str
-        'dirichlet' or 'neumann'.
-    kmax_per_axis : sequence of length d or None
-        Maximum modal index per axis. For Dirichlet, k_i ∈ {1,...,kmax_i}.
-        For Neumann, k_i ∈ {0,...,kmax_i}.
-        If None, you must give m.
-    m : int or None
-        Number of features to keep (after sorting by eigenvalue if requested).
-        If None, use *all* multi-indices generated by kmax_per_axis.
-    normalize : bool
-        If True, scale each eigenfunction to unit L2(Ω)-norm.
-        (Closed-form factors: Dirichlet: √(2/L_i) per axis;
-         Neumann: k_i=0 -> √(1/L_i), k_i>0 -> √(2/L_i); product over axes.)
-    sort_by_eigenvalue : bool
-        If True, sort by increasing eigenvalue λ_k = Σ_i (π k_i / L_i)^2.
+
+        Boundary condition. 'dirichlet' or 'neumann'
+
+    max_ef : int
+
+        Maximum number of eigenfunctions to consider among the ones with greatest eigenvalues. If None, considers d * max(kmax_per_axis) eigenfunctions
 
     Returns
     -------
-    phi : callable
-        JAX function phi(x) -> (..., m) where x has shape (..., d).
-    Ks  : jnp.ndarray, shape (m, d)
-        The selected multi-indices (k_1,...,k_d) for each feature.
-    lambdas : jnp.ndarray, shape (m,)
-        The corresponding continuous Laplace eigenvalues.
+    function to compute eigenfunctions,eigenvalues of the eigenfunctions considered
     """
-    L_vec = jnp.asarray(L_vec, dtype=jnp.float32)
+    #Parameters
+    L_vec = jnp.asarray(L_vec,dtype = jnp.float32)
     d = L_vec.shape[0]
     bc = bc.lower()
-    # 1) Build the candidate multi-indices per axis
-    if kmax_per_axis is None:
-        raise ValueError("Provide either kmax_per_axis or m (or both).")
+
+    #Maximum number of functions
+    if max_ef is None:
+        jnp.max(d * jnp.array(kmax_per_axis))
+
+    #Build the candidate multi-indices per axis
     kmax_per_axis = list(map(int, kmax_per_axis))
     if bc.startswith("d"):
         axis_ranges = [range(1, km + 1) for km in kmax_per_axis]
     elif bc.startswith("n"):
         axis_ranges = [range(0, km + 1) for km in kmax_per_axis]
-    else:
-        raise ValueError("bc must be 'dirichlet' or 'neumann'.")
-    # All multi-indices
+
+    #Get all multi-indices
     Ks_list = list(product(*axis_ranges))
-    if len(Ks_list) == 0:
-        raise ValueError("No modes generated; check kmax_per_axis.")
-    Ks = jnp.array(Ks_list, dtype=jnp.float32)  # (M, d)
-    # 2) Eigenvalues λ_k = sum_i (π k_i / L_i)^2 (continuous Laplacian)
-    pi_over_L = jnp.pi / L_vec  # (d,)
-    lambdas_all = jnp.sum((Ks * pi_over_L) ** 2, axis=1)  # (M,)
-    # 3) Sort by eigenvalue
+    Ks = jnp.array(Ks_list,dtype = jnp.float32)
+
+    #Eigenvalues of the continuous Laplacian
+    pi_over_L = jnp.pi / L_vec
+    lambdas_all = jnp.sum((Ks * pi_over_L) ** 2, axis=1)
+
+    #Sort by eigenvalue
     order = jnp.argsort(lambdas_all)
     Ks = Ks[order]
     lambdas_all = lambdas_all[order]
-    # 4) Keep first m if requested
-    Ks = Ks[:jnp.max(d * jnp.array(kmax_per_axis))]
-    lambdas = lambdas_all[:jnp.max(d * jnp.array(kmax_per_axis))]
+
+    #Keep first max_ef
+    Ks = Ks[:max_ef]
+    lambdas = lambdas_all[:max_ef]
     m = Ks.shape[0]
-    # 5) Precompute per-feature normalization factor (closed form)
-    # Dirichlet 1D: ∫ sin^2 = L/2  -> factor √(2/L)
-    # Neumann  1D: k=0: ∫ cos^2 = L -> factor 1/√L;  k>0: L/2 -> √(2/L)
+
+    #Precompute per-feature normalization factor (closed form)
     def per_axis_norm_factor(k_i, L_i, is_dirichlet):
         if is_dirichlet:
             return jnp.sqrt(2.0 / L_i)
         else:
             return jnp.where(k_i == 0, jnp.sqrt(1.0 / L_i), jnp.sqrt(2.0 / L_i))
     if bc.startswith("d"):
-        nf = jnp.prod(jnp.sqrt(2.0 / L_vec)[None, :], axis=1)  # (1,) broadcast
-        norm_factors = jnp.ones((m,), dtype=jnp.float32) * nf  # all same
+        nf = jnp.prod(jnp.sqrt(2.0 / L_vec)[None, :],axis = 1)
+        norm_factors = jnp.ones((m,),dtype = jnp.float32) * nf
     else:
         # per-mode product across axes
         def nf_row(k_row):
             return jnp.prod(per_axis_norm_factor(k_row, L_vec, False))
-        norm_factors = jax.vmap(nf_row)(Ks)  # (m,)
-    # 6) Build the callable φ(x) → (..., m)
-    # Vectorized formula: for each axis i, compute sin/cos(π k_i x_i / L_i) for all selected k_i
-    # and multiply across axes.
+        norm_factors = jax.vmap(nf_row)(Ks)
+
+    #Build the callable function
     Ks_int = Ks  # float array, but only integer values
     L_vec_f = L_vec
+    @jax.jit
     def phi(x):
-        """
-        x: (..., d) point(s) in [0,L]^d
-        returns: (..., m) stacked features [φ_1(x),...,φ_m(x)]
-        """
-        x = jnp.asarray(x, dtype=jnp.float32)
-        if x.shape[-1] != d:
-            raise ValueError(f"Expected x with last dimension {d}, got {x.shape}.")
-        # Initialize with ones
+        x = jnp.asarray(x,dtype = jnp.float32)
+        #Initialize with ones
         vals = jnp.ones(x.shape[:-1] + (m,), dtype=jnp.float32)
+        #Compute eigenfunction
         for i in range(d):
-            ang = (jnp.pi / L_vec_f[i]) * x[..., i][..., None] * Ks_int[:, i]  # (..., m)
+            ang = (jnp.pi / L_vec_f[i]) * x[..., i][..., None] * Ks_int[:, i]
             if bc.startswith("d"):
                 comp = jnp.sin(ang)
             else:
                 comp = jnp.cos(ang)
             vals = vals * comp
-        # Apply L2-normalizing constants (if enabled)
+        #Apply L2-normalizing constants
         vals = vals * norm_factors[None, ...] if vals.ndim > 1 else vals * norm_factors
-        return vals#/jnp.sqrt(1 + lambdas)
-    return phi, Ks.astype(jnp.int32), lambdas
+        return vals
+    return phi, lambdas
 
-def multiple_daff(L_vec,kmax_per_axis = None,bc = "dirichlet"):
+#Compute multiple frequences of domain aware fourrier fesatures
+def multiple_daff(L_vec,kmax_per_axis = None,bc = "dirichlet",max_ef = None):
+    """
+    Create function to compute multiple frequences of the eigenfunctions of the Dirichlet-Laplace or Neumann-Laplace. Each frequences is a different domain.
+    ----------
+    Parameters
+    ----------
+    L_vec : list of lists of float
+
+        List with the domain of each frequence of the eigenfunctions in the form [0,L[i][1]]
+
+    kmax_per_axis : list
+
+        List with the maximum number of eigenfunctions per dimension.
+
+    bc : str
+
+        Boundary condition. 'dirichlet' or 'neumann'
+
+    max_ef : int
+
+        Maximum number of eigenfunctions to consider among the ones with greatest eigenvalues. If None, considers d * max(kmax_per_axis) eigenfunctions
+
+    Returns
+    -------
+    function to compute daff,eigenvalues of the eigenfunctions considered
+    """
     psi = []
     lamb = []
     for L in L_vec:
-        tmp,_,l = build_phi_rect_callable(L,kmax_per_axis,bc)
+        tmp,l = eigenf_laplace(L,kmax_per_axis,bc,max_ef) #Get function
         lamb.append(l)
         psi.append(tmp)
         del tmp
+    #Create function to compute features
+    @jax.jit
     def mff(x):
         y = []
         for i in range(len(psi)):
             y.append(psi[i](x))
-        if len(y) == 1:
+        if len(psi) == 1:
             return y[0]
         else:
             return jnp.concatenate(y,1)
     return mff,jnp.concatenate(lamb)
 
-
+#Code for chebyshev polynomials writeen by AI (deprecated)
 def _chebyshev_T_all(t, K: int):
     """
     Compute T_0..T_K(t) with the standard recurrence.
@@ -422,7 +535,7 @@ def multiple_cheb(L_vec, n: int):
     return mcheb
 
 
-#Simple fully connected architecture. Return the initial parameters and the function for the forward pass
+#Initialize fully connected neyral network Return the initial parameters and the function for the forward pass
 def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs = None,static = None):
     """
     Initialize fully connected neural network
@@ -453,9 +566,9 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs
 
         Arguments for deature transformation:
 
-        For 'ff': A list with the number of frequences and value of greatest frequence.
+        For 'ff': A list with the number of frequences and value of greatest frequence standard deviation.
 
-        For 'daff' and 'daff' bias: A list with the size of rectangles.
+        For 'daff' and 'daff' bias: A dicitionary with a list with the size of rectangles and the type of boundary condition. If its a list, than boundary conditions is dirichlet.
 
     static : function
 
@@ -469,23 +582,26 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs
     initializer = jax.nn.initializers.glorot_normal()
     params = list()
     if static is None:
-        static = lambda x: 0
+        static = lambda x: 0.0
 
     #Feature mapping
-    if ftype == 'ff':
+    if ftype == 'ff': #Fourrier features
         for s in range(fargs[0]):
             sd = fargs[1] ** ((s + 1)/fargs[0])
             if s == 0:
                 Bff = sd*jax.random.normal(jax.random.PRNGKey(key + s + 1),(width[0],int(width[1]/2)))
             else:
                 Bff = jnp.append(Bff,sd*jax.random.normal(jax.random.PRNGKey(key + s + 1),(width[0],int(width[1]/2))),1)
+        @jax.jit
         def phi(x):
             x = x @ Bff
             return jnp.concatenate([jnp.sin(2 * jnp.pi * x),jnp.cos(2 * jnp.pi * x)],axis = -1)
         width = width[1:]
         width[0] = 2*Bff.shape[1]
     elif ftype == 'daff' or ftype == 'daff_bias':
-        phi,lamb = multiple_daff(fargs,kmax_per_axis = [width[1]] * width[0],bc = "dirichlet")
+        if not isinstance(fargs, dict):
+            fargs = {'L': fargs,'bc': "dirichlet"}
+        phi,lamb = multiple_daff(list(fargs.values())[0],kmax_per_axis = [width[1]] * width[0],bc = list(fargs.values())[1])
         width = width[1:]
         width[0] = lamb.shape[0]
     elif ftype == 'cheb' or ftype == 'cheb_bias':
@@ -493,6 +609,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs
         width = width[1:]
         width[0] = len(fargs)*width[0]
     else:
+        @jax.jit
         def phi(x):
             return x
 
@@ -504,7 +621,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs
         WV = initializer(k[2],(width[0],width[1]),jnp.float32)
         BV = initializer(k[3],(1,width[1]),jnp.float32)
         params.append({'WU':WU,'BU':BU,'WV':WV,'BV':BV})
-    key = jax.random.split(jax.random.PRNGKey(key),len(width)-1) #Seed for initialization
+    key = jax.random.split(jax.random.PRNGKey(key + 1),len(width)-1) #Seed for initialization
     for key,lin,lout in zip(key,width[:-1],width[1:]):
         W = initializer(key,(lin,lout),jnp.float32)
         B = initializer(key,(1,lout),jnp.float32)
@@ -595,7 +712,7 @@ def get_activation(act):
     elif act == 'log_sigmoid':
         return jax.nn.log_sigmoid
     elif act == 'leaky_relu':
-        return jax.xx.leaky_relu
+        return jax.nn.leaky_relu
     elif act == 'hard_sigmoid':
         return jax.nn.hard_sigmoid
     elif act == 'hard_silu':
@@ -861,7 +978,9 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
 
 #Training PINN
-def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1,resample = True,epochs = 100,at_each = 10,activation = 'tanh',neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 100,save = False,file_name = 'result_pinn',exp_decay = False,transition_steps = 1000,decay_rate = 0.9,mlp = False,ftype = None,fargs = None,q = 2,w = None,periodic = False,static = None,opt = 'LBFGS'):
+def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1024,resample = False,epochs = 100,at_each = 10,activation = 'tanh',
+    neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 1,save = False,file_name = 'result_pinn',
+    exp_decay = True,transition_steps = 100,decay_rate = 0.9,mlp = True,ftype = None,fargs = None,q = 4,w = None,periodic = False,static = None,opt = 'LBFGS'):
     """
     Train a Physics-informed Neural Network
     ----------
@@ -905,7 +1024,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
     bsize : int
 
-        Batch size for weak norm computation. Default 1
+        Batch size for weak norm computation. Default 1024
 
     resample : logical
 
@@ -949,7 +1068,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
     epoch_print : int
 
-        Number of epochs to calculate and print test errors. Default 100
+        Number of epochs to calculate and print test errors. Default 1
 
     save : logical
 
@@ -961,11 +1080,11 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
     exp_decay : logical
 
-        Whether to consider exponential decay of learning rate. Default False
+        Whether to consider exponential decay of learning rate. Default True
 
     transition_steps : int
 
-        Number of steps for exponential decay. Default 1000
+        Number of steps for exponential decay. Default 100
 
     decay_rate : float
 
@@ -983,13 +1102,13 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
         Arguments for deature transformation:
 
-        For 'ff': A list with the number of frequences and value of greatest frequence.
+        For 'ff': A list with the number of frequences and value of greatest frequence standard deviation.
 
-        For 'daff' and 'daff' bias: A list with the size of rectangles.
+        For 'daff' and 'daff' bias: A dicitionary with a list with the size of rectangles and the type of boundary condition. If its a list, than boundary conditions is dirichlet.
 
     q : int
 
-        Power of weights mask. Default 2
+        Power of weights mask. Default 4
 
     w : dict
 
@@ -1009,7 +1128,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
     Returns
     -------
-    dict-like object with the estimated function, the estimated parameters, the neural network function for the forward pass and the training time
+    dict-like object with the estimated function, the estimated parameters, the neural network function for the forward pass and the loss, L2error and training time at each epoch
     """
     #Initialize architecture
     nnet = fconNN(width,get_activation(activation),key,mlp,ftype,fargs,static)
@@ -1086,10 +1205,10 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
     def lf(params,x,k):
         l = lf_each(params,x,k)
         w = params['w']
+        loss = jnp.mean((w['ws'] ** q)*l['ls']) + jnp.mean((w['wb'] ** q)*l['lb']) + jnp.mean((w['wi'] ** q)*l['li']) + jnp.mean((w['wc'] ** q)*l['lc']) + (w['wc_weak'] ** q)*l['lc_weak']
         if opt != 'LBFGS':
-            return jnp.mean((w['ws'] ** q)*l['ls']) + jnp.mean((w['wb'] ** q)*l['lb']) + jnp.mean((w['wi'] ** q)*l['li']) + jnp.mean((w['wc'] ** q)*l['lc']) + (w['wc_weak'] ** q)*l['lc_weak']
+            return loss
         else:
-            loss = jnp.mean((w['ws'] ** q)*l['ls']) + jnp.mean((w['wb'] ** q)*l['lb']) + jnp.mean((w['wi'] ** q)*l['li']) + jnp.mean((w['wc'] ** q)*l['lc']) + (w['wc_weak'] ** q)*l['lc_weak']
             l2 = None
             if test_data is not None:
                 l2 = L2error(forward(test_data['sensor'],params['net']),test_data['usensor'])
@@ -1098,14 +1217,15 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
     #Initialize self-adaptive weights
     if w is None:
         w = {'ws': jnp.array(1.0),'wb': jnp.array(1.0),'wi': jnp.array(1.0),'wc': jnp.array(1.0),'wc_weak': jnp.array(1.0)}
-    if data['sensor'] is not None:
-        w['ws'] = w['ws'] + jax.random.normal(jax.random.PRNGKey(key+1),(data['sensor'].shape[0],1))
-    if data['boundary'] is not None:
-        w['wb'] = w['wb'] + jax.random.normal(jax.random.PRNGKey(key+2),(data['boundary'].shape[0],1))
-    if data['initial'] is not None:
-        w['wi'] = w['wi'] + jax.random.normal(jax.random.PRNGKey(key+3),(data['initial'].shape[0],1))
-    if data['collocation'] is not None:
-        w['wc'] = w['wc'] + jax.random.normal(jax.random.PRNGKey(key+4),(data['collocation'].shape[0],1))
+    if q != 0:
+        if data['sensor'] is not None:
+            w['ws'] = w['ws'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+1),(data['sensor'].shape[0],1))
+        if data['boundary'] is not None:
+            w['wb'] = w['wb'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+2),(data['boundary'].shape[0],1))
+        if data['initial'] is not None:
+            w['wi'] = w['wi'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+3),(data['initial'].shape[0],1))
+        if data['collocation'] is not None:
+            w['wc'] = w['wc'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+4),(data['collocation'].shape[0],1))
 
     #Store all parameters
     params = {'net': nnet['params'],'inverse': initial_par,'w': w}
@@ -1130,13 +1250,11 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         def update(opt_state,params,x,k):
             #Compute gradient
             grads = grad_loss(params,x,k)
-            #Change sign weights
-            #for i in grads['w']:
-            #    grads['w'][i] = - grads['w'][i]
             #Calculate parameters updates
             updates, opt_state = optimizer.update(grads, opt_state)
             #Update parameters
-            updates = {**updates, 'w': jax.tree_util.tree_map(lambda x: -x, updates['w'])}
+            if q != 0:
+                updates = {**updates, 'w': jax.tree_util.tree_map(lambda x: -x, updates['w'])} #Change signs of weights
             params = optax.apply_updates(params, updates)
             #Return state of optmizer and updated parameters
             return opt_state,params
