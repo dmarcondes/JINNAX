@@ -290,11 +290,8 @@ def build_phi_rect_callable(L_vec,kmax_per_axis=None,bc="dirichlet"):
     Ks = Ks[order]
     lambdas_all = lambdas_all[order]
     # 4) Keep first m if requested
-    if d > 1:
-        Ks = Ks[:jnp.max(2 * jnp.array(kmax_per_axis))]
-        lambdas = lambdas_all[:jnp.max(2 * jnp.array(kmax_per_axis))]
-    else:
-        lambdas = lambdas_all
+    Ks = Ks[:jnp.max(d * jnp.array(kmax_per_axis))]
+    lambdas = lambdas_all[:jnp.max(d * jnp.array(kmax_per_axis))]
     m = Ks.shape[0]
     # 5) Precompute per-feature normalization factor (closed form)
     # Dirichlet 1D: ∫ sin^2 = L/2  -> factor √(2/L)
