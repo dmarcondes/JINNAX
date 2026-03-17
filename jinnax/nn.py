@@ -191,7 +191,7 @@ def dirichlet_eigs_nd(n,L):
     lam_axes = []
     for ni, Li in zip(n,L):
         h = Li / (ni + 1.0)
-        k = jnp.arange(1,ni + 1,dtype = np.float64)
+        k = jnp.arange(1,ni + 1,dtype = np.float32)
         ln = (2.0 / (h*h)) * (1.0 - jnp.cos(jnp.pi * k / (ni + 1.0)))
         lam_axes.append(ln)
     grids = jnp.meshgrid(*lam_axes, indexing='ij')
