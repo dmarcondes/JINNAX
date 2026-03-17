@@ -50,7 +50,7 @@ def MSE(pred,true):
 @jax.jit
 def MSE_SA(pred,true,w,q = 2):
     """
-    Selft-adaptative squared error
+    Self-adaptative squared error
     ----------
     Parameters
     ----------
@@ -189,10 +189,10 @@ def dirichlet_eigs_nd(n,L):
     """
     #Unidimensional eigenvalues
     lam_axes = []
-    for n, L in zip(n,L):
-        h = L / (n + 1.0)
-        k = jnp.arange(1, n + 1)
-        ln = (2.0 / (h*h)) * (1.0 - jnp.cos(jnp.pi * k / (n + 1.0)))
+    for ni, Li in zip(n,L):
+        h = Li / (ni + 1.0)
+        k = jnp.arange(1,ni + 1,dtype = np.float64)
+        ln = (2.0 / (h*h)) * (1.0 - jnp.cos(jnp.pi * k / (ni + 1.0)))
         lam_axes.append(ln)
     grids = jnp.meshgrid(*lam_axes, indexing='ij')
     Lam = jnp.zeros_like(grids[0])
@@ -358,7 +358,7 @@ def eigenf_laplace(L_vec,kmax_per_axis = None,bc = "dirichlet",max_ef = None):
 
     #Maximum number of functions
     if max_ef is None:
-        jnp.max(d * jnp.array(kmax_per_axis))
+        max_ef = jnp.max(d * jnp.array(kmax_per_axis))
 
     #Build the candidate multi-indices per axis
     kmax_per_axis = list(map(int, kmax_per_axis))
