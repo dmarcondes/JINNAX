@@ -358,7 +358,10 @@ def eigenf_laplace(L_vec,kmax_per_axis = None,bc = "dirichlet",max_ef = None):
 
     #Maximum number of functions
     if max_ef is None:
-        max_ef = jnp.max(d * jnp.array(kmax_per_axis))
+        if d == 1:
+            max_ef = jnp.max(jnp.array(kmax_per_axis))
+        else:
+            max_ef = jnp.max(2 * jnp.array(kmax_per_axis))#jnp.max(d * jnp.array(kmax_per_axis))
 
     #Build the candidate multi-indices per axis
     kmax_per_axis = list(map(int, kmax_per_axis))
