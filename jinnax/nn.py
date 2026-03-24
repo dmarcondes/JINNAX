@@ -1159,8 +1159,12 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(tf)
             loss_res_weak = jnp.mean(integralOmega ** 2)
             sigma = float(jnp.sqrt(loss_boundary/loss_res_weak).tolist())
-        gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic)
-        tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
+            del gen
+            gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic)
+            tf = sigma*tf
+        else:
+            gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic)
+            tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
 
     #Define loss function
     @jax.jit
