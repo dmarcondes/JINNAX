@@ -202,7 +202,7 @@ def dirichlet_eigs_nd(n,L):
 
 
 #Sample from d-dimensional Matern process
-def generate_matern_sample(key,d = 2,N = 128,L = 1.0,kappa = 1,alpha = 1,sigma = 1,periodic = False):
+def generate_matern_sample(key,d = 2,N = 128,L = 1.0,kappa = 1,alpha = 1,tau = 1,periodic = False):
     """
     Sample d-dimensional Matern process
     ----------
@@ -224,7 +224,7 @@ def generate_matern_sample(key,d = 2,N = 128,L = 1.0,kappa = 1,alpha = 1,sigma =
 
         The domain of the function in each coordinate is [0,L[1]]. If a float, repeat the same interval for all coordinates. Default 1
 
-    kappa,alpha,sigma : float
+    kappa,alpha,tau : float
 
         Parameters of the Matern process
 
@@ -261,7 +261,7 @@ def generate_matern_sample(key,d = 2,N = 128,L = 1.0,kappa = 1,alpha = 1,sigma =
 
         #Transform back to Physical Space
         sample = jnp.real(jnp.fft.ifftn(field_f))
-        return sigma*sample
+        return tau*sample
     else: #NOT JAX
         #Shape and key
         rng = np.random.default_rng(seed = key)
@@ -286,10 +286,10 @@ def generate_matern_sample(key,d = 2,N = 128,L = 1.0,kappa = 1,alpha = 1,sigma =
 
         #Back to real space
         psi = idstn(psi_hat)
-        return jnp.array(sigma*psi)
+        return jnp.array(tau*psi)
 
 #Vectorized generate_matern_sample
-def generate_matern_sample_batch(d = 2,N = 512,L = 1.0,kappa = 10.0,alpha = 1,sigma = 10,periodic = False):
+def generate_matern_sample_batch(d = 2,N = 512,L = 1.0,kappa = 10.0,alpha = 1,tau = 10,periodic = False):
     """
     Create function to sample d-dimensional Matern process
     ----------
@@ -307,7 +307,7 @@ def generate_matern_sample_batch(d = 2,N = 512,L = 1.0,kappa = 10.0,alpha = 1,si
 
         The domain of the function in each coordinate is [0,L[1]]. If a float, repeat the same interval for all coordinates. Default 1
 
-    kappa,alpha,sigma : float
+    kappa,alpha,tau : float
 
         Parameters of the Matern process
 
@@ -320,9 +320,9 @@ def generate_matern_sample_batch(d = 2,N = 512,L = 1.0,kappa = 10.0,alpha = 1,si
     function
     """
     if periodic:
-        return jax.vmap(lambda k: generate_matern_sample(k,d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic))
+        return jax.vmap(lambda k: generate_matern_sample(k,d = d,N = N,L = L,kappa = kappa,alpha = alpha,tau = tau,periodic = periodic))
     else:
-        return lambda keys: jnp.array(np.apply_along_axis(lambda k: generate_matern_sample(k,d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic),1,keys.reshape((keys.shape[0],1))))
+        return lambda keys: jnp.array(np.apply_along_axis(lambda k: generate_matern_sample(k,d = d,N = N,L = L,kappa = kappa,alpha = alpha,tau = tau,periodic = periodic),1,keys.reshape((keys.shape[0],1))))
 
 #Build function to compute the eigenfunctions of Laplacian
 def eigenf_laplace(L_vec,kmax_per_axis = None,bc = "dirichlet",max_ef = None):
@@ -539,7 +539,7 @@ def multiple_cheb(L_vec, n: int):
 
 
 #Initialize fully connected neyral network Return the initial parameters and the function for the forward pass
-def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs = None,static = None):
+def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs = None,static = None,daff = None):
     """
     Initialize fully connected neural network
     ----------
@@ -577,6 +577,10 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs
 
         A static function to sum to the neural network output.
 
+    daff : list
+
+        List with function to compute daff and the number of daff. If None computes assuming rectangular domain.
+
     Returns
     -------
     dict with initial parameters and the function for the forward pass
@@ -604,9 +608,13 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs
     elif ftype == 'daff' or ftype == 'daff_bias':
         if not isinstance(fargs, dict):
             fargs = {'L': fargs,'bc': "dirichlet"}
-        phi,lamb = multiple_daff(list(fargs.values())[0],kmax_per_axis = [width[1]] * width[0],bc = list(fargs.values())[1])
         width = width[1:]
-        width[0] = lamb.shape[0]
+        if daff is None:
+            phi,lamb = multiple_daff(list(fargs.values())[0],kmax_per_axis = [width[1]] * width[0],bc = list(fargs.values())[1])
+            width[0] = lamb.shape[0]
+        else:
+            phi = daff[0]
+            width[0] = daff[1]
     elif ftype == 'cheb' or ftype == 'cheb_bias':
         phi = multiple_cheb(fargs,n = width[1])
         width = width[1:]
@@ -981,9 +989,9 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
     return {'u': u,'params': params,'forward': forward,'time': time.time() - t0}
 
 #Training PINN
-def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1024,resample = False,epochs = 100,at_each = 10,activation = 'tanh',
+def train_Matern_PINN(data,width,pde,test_data = None,tf = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,tau = 100,bsize = 1024,resample = False,epochs = 100,at_each = 10,activation = 'tanh',
     neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 1,save = False,file_name = 'result_pinn',
-    exp_decay = True,transition_steps = 100,decay_rate = 0.9,mlp = True,ftype = None,fargs = None,q = 4,w = None,periodic = False,static = None,opt = 'LBFGS'):
+    exp_decay = True,transition_steps = 100,decay_rate = 0.9,mlp = True,ftype = None,fargs = None,q = 4,w = None,periodic = False,static = None,opt = 'LBFGS',daff = None):
     """
     Train a Physics-informed Neural Network
     ----------
@@ -1005,6 +1013,10 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
         A dictionay with test data for L2 error calculation generated by the jinnax.data.generate_PINNdata function. Default None for not calculating L2 error
 
+    tf : jax.numpy.array
+
+        Sample of test functions. If None sample from DST assuming rectangular domains
+
     params : list
 
         Initial parameters for the neural network. Default None to initialize randomly
@@ -1021,7 +1033,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
         The domain of the function in each coordinate is [0,L[1]]. If a float, repeat the same interval for all coordinates. Default 1
 
-    kappa,alpha,sigma : float
+    kappa,alpha,tau : float
 
         Parameters of the Matern process
 
@@ -1129,27 +1141,33 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
         Optimizer. Default LBFGS.
 
+    daff : list
+
+        List with function to compute daff and the number of daff. If None computes assuming rectangular domain.
+
     Returns
     -------
     dict-like object with the estimated function, the estimated parameters, the neural network function for the forward pass and the loss, L2error and training time at each epoch
     """
     #Initialize architecture
-    nnet = fconNN(width,get_activation(activation),key,mlp,ftype,fargs,static)
+    nnet = fconNN(width,get_activation(activation),key,mlp,ftype,fargs,static,daff)
     forward = nnet['forward']
     if params is not None:
         nnet['params'] = params
+    if tf is not None:
+        grid = data['collocation']
 
     #Generate from Matern process
-    if sigma > 0:
+    if tau > 0 and tf is None:
         if isinstance(L,float) or isinstance(L,int):
             L = d*[L]
         #Grid for weak norm
         grid = [jnp.linspace(0,L[i],N) for i in range(d)]
         grid = jnp.meshgrid(*grid, indexing='ij')
         grid = jnp.stack(grid, axis=-1).reshape((-1, d))
-        #Set sigma
+        #Set tau
         if data['boundary'] is not None:
-            gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma)
+            gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,tau = tau)
             tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
             if neumann:
                 loss_boundary = oper_neumann(lambda x: forward(x,params['net']),data['boundary'])
@@ -1158,18 +1176,18 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             output_w = pde(lambda x: forward(x,nnet['params']),grid)
             integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(tf)
             loss_res_weak = jnp.mean(integralOmega ** 2)
-            sigma = float(jnp.sqrt(loss_boundary/loss_res_weak).tolist())
+            tau = float(jnp.sqrt(loss_boundary/loss_res_weak).tolist())
             del gen
-            gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic)
-            tf = sigma*tf
+            gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,tau = tau,periodic = periodic)
+            tf = tau*tf
         else:
-            gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic)
+            gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,tau = tau,periodic = periodic)
             tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
 
     #Define loss function
     @jax.jit
     def lf_each(params,x,k):
-        if sigma > 0:
+        if tau > 0:
             #Term that refers to weak loss
             if resample:
                 test_functions = gen(jax.random.split(jax.random.PRNGKey(k[0]),(bsize,))[:,0])
@@ -1189,14 +1207,14 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         if x['initial'] is not None:
             #Term that refers to initial data
             loss_initial = MSE(forward(x['initial'],params['net']),x['uinitial'])
-        if x['collocation'] is not None and sigma == 0:
+        if x['collocation'] is not None and tau == 0:
             if inverse:
                 output = pde(lambda x: forward(x,params['net']),x['collocation'],params['inverse'])
                 loss_res = MSE(output,0)
             else:
                 output = pde(lambda x: forward(x,params['net']),x['collocation'])
                 loss_res = MSE(output,0)
-        if sigma > 0:
+        if tau > 0:
             #Term that refers to weak loss
             if inverse:
                 output_w = pde(lambda x: forward(x,params['net']),grid,params['inverse'])
