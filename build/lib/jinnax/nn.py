@@ -991,7 +991,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
 #Training PINN
 def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,tau = 100,bsize = 1024,resample = False,epochs = 100,at_each = 10,activation = 'tanh',
     neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 1,save = False,file_name = 'result_pinn',
-    exp_decay = True,transition_steps = 100,decay_rate = 0.9,mlp = True,ftype = None,fargs = None,q = 4,w = None,periodic = False,static = None,opt = 'LBFGS',tf = None,daff = None):
+    exp_decay = True,transition_steps = 100,decay_rate = 0.9,mlp = True,ftype = None,fargs = None,q = 0,w = None,periodic = False,static = None,opt = 'LBFGS',tf = None,daff = None):
     """
     Train a Physics-informed Neural Network
     ----------
@@ -1119,7 +1119,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
     q : int
 
-        Power of weights mask. Default 4
+        Power of weights mask. Default 0 for no adaptive weight
 
     w : dict
 
