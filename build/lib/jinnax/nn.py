@@ -539,7 +539,7 @@ def multiple_cheb(L_vec, n: int):
 
 
 #Initialize fully connected neyral network Return the initial parameters and the function for the forward pass
-def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs = None,static = None):
+def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs = None,static = None,daff = None):
     """
     Initialize fully connected neural network
     ----------
@@ -577,6 +577,10 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs
 
         A static function to sum to the neural network output.
 
+    daff : list
+
+    List with function to compute daff and the number of daff. If None computes assuming rectangular domain.
+
     Returns
     -------
     dict with initial parameters and the function for the forward pass
@@ -604,9 +608,13 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs
     elif ftype == 'daff' or ftype == 'daff_bias':
         if not isinstance(fargs, dict):
             fargs = {'L': fargs,'bc': "dirichlet"}
-        phi,lamb = multiple_daff(list(fargs.values())[0],kmax_per_axis = [width[1]] * width[0],bc = list(fargs.values())[1])
         width = width[1:]
-        width[0] = lamb.shape[0]
+        if daff is None:
+            phi,lamb = multiple_daff(list(fargs.values())[0],kmax_per_axis = [width[1]] * width[0],bc = list(fargs.values())[1])
+            width[0] = lamb.shape[0]
+        else:
+            phi = daff[0]
+            width[0] = daff[1]
     elif ftype == 'cheb' or ftype == 'cheb_bias':
         phi = multiple_cheb(fargs,n = width[1])
         width = width[1:]
