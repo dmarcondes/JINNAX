@@ -145,7 +145,7 @@ def generate_PINNdata(u,xl,xu,tl = None,tu = None,Ns = None,Nts = None,Nb = None
                 for i in range(d-1):
                     #Sample Ns^d points for the i-th coordinate and append collumn-wise
                     x_sensor =  jnp.append(x_sensor,jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xl[i+1],maxval = xu[i+1],shape = (Ns ** d,1)),1)
-            x_sensor = jnp.array(x_sensor,dtype = jnp.float32)
+            x_sensor = jnp.array(x_sensor)
             if Nts is not None:
                 if posts == 'grid':
                     #Create the Nt grid of (tl,tu]
@@ -154,9 +154,9 @@ def generate_PINNdata(u,xl,xu,tl = None,tu = None,Ns = None,Nts = None,Nb = None
                     #Sample Nt points from (tl,tu)
                     t_sensor = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = tl,maxval = tu,shape = (Nts,))
                 #Product of x and t
-                xt_sensor = jnp.array([x.tolist() + [t.tolist()] for x in x_sensor for t in t_sensor],dtype = jnp.float32)
+                xt_sensor = jnp.array([x.tolist() + [t.tolist()] for x in x_sensor for t in t_sensor])
                 #Calculate u at each point
-                u_sensor = jnp.array([u(x,t) + sigmas*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize))) for x in x_sensor for t in t_sensor],dtype = jnp.float32)
+                u_sensor = jnp.array([u(x,t) + sigmas*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize))) for x in x_sensor for t in t_sensor])
                 u_sensor = u_sensor.reshape((u_sensor.shape[0],p))
             else:
                 xt_sensor = x_sensor
@@ -183,7 +183,7 @@ def generate_PINNdata(u,xl,xu,tl = None,tu = None,Ns = None,Nts = None,Nb = None
                 x_collocation = jnp.stack(x_collocation, axis=-1).reshape((-1, d))
                 if Ntc is not None:
                     #Product of x and t
-                    xt_collocation = jnp.array([x.tolist() + [t.tolist()] for t in t_collocation for x in x_collocation],dtype = jnp.float32)
+                    xt_collocation = jnp.array([x.tolist() + [t.tolist()] for t in t_collocation for x in x_collocation])
                 else:
                     xt_collocation = x_collocation
             else:
@@ -194,7 +194,7 @@ def generate_PINNdata(u,xl,xu,tl = None,tu = None,Ns = None,Nts = None,Nb = None
                     x_collocation =  jnp.append(x_collocation,jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xl[i+1],maxval = xu[i+1],shape = (Nc ** d,1)),1)
                 if Ntc is not None:
                     #Product of x and t
-                    xt_collocation = jnp.array([x.tolist() + [t.tolist()] for t in t_collocation for x in x_collocation],dtype = jnp.float32)
+                    xt_collocation = jnp.array([x.tolist() + [t.tolist()] for t in t_collocation for x in x_collocation])
                 else:
                     xt_collocation = x_collocation
         else:
@@ -218,7 +218,7 @@ def generate_PINNdata(u,xl,xu,tl = None,tu = None,Ns = None,Nts = None,Nb = None
             #Exclude last row
             pre_grid = pre_grid[:-1]
             #Create array with vertex (xl,...,xl)
-            x_boundary = jnp.array(pre_grid[0],dtype = jnp.float32).reshape((1,d))
+            x_boundary = jnp.array(pre_grid[0]).reshape((1,d))
             if posb == 'grid':
                 #Create a grid over each edge of the n-cube
                 for i in range(len(pre_grid) - 1):
@@ -237,10 +237,10 @@ def generate_PINNdata(u,xl,xu,tl = None,tu = None,Ns = None,Nts = None,Nb = None
                         for j in range(len(grid_points) - 1):
                             grid_values = [x1 + [x2] for x1 in grid_values for x2 in grid_points[j + 1]]
                         #Append to data
-                        x_boundary = jnp.append(x_boundary,jnp.array(grid_values,dtype = jnp.float32).reshape((len(grid_values),d)),0)
+                        x_boundary = jnp.append(x_boundary,jnp.array(grid_values).reshape((len(grid_values),d)),0)
                     else:
                         #If the point is a vertex, append it to data
-                        x_boundary = jnp.append(x_boundary,jnp.array(pre_grid[i + 1],dtype = jnp.float32).reshape((1,d)),0)
+                        x_boundary = jnp.append(x_boundary,jnp.array(pre_grid[i + 1]).reshape((1,d)),0)
             else:
                 #Sample points over each edge of the n-cube
                 for i in range(len(pre_grid) - 1):
@@ -256,15 +256,15 @@ def generate_PINNdata(u,xl,xu,tl = None,tu = None,Ns = None,Nts = None,Nb = None
                             else:
                                 grid_values = [x1 + [pre_grid[i + 1][j + 1]] for x1 in grid_values]
                         #Append to data
-                        x_boundary = jnp.append(x_boundary,jnp.array(grid_values,dtype = jnp.float32).reshape((len(grid_values),d)),0)
+                        x_boundary = jnp.append(x_boundary,jnp.array(grid_values).reshape((len(grid_values),d)),0)
                     else:
                         #If the point is a vertex, append it to data
-                        x_boundary = jnp.append(x_boundary,jnp.array(pre_grid[i + 1],dtype = jnp.float32).reshape((1,d)),0)
+                        x_boundary = jnp.append(x_boundary,jnp.array(pre_grid[i + 1]).reshape((1,d)),0)
             if Ntb is not None:
                 #Product of x and t
-                xt_boundary = jnp.array([x.tolist() + [t.tolist()] for x in x_boundary for t in t_boundary],dtype = jnp.float32)
+                xt_boundary = jnp.array([x.tolist() + [t.tolist()] for x in x_boundary for t in t_boundary])
                 #Calculate u at each point
-                u_boundary = jnp.array([[u(x,t) + sigmab*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_boundary for t in t_boundary],dtype = jnp.float32)
+                u_boundary = jnp.array([[u(x,t) + sigmab*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_boundary for t in t_boundary])
                 u_boundary = u_boundary.reshape((u_boundary.shape[0],p))
             else:
                 xt_boundary = x_boundary
@@ -287,11 +287,11 @@ def generate_PINNdata(u,xl,xu,tl = None,tu = None,Ns = None,Nts = None,Nb = None
                 for i in range(d-1):
                     #Sample N0^d points for the i-th coordinate and append collumn-wise
                     x_initial =  jnp.append(x_initial,jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xl[i+1],maxval = xu[i+1],shape = (N0 ** d,1)),1)
-            x_initial = jnp.array(x_initial,dtype = jnp.float32)
+            x_initial = jnp.array(x_initial)
             #Product of x and t
-            xt_initial = jnp.array([x.tolist() + [t] for x in x_initial for t in [0.0]],dtype = jnp.float32)
+            xt_initial = jnp.array([x.tolist() + [t] for x in x_initial for t in [0.0]])
             #Calculate u at each point
-            u_initial = jnp.array([[u(x,t) + sigma0*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_initial for t in jnp.array([0.0])],dtype = jnp.float32)
+            u_initial = jnp.array([[u(x,t) + sigma0*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)))] for x in x_initial for t in jnp.array([0.0])])
             u_initial = u_initial.reshape((u_initial.shape[0],p))
         else:
             #Return None if initial data should not be generated
@@ -310,7 +310,7 @@ def generate_PINNdata(u,xl,xu,tl = None,tu = None,Ns = None,Nts = None,Nb = None
                 for i in range(d-1):
                     #Sample Ns^d points for the i-th coordinate and append collumn-wise
                     x_sensor =  jnp.append(x_sensor,jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = xl[i+1],maxval = xu[i+1],shape = (Ns ** d,1)),1)
-            x_sensor = jnp.array(x_sensor,dtype = jnp.float32)
+            x_sensor = jnp.array(x_sensor)
             if Nts is not None:
                 if posts == 'grid':
                     #Create the Nt grid of (tl,tu]
@@ -319,9 +319,9 @@ def generate_PINNdata(u,xl,xu,tl = None,tu = None,Ns = None,Nts = None,Nb = None
                     #Sample Nt points from (tl,tu)
                     t_sensor = jax.random.uniform(key = jax.random.PRNGKey(random.randint(0,sys.maxsize)),minval = tl,maxval = tu,shape = (Nts,))
                 #Product of x and t
-                xt_sensor = jnp.array([x.tolist() + [t.tolist()] for x in x_sensor for t in t_sensor],dtype = jnp.float32)
+                xt_sensor = jnp.array([x.tolist() + [t.tolist()] for x in x_sensor for t in t_sensor])
                 #Calculate u at each point
-                u_sensor = jnp.array([u(x,t) + sigmas*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize))) for x in x_sensor for t in t_sensor],dtype = jnp.float32)
+                u_sensor = jnp.array([u(x,t) + sigmas*jax.random.normal(key = jax.random.PRNGKey(random.randint(0,sys.maxsize))) for x in x_sensor for t in t_sensor])
                 u_sensor = u_sensor.reshape((u_sensor.shape[0],p))
             else:
                 xt_sensor = x_sensor
@@ -386,6 +386,6 @@ def read_data_frame(file,sep = None,header = 'infer',sheet = 0):
         dat = pandas.read_excel(file,header = header,sheet_name = sheet)
 
     #Convert to JAX data structure
-    dat = jnp.array(dat,dtype = jnp.float32)
+    dat = jnp.array(dat)
 
     return dat

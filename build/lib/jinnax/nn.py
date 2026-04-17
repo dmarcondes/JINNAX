@@ -191,7 +191,7 @@ def dirichlet_eigs_nd(n,L):
     lam_axes = []
     for ni, Li in zip(n,L):
         h = Li / (ni + 1.0)
-        k = jnp.arange(1,ni + 1,dtype = np.float32)
+        k = jnp.arange(1,ni + 1)
         ln = (2.0 / (h*h)) * (1.0 - jnp.cos(jnp.pi * k / (ni + 1.0)))
         lam_axes.append(ln)
     grids = jnp.meshgrid(*lam_axes, indexing='ij')
@@ -352,7 +352,7 @@ def eigenf_laplace(L_vec,kmax_per_axis = None,bc = "dirichlet",max_ef = None):
     function to compute eigenfunctions,eigenvalues of the eigenfunctions considered
     """
     #Parameters
-    L_vec = jnp.asarray(L_vec,dtype = jnp.float32)
+    L_vec = jnp.asarray(L_vec)
     d = L_vec.shape[0]
     bc = bc.lower()
 
@@ -372,7 +372,7 @@ def eigenf_laplace(L_vec,kmax_per_axis = None,bc = "dirichlet",max_ef = None):
 
     #Get all multi-indices
     Ks_list = list(product(*axis_ranges))
-    Ks = jnp.array(Ks_list,dtype = jnp.float32)
+    Ks = jnp.array(Ks_list)
 
     #Eigenvalues of the continuous Laplacian
     pi_over_L = jnp.pi / L_vec
@@ -396,7 +396,7 @@ def eigenf_laplace(L_vec,kmax_per_axis = None,bc = "dirichlet",max_ef = None):
             return jnp.where(k_i == 0, jnp.sqrt(1.0 / L_i), jnp.sqrt(2.0 / L_i))
     if bc.startswith("d"):
         nf = jnp.prod(jnp.sqrt(2.0 / L_vec)[None, :],axis = 1)
-        norm_factors = jnp.ones((m,),dtype = jnp.float32) * nf
+        norm_factors = jnp.ones((m,)) * nf
     else:
         # per-mode product across axes
         def nf_row(k_row):
@@ -408,9 +408,9 @@ def eigenf_laplace(L_vec,kmax_per_axis = None,bc = "dirichlet",max_ef = None):
     L_vec_f = L_vec
     @jax.jit
     def phi(x):
-        x = jnp.asarray(x,dtype = jnp.float32)
+        x = jnp.asarray(x)
         #Initialize with ones
-        vals = jnp.ones(x.shape[:-1] + (m,), dtype=jnp.float32)
+        vals = jnp.ones(x.shape[:-1] + (m,))
         #Compute eigenfunction
         for i in range(d):
             ang = (jnp.pi / L_vec_f[i]) * x[..., i][..., None] * Ks_int[:, i]
@@ -627,15 +627,15 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs
     #Initialize parameters
     if mlp:
         k = jax.random.split(jax.random.PRNGKey(key),4)
-        WU = initializer(k[0],(width[0],width[1]),jnp.float32)
-        BU = initializer(k[1],(1,width[1]),jnp.float32)
-        WV = initializer(k[2],(width[0],width[1]),jnp.float32)
-        BV = initializer(k[3],(1,width[1]),jnp.float32)
+        WU = initializer(k[0],(width[0],width[1]))
+        BU = initializer(k[1],(1,width[1]))
+        WV = initializer(k[2],(width[0],width[1]))
+        BV = initializer(k[3],(1,width[1]))
         params.append({'WU':WU,'BU':BU,'WV':WV,'BV':BV})
     key = jax.random.split(jax.random.PRNGKey(key + 1),len(width)-1) #Seed for initialization
     for key,lin,lout in zip(key,width[:-1],width[1:]):
-        W = initializer(key,(lin,lout),jnp.float32)
-        B = initializer(key,(1,lout),jnp.float32)
+        W = initializer(key,(lin,lout))
+        B = initializer(key,(1,lout))
         params.append({'W':W,'B':B})
 
     #Define function for forward pass
