@@ -24,6 +24,13 @@ from jaxopt import LBFGS
 
 __docformat__ = "numpy"
 
+#Change to float64
+def to_float64(tree):
+    return jax.tree_util.tree_map(
+        lambda x: x.astype(jnp.float64) if isinstance(x, jnp.ndarray) else x,
+        tree)
+
+
 #MSE
 @jax.jit
 def MSE(pred,true):
@@ -141,7 +148,7 @@ def dstn(x,axes = None):
         axes = tuple(range(x.ndim))
     y = x
     for ax in axes:
-        y = dst(x,type = 1,axis = ax,norm = 'ortho')
+        y = dst(y,type = 1,axis = ax,norm = 'ortho')
     return y
 
 def idstn(x,axes = None):
@@ -154,7 +161,7 @@ def idstn(x,axes = None):
 
         Array to apply the transformation
 
-    axes : int
+    axes : tuple
 
         Axes to apply the transformation over
 
@@ -190,9 +197,9 @@ def dirichlet_eigs_nd(n,L):
     #Unidimensional eigenvalues
     lam_axes = []
     for ni, Li in zip(n,L):
-        h = Li / (ni + 1.0)
+        h = Li / (ni + 1)
         k = jnp.arange(1,ni + 1)
-        ln = (2.0 / (h*h)) * (1.0 - jnp.cos(jnp.pi * k / (ni + 1.0)))
+        ln = (2 / (h*h)) * (1 - jnp.cos(jnp.pi * k / (ni + 1)))
         lam_axes.append(ln)
     grids = jnp.meshgrid(*lam_axes, indexing='ij')
     Lam = jnp.zeros_like(grids[0])
@@ -256,7 +263,7 @@ def generate_matern_sample(key,d = 2,N = 128,L = 1.0,kappa = 1,alpha = 1,sigma =
                          1j * jax.random.normal(key_im, shape))
 
         #Apply the Whittle Filter
-        amplitude_filter = (kappa ** 2 + sq_norm_xi) ** (-alpha / 2.0)
+        amplitude_filter = (kappa ** 2 + sq_norm_xi) ** (-alpha / 2)
         field_f = white_noise_f * amplitude_filter
 
         #Transform back to Physical Space
@@ -281,7 +288,7 @@ def generate_matern_sample(key,d = 2,N = 128,L = 1.0,kappa = 1,alpha = 1,sigma =
         lam = dirichlet_eigs_nd(N, L)
 
         #Spectral filter
-        filt = ((kappa + lam) ** (-alpha/2.0))
+        filt = ((kappa + lam) ** (-alpha/2))
         psi_hat = filt * W_hat
 
         #Back to real space
@@ -391,11 +398,11 @@ def eigenf_laplace(L_vec,kmax_per_axis = None,bc = "dirichlet",max_ef = None):
     #Precompute per-feature normalization factor (closed form)
     def per_axis_norm_factor(k_i, L_i, is_dirichlet):
         if is_dirichlet:
-            return jnp.sqrt(2.0 / L_i)
+            return jnp.sqrt(2 / L_i)
         else:
-            return jnp.where(k_i == 0, jnp.sqrt(1.0 / L_i), jnp.sqrt(2.0 / L_i))
+            return jnp.where(k_i == 0, jnp.sqrt(1 / L_i), jnp.sqrt(2 / L_i))
     if bc.startswith("d"):
-        nf = jnp.prod(jnp.sqrt(2.0 / L_vec)[None, :],axis = 1)
+        nf = jnp.prod(jnp.sqrt(2 / L_vec)[None, :],axis = 1)
         norm_factors = jnp.ones((m,)) * nf
     else:
         # per-mode product across axes
@@ -489,7 +496,7 @@ def _chebyshev_T_all(t, K: int):
 
     def body(carry, _):
         Tkm1, Tk = carry            # each (..., d)
-        Tkp1 = 2.0 * t * Tk - Tkm1  # (..., d)
+        Tkp1 = 2 * t * Tk - Tkm1  # (..., d)
         return (Tk, Tkp1), Tkp1
 
     # K >= 2: produce T_2..T_K
@@ -507,10 +514,10 @@ def multiple_cheb_fast(x, L_vec, n: int):
     N, d = x.shape
     L = L_vec.shape[0]
 
-    a = 0.0
+    a = 0
     b = L_vec                       # (L, d)
     # Map x to t in [-1, 1] for each l, j: shape (L, N, d)
-    t = (2.0 * x[None, :, :] - (a + b)[:, None, :]) / (b - a)[:, None, :]
+    t = (2 * x[None, :, :] - (a + b)[:, None, :]) / (b - a)[:, None, :]
 
     # Chebyshev T_0..T_{n+2} for all (L, N, d): shape (n+3, L, N, d)
     T = _chebyshev_T_all(t, n + 2)
@@ -589,7 +596,7 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs
     initializer = jax.nn.initializers.glorot_normal()
     params = list()
     if static is None:
-        static = lambda x: 0.0
+        static = lambda x: 0
 
     #Feature mapping
     if ftype == 'ff': #Fourrier features
@@ -608,12 +615,13 @@ def fconNN(width,activation = jax.nn.tanh,key = 0,mlp = False,ftype = None,fargs
     elif ftype == 'daff' or ftype == 'daff_bias':
         if not isinstance(fargs, dict):
             fargs = {'L': fargs,'bc': "dirichlet"}
-        width = width[1:]
         if daff is None:
             phi,lamb = multiple_daff(list(fargs.values())[0],kmax_per_axis = [width[1]] * width[0],bc = list(fargs.values())[1])
+            width = width[1:]
             width[0] = lamb.shape[0]
         else:
             phi = daff[0]
+            width = width[1:]
             width[0] = daff[1]
     elif ftype == 'cheb' or ftype == 'cheb_bias':
         phi = multiple_cheb(fargs,n = width[1])
@@ -991,7 +999,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
 #Training PINN
 def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L = 1,alpha = 1,kappa = 1,sigma = 100,bsize = 1024,resample = False,epochs = 100,at_each = 10,activation = 'tanh',
     neumann = False,oper_neumann = None,inverse = False,initial_par = None,lr = 0.001,b1 = 0.9,b2 = 0.999,eps = 1e-08,eps_root = 0.0,key = 0,epoch_print = 1,save = False,file_name = 'result_pinn',
-    exp_decay = True,transition_steps = 100,decay_rate = 0.9,mlp = True,ftype = None,fargs = None,q = 4,w = None,periodic = False,static = None,opt = 'LBFGS'):
+    exp_decay = True,transition_steps = 100,decay_rate = 0.9,mlp = True,ftype = None,fargs = None,q = 4,w = None,periodic = False,static = None,opt = 'LBFGS',float64 = False):
     """
     Train a Physics-informed Neural Network
     ----------
@@ -1137,22 +1145,36 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
         Optimizer. Default LBFGS.
 
+    float64 : logical
+
+        Whether to train with float64
+
     Returns
     -------
     dict-like object with the estimated function, the estimated parameters, the neural network function for the forward pass and the loss, L2error and training time at each epoch
     """
     #Initialize architecture
     nnet = fconNN(width,get_activation(activation),key,mlp,ftype,fargs,static)
-    forward = nnet['forward']
+    if float64:
+        forward = lambda x,params: nnet['forward'](x,params).astype(jnp.float64)
+    else:
+        forward = nnet['forward']
     if params is not None:
         nnet['params'] = params
+    if float64:
+        data = to_float64(data)
+        if test_data is not None:
+            test_data = to_float64(test_data)
 
     #Generate from Matern process
     if sigma > 0:
         if isinstance(L,float) or isinstance(L,int):
             L = d*[L]
         #Grid for weak norm
-        grid = [jnp.linspace(0,L[i],N) for i in range(d)]
+        if float64:
+            grid = [jnp.linspace(0,L[i],N,dtype = jnp.float64) for i in range(d)]
+        else:
+            grid = [jnp.linspace(0,L[i],N,dtype = jnp.floa) for i in range(d)]
         grid = jnp.meshgrid(*grid, indexing='ij')
         grid = jnp.stack(grid, axis=-1).reshape((-1, d))
         #Set sigma
@@ -1160,11 +1182,11 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma)
             tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
             if neumann:
-                loss_boundary = oper_neumann(lambda x: forward(x,params['net']),data['boundary'])
+                loss_boundary = oper_neumann(nnet['params'],data['boundary'])
             else:
                 loss_boundary = jnp.mean(MSE(forward(data['boundary'],nnet['params']),data['uboundary']))
-            output_w = pde(lambda x: forward(x,nnet['params']),grid)
-            integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(tf)
+            output_w = pde(nnet['params'],grid)
+            integralOmega = jnp.mean(tf * output_w.reshape((1,)*(tf.ndim-1) + output_w.shape),axis=tuple(range(1, tf.ndim)))
             loss_res_weak = jnp.mean(integralOmega ** 2)
             sigma = float(jnp.sqrt(loss_boundary/loss_res_weak).tolist())
             del gen
@@ -1173,6 +1195,9 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         else:
             gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic)
             tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
+    if float64 and tf is not None:
+        tf = to_float64(tf)
+        grid = to_float64(grid)
 
     #Define loss function
     @jax.jit
@@ -1180,7 +1205,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         if sigma > 0:
             #Term that refers to weak loss
             if resample:
-                test_functions = gen(jax.random.split(jax.random.PRNGKey(k[0]),(bsize,))[:,0])
+                test_functions = to_float64(gen(jax.random.split(jax.random.PRNGKey(k[0]),(bsize,))[:,0]))
             else:
                 test_functions = tf
         loss_sensor = loss_boundary = loss_initial = loss_res = loss_res_weak = 0
@@ -1190,7 +1215,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         if x['boundary'] is not None:
             if neumann:
                 #Neumann coditions
-                loss_boundary = oper_neumann(lambda x: forward(x,params['net']),x['boundary'])
+                loss_boundary = oper_neumann(params['net'],x['boundary'])
             else:
                 #Term that refers to boundary data
                 loss_boundary = MSE(forward(x['boundary'],params['net']),x['uboundary'])
@@ -1199,20 +1224,20 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             loss_initial = MSE(forward(x['initial'],params['net']),x['uinitial'])
         if x['collocation'] is not None and sigma == 0:
             if inverse:
-                output = pde(lambda x: forward(x,params['net']),x['collocation'],params['inverse'])
+                output = pde(params['net'],x['collocation'],params['inverse'])
                 loss_res = MSE(output,0)
             else:
-                output = pde(lambda x: forward(x,params['net']),x['collocation'])
+                output = pde(params['net'],x['collocation'])
                 loss_res = MSE(output,0)
         if sigma > 0:
             #Term that refers to weak loss
             if inverse:
-                output_w = pde(lambda x: forward(x,params['net']),grid,params['inverse'])
-                integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(test_functions)
+                output_w = pde(params['net'],grid,params['inverse'])
+                integralOmega = integralOmega = jnp.mean(tf * output_w.reshape((1,)*(tf.ndim-1) + output_w.shape),axis=tuple(range(1, tf.ndim)))
                 loss_res_weak = jnp.mean(integralOmega ** 2)
             else:
-                output_w = pde(lambda x: forward(x,params['net']),grid)
-                integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(test_functions)
+                output_w = pde(params['net'],grid)
+                integralOmega = integralOmega = jnp.mean(tf * output_w.reshape((1,)*(tf.ndim-1) + output_w.shape),axis=tuple(range(1, tf.ndim)))
                 loss_res_weak = jnp.mean(integralOmega ** 2)
         return {'ls': loss_sensor,'lb': loss_boundary,'li': loss_initial,'lc': loss_res,'lc_weak': loss_res_weak}
 
@@ -1244,6 +1269,8 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
     #Store all parameters
     params = {'net': nnet['params'],'inverse': initial_par,'w': w}
+    if float64:
+        params = to_float64(params)
 
     #Save config file
     if save:
@@ -1278,7 +1305,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         @jax.jit
         def loss_LBFGS(params):
             return lf(params,data,key + 234)
-        solver = LBFGS(fun = loss_LBFGS,has_aux = True,maxiter = epochs,tol = 1e-9,verbose = False,linesearch = 'zoom',history_size = 10)  # linesearch='zoom' by default
+        solver = LBFGS(fun = loss_LBFGS,has_aux = True,maxiter = epochs,tol = 1e-9,verbose = False,linesearch = 'zoom',history_size = 100)  # linesearch='zoom' by default
         state = solver.init_state(params)
 
     ###Training###
@@ -1391,7 +1418,7 @@ def process_result(test_data,fit,train_data,plot = True,plot_test = True,times =
     d = test_data['xt'].shape[1] - 1
 
     #Number of plots multiple of 5
-    times = 5 * round(times/5.0)
+    times = 5 * round(times/5)
 
     #Data
     td = get_train_data(train_data)
