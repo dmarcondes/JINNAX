@@ -1188,7 +1188,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             else:
                 loss_boundary = jnp.mean(MSE(forward(data['boundary'],nnet['params']),data['uboundary']))
             output_w = pde(lambda x: forward(x,nnet['params']),grid)
-            integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(test_functions)
+            integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(tf)
             loss_res_weak = jnp.mean(integralOmega ** 2)
             sigma = float(jnp.sqrt(loss_boundary/loss_res_weak).tolist())
             del gen
