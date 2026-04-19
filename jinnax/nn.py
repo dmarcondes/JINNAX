@@ -1203,7 +1203,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
     #Define loss function
     @jax.jit
-    def lf_each(params,x,k):
+    def lf_each(params,x,k,tf,grid):
         if sigma > 0:
             #Term that refers to weak loss
             if resample:
@@ -1244,8 +1244,8 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         return {'ls': loss_sensor,'lb': loss_boundary,'li': loss_initial,'lc': loss_res,'lc_weak': loss_res_weak}
 
     @jax.jit
-    def lf(params,x,k):
-        l = lf_each(params,x,k)
+    def lf(params,x,k,tf,grid):
+        l = lf_each(params,x,k,tf,grid)
         w = params['w']
         loss = jnp.mean((w['ws'] ** q)*l['ls']) + jnp.mean((w['wb'] ** q)*l['lb']) + jnp.mean((w['wi'] ** q)*l['li']) + jnp.mean((w['wc'] ** q)*l['lc']) + (w['wc_weak'] ** q)*l['lc_weak']
         if opt != 'LBFGS':
@@ -1295,9 +1295,9 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
 
         #Define update function
         @jax.jit
-        def update(opt_state,params,x,k):
+        def update(opt_state,params,x,k,tf,grid):
             #Compute gradient
-            grads = grad_loss(params,x,k)
+            grads = grad_loss(params,x,k,tf,grid)
             #Calculate parameters updates
             updates, opt_state = optimizer.update(grads, opt_state)
             #Update parameters
@@ -1310,7 +1310,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         print('--------- LBFGS OPTIMIZER ---------')
         @jax.jit
         def loss_LBFGS(params):
-            return lf(params,data,key + 234)
+            return lf(params,data,key + 234,tf,grid)
         solver = LBFGS(fun = loss_LBFGS,has_aux = True,maxiter = epochs,tol = 1e-9,verbose = False,linesearch = 'zoom',history_size = 100)  # linesearch='zoom' by default
         state = solver.init_state(params)
 
@@ -1327,7 +1327,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             if opt != 'LBFGS':
                 #Update optimizer state and parameters
                 opt_state,params = update(opt_state,params,data,k[e,:])
-                sloss.append(lf(params,data,k[e,:]))
+                sloss.append(lf(params,data,k[e,:],tf,grid))
                 if test_data is not None:
                     sL2.append(L2error(forward(test_data['sensor'],params['net']),test_data['usensor']))
             else:
@@ -1356,7 +1356,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
     def u(xt):
         return forward(xt,params['net'])
 
-    return {'u': u,'params': params,'forward': forward,'time': time.time() - t0,'loss_each': lf_each(params,data,[key + 100]),'loss': sloss,'L2error': sL2}
+    return {'u': u,'params': params,'forward': forward,'time': time.time() - t0,'loss_each': lf_each(params,data,[key + 100],tf,grid),'loss': sloss,'L2error': sL2}
 
 
 #Process result
