@@ -26,9 +26,11 @@ __docformat__ = "numpy"
 
 #Change to float64
 def to_float64(tree):
-    return jax.tree_util.tree_map(
-        lambda x: x.astype(jnp.float64) if isinstance(x, jnp.ndarray) else x,
-        tree)
+    def cast(x):
+        if isinstance(x, (jax.Array, np.ndarray, float, int)):
+            return x.astype(jnp.float64)
+        return x
+    return jax.tree_util.tree_map(cast, tree)
 
 
 #MSE
@@ -721,7 +723,7 @@ def get_activation(act):
     elif act == 'softplus':
         return jax.nn.softplus
     elif act == 'sparse_plus':
-        return jx.nn.sparse_plus
+        return jax.nn.sparse_plus
     elif act == 'soft_sign':
         return jax.nn.soft_sign
     elif act == 'silu':
@@ -871,7 +873,7 @@ def train_PINN(data,width,pde,test_data = None,epochs = 100,at_each = 10,activat
         if data['collocation'] is not None:
             par_sa.update({'wr': c['wr'] * jax.random.uniform(key = jax.random.PRNGKey(ksa[2]),shape = (data['collocation'].shape[0],1))})
         if data['boundary'] is not None:
-            par_sa.update({'wb': c['wr'] * jax.random.uniform(key = jax.random.PRNGKey(ksa[3]),shape = (data['boundary'].shape[0],1))})
+            par_sa.update({'wb': c['wb'] * jax.random.uniform(key = jax.random.PRNGKey(ksa[3]),shape = (data['boundary'].shape[0],1))})
 
     #Store all parameters
     params = {'net': nnet['params'],'inverse': initial_par,'sa': par_sa}
@@ -1174,7 +1176,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         if float64:
             grid = [jnp.linspace(0,L[i],N,dtype = jnp.float64) for i in range(d)]
         else:
-            grid = [jnp.linspace(0,L[i],N,dtype = jnp.floa) for i in range(d)]
+            grid = [jnp.linspace(0,L[i],N) for i in range(d)]
         grid = jnp.meshgrid(*grid, indexing='ij')
         grid = jnp.stack(grid, axis=-1).reshape((-1, d))
         #Set sigma
@@ -1182,11 +1184,11 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma)
             tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
             if neumann:
-                loss_boundary = oper_neumann(nnet['params'],data['boundary'])
+                loss_boundary = oper_neumann(lambda x: forward(x,nnet['params']),data['boundary'])
             else:
                 loss_boundary = jnp.mean(MSE(forward(data['boundary'],nnet['params']),data['uboundary']))
-            output_w = pde(nnet['params'],grid)
-            integralOmega = jnp.mean(tf * output_w.reshape((1,)*(tf.ndim-1) + output_w.shape),axis=tuple(range(1, tf.ndim)))
+            output_w = pde(lambda x: forward(x,nnet['params']),grid)
+            integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(test_functions)
             loss_res_weak = jnp.mean(integralOmega ** 2)
             sigma = float(jnp.sqrt(loss_boundary/loss_res_weak).tolist())
             del gen
@@ -1195,9 +1197,9 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         else:
             gen = generate_matern_sample_batch(d = d,N = N,L = L,kappa = kappa,alpha = alpha,sigma = sigma,periodic = periodic)
             tf = gen(jax.random.split(jax.random.PRNGKey(key + 1),(bsize,))[:,0])
-    if float64 and tf is not None:
-        tf = to_float64(tf)
-        grid = to_float64(grid)
+        if float64 and tf is not None:
+            tf = to_float64(tf)
+            grid = to_float64(grid)
 
     #Define loss function
     @jax.jit
@@ -1211,11 +1213,11 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         loss_sensor = loss_boundary = loss_initial = loss_res = loss_res_weak = 0
         if x['sensor'] is not None:
             #Term that refers to sensor data
-            loss_sensor = jnp.mean(MSE(forward(x['sensor'],params['net']),x['usensor']))
+            loss_sensor = MSE(forward(x['sensor'],params['net']),x['usensor'])
         if x['boundary'] is not None:
             if neumann:
                 #Neumann coditions
-                loss_boundary = oper_neumann(params['net'],x['boundary'])
+                loss_boundary = oper_neumann(lambda x: forward(x,nnet['params']),x['boundary'])
             else:
                 #Term that refers to boundary data
                 loss_boundary = MSE(forward(x['boundary'],params['net']),x['uboundary'])
@@ -1224,20 +1226,20 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             loss_initial = MSE(forward(x['initial'],params['net']),x['uinitial'])
         if x['collocation'] is not None and sigma == 0:
             if inverse:
-                output = pde(params['net'],x['collocation'],params['inverse'])
+                output = pde(lambda x: forward(x,params['net']),x['collocation'],params['inverse'])
                 loss_res = MSE(output,0)
             else:
-                output = pde(params['net'],x['collocation'])
+                output = pde(lambda x: forward(x,params['net']),x['collocation'])
                 loss_res = MSE(output,0)
         if sigma > 0:
             #Term that refers to weak loss
             if inverse:
-                output_w = pde(params['net'],grid,params['inverse'])
-                integralOmega = integralOmega = jnp.mean(tf * output_w.reshape((1,)*(tf.ndim-1) + output_w.shape),axis=tuple(range(1, tf.ndim)))
+                output_w = pde(lambda x: forward(x,params['net']),grid,params['inverse'])
+                integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(test_functions)
                 loss_res_weak = jnp.mean(integralOmega ** 2)
             else:
-                output_w = pde(params['net'],grid)
-                integralOmega = integralOmega = jnp.mean(tf * output_w.reshape((1,)*(tf.ndim-1) + output_w.shape),axis=tuple(range(1, tf.ndim)))
+                output_w = pde(lambda x: forward(x,params['net']),grid)
+                integralOmega = jax.vmap(lambda psi: jnp.mean(psi*output_w.reshape((N,) * d)))(test_functions)
                 loss_res_weak = jnp.mean(integralOmega ** 2)
         return {'ls': loss_sensor,'lb': loss_boundary,'li': loss_initial,'lc': loss_res,'lc_weak': loss_res_weak}
 
@@ -1255,17 +1257,21 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             return loss,{'loss': loss,'l2': l2}
 
     #Initialize self-adaptive weights
+    if float64:
+        typ = jnp.float64
+    else:
+        typ = jnp.float32
     if w is None:
         w = {'ws': jnp.array(1.0),'wb': jnp.array(1.0),'wi': jnp.array(1.0),'wc': jnp.array(1.0),'wc_weak': jnp.array(1.0)}
     if q != 0:
         if data['sensor'] is not None:
-            w['ws'] = w['ws'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+1),(data['sensor'].shape[0],1))
+            w['ws'] = w['ws'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+1),(data['sensor'].shape[0],1),dtype = typ)
         if data['boundary'] is not None:
-            w['wb'] = w['wb'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+2),(data['boundary'].shape[0],1))
+            w['wb'] = w['wb'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+2),(data['boundary'].shape[0],1),dtype = typ)
         if data['initial'] is not None:
-            w['wi'] = w['wi'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+3),(data['initial'].shape[0],1))
+            w['wi'] = w['wi'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+3),(data['initial'].shape[0],1),dtype = typ)
         if data['collocation'] is not None:
-            w['wc'] = w['wc'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+4),(data['collocation'].shape[0],1))
+            w['wc'] = w['wc'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+4),(data['collocation'].shape[0],1),dtype = typ)
 
     #Store all parameters
     params = {'net': nnet['params'],'inverse': initial_par,'w': w}
@@ -1652,7 +1658,7 @@ def plot_pinn_out2D(times,xt,u,upred,save = False,show = True,file_name = 'resul
                 else:
                     if plot_test:
                         ax[j].plot(x_plot,y_plot,'b-',linewidth=2,label='Exact')
-                    ax[j].plot(xpred_plot,ypred,'r-',linewidth=2,label='Prediction')
+                    ax[j].plot(xpred_plot,ypred_plot,'r-',linewidth=2,label='Prediction')
                     ax[j].set_title('$t = %.2f$' % (t),fontsize=10)
                     ax[j].set_xlabel(' ')
                     ax[j].set_ylim([1.3 * ylo.tolist(),1.3 * yup.tolist()])
