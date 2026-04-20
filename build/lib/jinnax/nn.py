@@ -1376,7 +1376,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         @jax.jit
         def loss_LBFGS(params):
             return lf(params,data,key + 234,tf,grid)
-        solver = LBFGS(fun = loss_LBFGS,has_aux = True,maxiter = epochs,tol = 1e-9,verbose = False,linesearch = 'zoom',history_size = 10)  # linesearch='zoom' by default
+        solver = LBFGS(fun = loss_LBFGS,has_aux = True,maxiter = epochs,tol = 1e-9,verbose = False,linesearch = 'zoom',history_size = 100)  # linesearch='zoom' by default
         state = solver.init_state(params)
         if float64:
             assert_lbfgs_state_float64(state)
