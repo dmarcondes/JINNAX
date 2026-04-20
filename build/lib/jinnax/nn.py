@@ -53,7 +53,7 @@ def warn_tree_float64(tree, name="object"):
 
 
 def check_grads_float64(grads):
-    leaves, _ = jax.tree_flatten(grads)
+    leaves, _ = tree_flatten(grads)
     bad = [
         (i, x.dtype)
         for i, x in enumerate(leaves)
@@ -71,8 +71,6 @@ def assert_lbfgs_state_float64(state):
     Ensures that all *floating-point* values inside the LBFGS state
     are float64. Integers and booleans are allowed.
     """
-    from jax.tree_util import tree_flatten
-    import jax.numpy as jnp
     leaves, _ = tree_flatten(state)
     bad = []
     for i, x in enumerate(leaves):
