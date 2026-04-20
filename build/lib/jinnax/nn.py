@@ -1262,6 +1262,9 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         if float64 and tf is not None:
             tf = to_float64(tf)
             grid = to_float64(grid)
+    else:
+        tf = None
+        grid = None
 
     #Define loss function
     @jax.jit
