@@ -1394,7 +1394,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
                     grads = grad_loss(params, data, k[e,:], tf, grid)
                     check_grads_float64(grads)
                 #Update optimizer state and parameters
-                opt_state,params = update(opt_state,params,data,k[e,:])
+                opt_state,params = update(opt_state,params,data,k[e,:],tf,grid)
                 sloss.append(lf(params,data,k[e,:],tf,grid))
                 if test_data is not None:
                     sL2.append(L2error(forward(test_data['sensor'],params['net']),test_data['usensor']))
