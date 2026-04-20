@@ -21,8 +21,71 @@ from functools import partial
 import orthax
 from jax import lax
 from jaxopt import LBFGS
+from jax.tree_util import tree_flatten
 
 __docformat__ = "numpy"
+
+def assert_tree_float64(tree, name="object"):
+    """
+    Raises an error if any leaf in a pytree is not float64.
+    """
+    leaves, _ = tree_flatten(tree)
+    bad = [
+        (i, x.dtype)
+        for i, x in enumerate(leaves)
+        if hasattr(x, "dtype") and x.dtype != jnp.float64
+    ]
+    if bad:
+        raise RuntimeError(
+            f"[FLOAT64 CHECK FAILED] {name} contains non-float64 dtypes:\n"
+            + "\n".join([f"  leaf {i}: {dtype}" for i, dtype in bad])
+        )
+
+
+def warn_tree_float64(tree, name="object"):
+    """
+    Same as assert_tree_float64, but prints a warning instead of raising.
+    """
+    leaves, _ = tree_flatten(tree)
+    dtypes = {x.dtype for x in leaves if hasattr(x, "dtype")}
+    if dtypes != {jnp.float64}:
+        print(f"[WARNING] {name} dtypes = {dtypes}")
+
+
+def check_grads_float64(grads):
+    leaves, _ = jax.tree_flatten(grads)
+    bad = [
+        (i, x.dtype)
+        for i, x in enumerate(leaves)
+        if hasattr(x, "dtype") and x.dtype != jnp.float64
+    ]
+    if bad:
+        raise RuntimeError(
+            "[FLOAT64 CHECK FAILED] Gradients are not float64:\n"
+            + "\n".join([f"  grad {i}: {dtype}" for i, dtype in bad])
+        )
+
+
+def assert_lbfgs_state_float64(state):
+    """
+    Ensures that all *floating-point* values inside the LBFGS state
+    are float64. Integers and booleans are allowed.
+    """
+    from jax.tree_util import tree_flatten
+    import jax.numpy as jnp
+    leaves, _ = tree_flatten(state)
+    bad = []
+    for i, x in enumerate(leaves):
+        if isinstance(x, jnp.ndarray):
+            if jnp.issubdtype(x.dtype, jnp.floating):
+                if x.dtype != jnp.float64:
+                    bad.append((i, x.dtype))
+    if bad:
+        raise RuntimeError(
+            "[FLOAT64 CHECK FAILED] LBFGS floating-point buffers are not float64:\n"
+            + "\n".join([f"  leaf {i}: {dtype}" for i, dtype in bad])
+        )
+
 
 #Change to float64
 def to_float64(tree):
@@ -1159,6 +1222,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
     nnet = fconNN(width,get_activation(activation),key,mlp,ftype,fargs,static)
     if float64:
         forward = lambda x,params: nnet['forward'](x,params).astype(jnp.float64)
+        assert jax.config.jax_enable_x64, "JAX is NOT running in float64 mode!"
     else:
         forward = nnet['forward']
     if params is not None:
@@ -1313,6 +1377,8 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             return lf(params,data,key + 234,tf,grid)
         solver = LBFGS(fun = loss_LBFGS,has_aux = True,maxiter = epochs,tol = 1e-9,verbose = False,linesearch = 'zoom',history_size = 10)  # linesearch='zoom' by default
         state = solver.init_state(params)
+        if float64:
+            assert_lbfgs_state_float64(state)
 
     ###Training###
     t0 = time.time()
@@ -1325,15 +1391,30 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         #For each epoch
         for e in range(epochs):
             if opt != 'LBFGS':
+                if float64 and e < 10:
+                    assert_tree_float64(params, name="params (before update)")
+                    grads = grad_loss(params, data, k[e,:], tf, grid)
+                    check_grads_float64(grads)
                 #Update optimizer state and parameters
                 opt_state,params = update(opt_state,params,data,k[e,:])
                 sloss.append(lf(params,data,k[e,:],tf,grid))
                 if test_data is not None:
                     sL2.append(L2error(forward(test_data['sensor'],params['net']),test_data['usensor']))
+                if float64 and e < 10:
+                    assert_tree_float64(params, name="params (before update)")
+                    grads = grad_loss(params, data, k[e,:], tf, grid)
+                    check_grads_float64(grads)
             else:
+                if float64 and e < 10:
+                    assert_tree_float64(params, name="params (before LBFGS step)")
                 params, state = solver.update(params, state)
+                if float64 and e < 10:
+                    assert_tree_float64(params, name="params (after LBFGS step)")
+                    assert_lbfgs_state_float64(state)
                 sL2.append(state.aux["l2"])
                 sloss.append(state.aux["loss"])
+                if float64 and e < 10:
+                    assert_tree_float64(params, name="params (before update)")
             stime.append(time.time() - t0)
             #After epoch_print epochs
             if e % epoch_print == 0:
