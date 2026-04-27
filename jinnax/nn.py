@@ -1315,11 +1315,11 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
     @jax.jit
     def lf(params,x,k,tf,grid):
         l = lf_each(params,x,k,tf,grid)
-        w = params['w']
-        loss = jnp.mean((w['ws'] ** q)*l['ls']) + jnp.mean((w['wb'] ** q)*l['lb']) + jnp.mean((w['wi'] ** q)*l['li']) + jnp.mean((w['wc'] ** q)*l['lc']) + (w['wc_weak'] ** q)*l['lc_weak']
         if opt != 'LBFGS':
+            loss = jnp.mean((params['w']['ws'] ** q)*l['ls']) + jnp.mean((params['w']['wb'] ** q)*l['lb']) + jnp.mean((params['w']['wi'] ** q)*l['li']) + jnp.mean((params['w']['wc'] ** q)*l['lc']) + (params['w']['wc_weak'] ** q)*l['lc_weak']
             return loss
         else:
+            loss = jnp.mean((w['ws'] ** q)*l['ls']) + jnp.mean((w['wb'] ** q)*l['lb']) + jnp.mean((w['wi'] ** q)*l['li']) + jnp.mean((w['wc'] ** q)*l['lc']) + (w['wc_weak'] ** q)*l['lc_weak']
             l2 = None
             if test_data is not None:
                 l2 = L2error(forward(test_data['sensor'],params['net']),test_data['usensor'])
@@ -1343,7 +1343,10 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             w['wc'] = w['wc'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+4),(data['collocation'].shape[0],1),dtype = typ)
 
     #Store all parameters
-    params = {'net': nnet['params'],'inverse': initial_par,'w': w}
+    if opt != 'LBFGS':
+        params = {'net': nnet['params'],'inverse': initial_par,'w': w}
+    else:
+        params = {'net': nnet['params'],'inverse': initial_par,'w': w}
     if float64:
         params = to_float64(params)
 
