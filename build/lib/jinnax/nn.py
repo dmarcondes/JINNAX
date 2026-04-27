@@ -1332,7 +1332,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
         typ = jnp.float32
     if w is None:
         w = {'ws': jnp.array(1.0),'wb': jnp.array(1.0),'wi': jnp.array(1.0),'wc': jnp.array(1.0),'wc_weak': jnp.array(1.0)}
-    if q != 0:
+    if q != 0 and opt != 'LBFGS':
         if data['sensor'] is not None:
             w['ws'] = w['ws'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+1),(data['sensor'].shape[0],1),dtype = typ)
         if data['boundary'] is not None:
@@ -1346,7 +1346,7 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
     if opt != 'LBFGS':
         params = {'net': nnet['params'],'inverse': initial_par,'w': w}
     else:
-        params = {'net': nnet['params'],'inverse': initial_par,'w': w}
+        params = {'net': nnet['params'],'inverse': initial_par}
     if float64:
         params = to_float64(params)
 
