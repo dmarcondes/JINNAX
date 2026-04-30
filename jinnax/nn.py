@@ -1240,9 +1240,9 @@ def train_Matern_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 12
             L = d*[L]
         #Grid for weak norm
         if float64:
-            grid = [(jnp.arange(1,N+1)*L[i]/(N+1)).astype(jnp.float64) for i in range(d)]
+            grid = [jnp.linspace(0,L[i],N,dtype = jnp.float64) for i in range(d)]
         else:
-            grid = [jnp.arange(1,N+1)*L[i]/(N+1) for i in range(d)]
+            grid = [jnp.linspace(0,L[i],N) for i in range(d)]
         grid = jnp.meshgrid(*grid, indexing='ij')
         grid = jnp.stack(grid, axis=-1).reshape((-1, d))
         #Set sigma
