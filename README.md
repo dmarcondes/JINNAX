@@ -8,6 +8,6 @@ A tutorial of `jinnax` is available at [Google Colab](https://colab.research.goo
 
 The code of some experiments of the paper
 
-[Marcondes, D. Random test functions, H−1 norm equivalence, and stochastic variational physics-informed neural networks. ArXiv 2605.03542.](https://arxiv.org/abs/2605.03542)
+*Marcondes, D. Random test functions, H−1 norm equivalence, and stochastic variational physics-informed neural networks.* [ArXiv 2605.03542.](https://arxiv.org/abs/2605.03542)
 
 are in [SV_PINN_examples](https://github.com/dmarcondes/JINNAX/tree/master/SV_PINN_examples). A Jupyter Notebook of the first examperiment is available at [Google Colab]().
