@@ -20,7 +20,7 @@ from itertools import product
 from functools import partial
 import orthax
 from jax import lax
-from jaxopt import LBFGS
+from jaxopt import LBFGS, BFGS
 from jax.tree_util import tree_flatten
 
 __docformat__ = "numpy"
@@ -1227,7 +1227,7 @@ def train_SV_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L 
     @jax.jit
     def lf(params,x,k,tf,grid):
         l = lf_each(params,x,k,tf,grid)
-        if opt != 'LBFGS':
+        if opt == 'GD':
             loss = jnp.mean((params['w']['ws'] ** q)*l['ls']) + jnp.mean((params['w']['wb'] ** q)*l['lb']) + jnp.mean((params['w']['wi'] ** q)*l['li']) + jnp.mean((params['w']['wc'] ** q)*l['lc']) + (params['w']['wc_weak'] ** q)*l['lc_weak']
             return loss
         else:
@@ -1244,7 +1244,7 @@ def train_SV_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L 
         typ = jnp.float32
     if w is None:
         w = {'ws': jnp.array(1.0),'wb': jnp.array(1.0),'wi': jnp.array(1.0),'wc': jnp.array(1.0),'wc_weak': jnp.array(1.0)}
-    if q != 0 and opt != 'LBFGS':
+    if q != 0 and opt == 'GD':
         if data['sensor'] is not None:
             w['ws'] = w['ws'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+1),(data['sensor'].shape[0],1),dtype = typ)
         if data['boundary'] is not None:
@@ -1255,7 +1255,7 @@ def train_SV_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L 
             w['wc'] = w['wc'] + 0.05*jax.random.normal(jax.random.PRNGKey(key+4),(data['collocation'].shape[0],1),dtype = typ)
 
     #Store all parameters
-    if opt != 'LBFGS':
+    if opt == 'GD':
         params = {'net': nnet['params'],'inverse': initial_par,'w': w}
     else:
         params = {'net': nnet['params'],'inverse': initial_par}
@@ -1267,7 +1267,7 @@ def train_SV_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L 
         pickle.dump({'train_data': data,'epochs': epochs,'activation': activation,'init_params': params,'forward': forward,'width': width,'pde': pde,'lr': lr,'b1': b1,'b2': b2,'eps': eps,'eps_root': eps_root,'key': key,'inverse': inverse},open(file_name + '_config.pickle','wb'), protocol = pickle.HIGHEST_PROTOCOL)
 
     #Initialize Adam Optmizer
-    if opt != 'LBFGS':
+    if opt == 'GD':
         print('--------- GRADIENT DESCENT OPTIMIZER ---------')
         if exp_decay:
             lr = optax.exponential_decay(lr,transition_steps,decay_rate)
@@ -1291,11 +1291,15 @@ def train_SV_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L 
             #Return state of optmizer and updated parameters
             return opt_state,params
     else:
-        print('--------- LBFGS OPTIMIZER ---------')
         @jax.jit
-        def loss_LBFGS(params):
+        def loss_fn(params):
             return lf(params,data,key + 234,tf,grid)
-        solver = LBFGS(fun = loss_LBFGS,has_aux = True,maxiter = epochs,tol = 1e-9,verbose = False,linesearch = 'zoom',history_size = 200)  # linesearch='zoom' by default
+        if opt == 'LBFGS':
+            print('--------- LBFGS OPTIMIZER ---------')
+            solver = LBFGS(fun = loss_fn,has_aux = True,maxiter = epochs,tol = 1e-9,verbose = False,linesearch = 'zoom',history_size = 200)
+        else:
+            print('--------- BFGS OPTIMIZER ---------')
+            solver = BFGS(fun = loss_fn,has_aux = True,maxiter = epochs,tol = 1e-9,verbose = False,linesearch = 'zoom')
         state = solver.init_state(params)
         if float64:
             assert_lbfgs_state_float64(state)
@@ -1310,7 +1314,7 @@ def train_SV_PINN(data,width,pde,test_data = None,params = None,d = 2,N = 128,L 
     with alive_bar(epochs) as bar:
         #For each epoch
         for e in range(epochs):
-            if opt != 'LBFGS':
+            if opt == 'GD':
                 if float64 and e < 10:
                     assert_tree_float64(params, name="params (before update)")
                     grads = grad_loss(params, data, k[e,:], tf, grid)
